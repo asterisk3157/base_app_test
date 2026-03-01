@@ -40,8 +40,8 @@ def post():
         conn.close()
     return redirect(url_for('index'))
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
-
-# Initialize DB when this file is loaded (works with flask run)
+# Initialize DB before starting the server
 init_db()
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5001)
