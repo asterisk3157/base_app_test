@@ -99,6 +99,14 @@
             border-bottom-left-radius: 4px;
         }
 
+        /* Highlight replies to the current user */
+        .reply-to-me {
+            border: 2px solid #fbbf24 !important;
+            /* amber-400 */
+            background-color: #fefce8 !important;
+            /* yellow-50 */
+        }
+
         .message-actions {
             font-size: 0.75rem;
             color: #888;
@@ -254,6 +262,15 @@
         .my-message .reply-reference {
             background: rgba(255, 255, 255, 0.15);
         }
+
+        .message-bubble a {
+            color: #0ea5e9;
+            text-decoration: underline;
+        }
+
+        .my-message .message-bubble a {
+            color: #bae6fd;
+        }
     </style>
 </head>
 
@@ -311,6 +328,9 @@
         });
 
         textarea.addEventListener('keydown', function (e) {
+            // Ignore Enter during IME composition (e.g., converting Kanji in Japanese)
+            if (e.isComposing) return;
+
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 if (this.value.trim().length > 0) {
@@ -410,42 +430,72 @@
                             const refSnippet = refPost.content.length > 50 ? refPost.content.substring(0, 50) + '...' : refPost.content;
                             refLink.textContent = `返信元: ${refPost.username} - ${refSnippet}`;
                             bubbleDiv.appendChild(refLink);
+
+                            // Highlight if the reply is TO the CURRENT USER
+                            if (refPost.username === localStorage.getItem('chatUsername') && !isMyMessage) {
+                                bubbleDiv.classList.add('reply-to-me');
+                            }
                         }
 
-                        // Fix XSS
-                        const contentSpan = document.createElement('span');
-                        contentSpan.textContent = post.content;
-                        bubbleDiv.appendChild(contentSpan);
+                        // Fix XSS & Auto-link URLs
+                        // 1. Create a dummy element to safely escape user text (prevents HTML injection)
+                        const safeContentDiv = document.createElement('div');
+                        safeContentDiv.textContent = post.content;
+                        let safeHTML = safeContentDiv.innerHTML;
+
+                        // 2. Run regex on the safe HTML to convert URLs into real <a> tags
+                        const urlRegex = /(https?:\/\/[^\s]+)/g;
+                        safeHTML = safeHTML.replace(urlRegex, function (url) {
+                            return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+                        });
+
+                        // 3. Create a wrapper for this processed content and append to bubble
+                        const contentBody = document.createElement('span');
+                        contentBody.innerHTML = safeHTML;
+                        bubbleDiv.appendChild(contentBody);
 
                         // Actions and Timestamp under bubble
                         const actionsDiv = document.createElement('div');
                         actionsDiv.className = 'message-actions';
+                        // Removed conditional flex-row-reverse so the order is consistently Time -> Buttons Left-to-Right
                         if (isMyMessage) {
-                            actionsDiv.classList.add('flex-row-reverse');
+                            // If we want it aligned to the right inside its wrapper, we can do justify-content-end
+                            actionsDiv.style.justifyContent = 'flex-end';
                         }
 
                         const timeSpan = document.createElement('span');
                         timeSpan.textContent = post.timestamp || '';
 
+                        // Add span first (on the left if myMessage since it's row-reverse, otherwise right)
+                        // Actually the user requested action buttons order: Reply, Edit, Delete, right of timestamp.
+                        // So DOM order inside the flex container needs to be Time, Reply, Edit, Delete.
+                        // But wait, my-message uses flex-row-reverse. So the DOM order should just be Time, Reply, Edit, Delete
+                        // and we remove flex-row-reverse from actionsDiv, or we handle the ordering so it looks consistent.
+                        // Let's remove flex-row-reverse from actionsDiv above for simplicity and push Time to the left.
+                        // Wait, for my-message, flex-row-reverse puts Time on the right. User said "日付表示の右側に移動" (Move to the right of the date display).
+                        // Let's just remove flex-row-reverse and use regular order for both, saving the reverse effect.
+
+                        // Create buttons
                         const replyBtn = document.createElement('i');
                         replyBtn.className = 'bi bi-reply-fill';
                         replyBtn.title = '返信';
                         replyBtn.onclick = () => setReply(post.id, post.username, post.content);
 
+                        const editBtn = document.createElement('i');
+                        editBtn.className = 'bi bi-pencil-fill text-secondary';
+                        editBtn.title = '編集';
+                        if (isMyMessage) editBtn.onclick = () => editPost(post.id, post.content);
+
+                        const deleteBtn = document.createElement('i');
+                        deleteBtn.className = 'bi bi-trash3-fill text-danger';
+                        deleteBtn.title = '削除';
+                        if (isMyMessage) deleteBtn.onclick = () => deletePost(post.id);
+
+                        // Layout: Time, Reply, Edit, Delete
                         actionsDiv.appendChild(timeSpan);
                         actionsDiv.appendChild(replyBtn);
 
                         if (isMyMessage) {
-                            const editBtn = document.createElement('i');
-                            editBtn.className = 'bi bi-pencil-fill text-secondary';
-                            editBtn.title = '編集';
-                            editBtn.onclick = () => editPost(post.id, post.content);
-
-                            const deleteBtn = document.createElement('i');
-                            deleteBtn.className = 'bi bi-trash3-fill text-danger';
-                            deleteBtn.title = '削除';
-                            deleteBtn.onclick = () => deletePost(post.id);
-
                             actionsDiv.appendChild(editBtn);
                             actionsDiv.appendChild(deleteBtn);
                         }
