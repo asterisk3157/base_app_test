@@ -29,6 +29,10 @@ def init_db():
         c.execute('''ALTER TABLE posts ADD COLUMN weather TEXT DEFAULT ""''')
     except sqlite3.OperationalError:
         pass # Column already exists
+    try:
+        c.execute('''ALTER TABLE posts ADD COLUMN parent_id INTEGER''')
+    except sqlite3.OperationalError:
+        pass # Column already exists
     
     # Fix existing rows that may not have generated defaults correctly
     c.execute('''UPDATE posts SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL''')
@@ -44,10 +48,21 @@ def index():
 def get_posts():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute('SELECT id, author, content, datetime(created_at, "localtime"), likes, weather FROM posts ORDER BY id DESC')
-    posts = [{'id': row[0], 'author': row[1], 'content': row[2], 'created_at': row[3], 'likes': row[4] or 0, 'weather': row[5] or ''} for row in c.fetchall()]
+    c.execute('SELECT id, author, content, datetime(created_at, "localtime"), likes, weather, parent_id FROM posts ORDER BY id DESC')
+    all_posts = [{'id': row[0], 'author': row[1], 'content': row[2], 'created_at': row[3], 'likes': row[4] or 0, 'weather': row[5] or '', 'parent_id': row[6], 'replies': []} for row in c.fetchall()]
+    
+    post_dict = {p['id']: p for p in all_posts}
+    top_level_posts = []
+    
+    for p in all_posts:
+        if p['parent_id'] and p['parent_id'] in post_dict:
+            # all_posts is newest first, so inserting at 0 makes replies chronological
+            post_dict[p['parent_id']]['replies'].insert(0, p)
+        elif not p['parent_id']:
+            top_level_posts.append(p)
+            
     conn.close()
-    return {'posts': posts}
+    return {'posts': top_level_posts}
 
 @app.route('/post', methods=['POST'])
 def post():
@@ -57,6 +72,10 @@ def post():
     content = request.form.get('content')
     delete_password = request.form.get('delete_password', '')
     weather = request.form.get('weather', '')
+    parent_id = request.form.get('parent_id')
+    if parent_id == '':
+        parent_id = None
+        
     if content:
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
@@ -65,7 +84,7 @@ def post():
         # which might introduce SQLi if not careful. Or we can INTENTIONALLY make this vulnerable later.
         # For base app, we keep it simple but functional.
         # Fixed: explicitly insert the CURRENT_TIMESTAMP for timezone correctness in SQLite.
-        c.execute('INSERT INTO posts (author, content, created_at, delete_password, weather) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?)', (author, content, delete_password, weather))
+        c.execute('INSERT INTO posts (author, content, created_at, delete_password, weather, parent_id) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, ?)', (author, content, delete_password, weather, parent_id))
         conn.commit()
         conn.close()
     return redirect(url_for('index'))
@@ -149,7 +168,14 @@ def delete_post(post_id):
         conn.close()
         return {'status': 'error', 'message': 'Unauthorized'}, 403
 
-    c.execute('DELETE FROM posts WHERE id = ?', (post_id,))
+    def delete_recursive(p_id):
+        c.execute('SELECT id FROM posts WHERE parent_id = ?', (p_id,))
+        children = c.fetchall()
+        for child in children:
+            delete_recursive(child[0])
+        c.execute('DELETE FROM posts WHERE id = ?', (p_id,))
+
+    delete_recursive(post_id)
     conn.commit()
     conn.close()
     return {'status': 'success'}

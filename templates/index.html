@@ -143,6 +143,17 @@
             word-wrap: break-word;
         }
 
+        .reply-post {
+            margin-left: 24px;
+            border-left: 3px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 0 16px 16px 0;
+            padding: 16px 20px;
+            margin-top: -8px;
+            margin-bottom: 16px;
+            box-shadow: none;
+        }
+
         .post-header {
             display: flex;
             justify-content: space-between;
@@ -222,6 +233,10 @@
             .post {
                 padding: 16px 20px;
                 font-size: 16px;
+            }
+
+            .reply-post {
+                margin-left: 20px;
             }
         }
 
@@ -350,6 +365,34 @@
         </div>
     </div>
 
+    <!-- Reply Modal -->
+    <div id="replyModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">返信する</div>
+            <input type="text" id="replyAuthor" placeholder="なまえ（省略すると「名無し」になります）">
+            <textarea id="replyContentText" placeholder="返信内容を入力してください"></textarea>
+            <input type="text" id="replyDeletePassword" placeholder="削除用パスワード（任意）">
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeReplyModal()">キャンセル</button>
+                <button onclick="submitReply()">返信する</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reply Modal -->
+    <div id="replyModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">返信する</div>
+            <input type="text" id="replyAuthor" placeholder="なまえ（省略すると「名無し」になります）">
+            <textarea id="replyContentText" placeholder="返信内容を入力してください"></textarea>
+            <input type="text" id="replyDeletePassword" placeholder="削除用パスワード（任意）">
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeReplyModal()">キャンセル</button>
+                <button onclick="submitReply()">返信する</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentEditPostId = null;
 
@@ -405,6 +448,160 @@
             }
         }
 
+        // Reply logic
+        let currentReplyParentId = null;
+
+        function openReplyModal(postId) {
+            currentReplyParentId = postId;
+            document.getElementById('replyAuthor').value = '';
+            document.getElementById('replyContentText').value = '';
+            document.getElementById('replyDeletePassword').value = '';
+            document.getElementById('replyModal').classList.add('active');
+            document.getElementById('replyContentText').focus();
+        }
+
+        function closeReplyModal() {
+            document.getElementById('replyModal').classList.remove('active');
+            currentReplyParentId = null;
+        }
+
+        function submitReply() {
+            if (!currentReplyParentId) return;
+            const author = document.getElementById('replyAuthor').value;
+            const content = document.getElementById('replyContentText').value;
+            const deletePassword = document.getElementById('replyDeletePassword').value;
+
+            if (content && content.trim() !== "") {
+                const formData = new FormData();
+                formData.append('parent_id', currentReplyParentId);
+                formData.append('author', author);
+                formData.append('content', content);
+                formData.append('delete_password', deletePassword);
+
+                // Keep weather string empty or fetch it here if strictly needed. For now empty is fine for replies.
+                formData.append('weather', '');
+
+                fetch(`/post`, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => {
+                        closeReplyModal();
+                        loadPosts();
+                    });
+            } else {
+                alert('返信内容を入力してください。');
+            }
+        }
+
+        function renderPost(post, containerDiv, isReply = false) {
+            const div = document.createElement('div');
+            div.className = 'post';
+            if (isReply) {
+                div.classList.add('reply-post');
+            }
+
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'post-header';
+
+            const authorDiv = document.createElement('div');
+            authorDiv.className = 'post-author';
+            authorDiv.innerText = post.author || '名無し';
+
+            const dateDiv = document.createElement('div');
+            dateDiv.className = 'post-date';
+            const wStr = post.weather ? `  ${post.weather}` : '';
+            dateDiv.innerText = `${post.created_at ? post.created_at.substring(0, 16) : ''}${wStr}`;
+
+            headerDiv.appendChild(authorDiv);
+            headerDiv.appendChild(dateDiv);
+
+            const contentDiv = document.createElement('div');
+            contentDiv.innerHTML = post.content;
+
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'post-actions';
+
+            const replyBtn = document.createElement('button');
+            replyBtn.className = 'action-button edit'; // Reusing edit icon style for now
+            replyBtn.innerHTML = `💬 返信`;
+            replyBtn.onclick = () => {
+                openReplyModal(post.id);
+            };
+
+            const likeBtn = document.createElement('button');
+            likeBtn.className = 'action-button like';
+
+            const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]');
+            const isLiked = likedPosts.includes(post.id);
+
+            likeBtn.innerHTML = isLiked ? `❤️ ${post.likes || 0}` : `🤍 ${post.likes || 0}`;
+
+            if (isLiked) {
+                likeBtn.style.color = '#ff3b30';
+                likeBtn.style.cursor = 'default';
+                likeBtn.title = 'いいね済みです';
+            } else {
+                likeBtn.onclick = () => {
+                    fetch(`/api/posts/${post.id}/like`, { method: 'POST' })
+                        .then(() => {
+                            likedPosts.push(post.id);
+                            localStorage.setItem('likedPosts', JSON.stringify(likedPosts));
+                            loadPosts();
+                        });
+                };
+            }
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'action-button edit';
+            editBtn.innerHTML = `✏️ 編集`;
+            editBtn.onclick = () => {
+                openEditModal(post.id, post.content);
+            };
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'action-button delete';
+            deleteBtn.innerHTML = `🗑️ 削除`;
+            deleteBtn.onclick = () => {
+                const secret = prompt('削除するには管理者パスワード、または投稿時に設定した「削除用パスワード」を入力してください:');
+                if (secret) {
+                    const formData = new FormData();
+                    formData.append('secret', secret);
+                    fetch(`/api/posts/${post.id}/delete`, {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(response => {
+                            if (response.ok) {
+                                loadPosts();
+                            } else {
+                                alert('権限がありません（パスワード、またはなまえが違います）。');
+                            }
+                        });
+                }
+            };
+
+            actionsDiv.appendChild(replyBtn);
+            actionsDiv.appendChild(likeBtn);
+            actionsDiv.appendChild(editBtn);
+            actionsDiv.appendChild(deleteBtn);
+
+            div.appendChild(headerDiv);
+            div.appendChild(contentDiv);
+            div.appendChild(actionsDiv);
+            containerDiv.appendChild(div);
+
+            // Render nested replies
+            if (post.replies && post.replies.length > 0) {
+                const repliesContainer = document.createElement('div');
+                repliesContainer.className = 'replies-group';
+                post.replies.forEach(reply => {
+                    renderPost(reply, repliesContainer, true);
+                });
+                containerDiv.appendChild(repliesContainer);
+            }
+        }
+
         function loadPosts() {
             fetch('/api/posts')
                 .then(response => response.json())
@@ -412,95 +609,7 @@
                     const postsDiv = document.getElementById('posts');
                     postsDiv.innerHTML = '';
                     data.posts.forEach((post) => {
-                        const div = document.createElement('div');
-                        div.className = 'post';
-
-                        const headerDiv = document.createElement('div');
-                        headerDiv.className = 'post-header';
-
-                        const authorDiv = document.createElement('div');
-                        authorDiv.className = 'post-author';
-                        authorDiv.innerText = post.author || '名無し';
-
-                        const dateDiv = document.createElement('div');
-                        dateDiv.className = 'post-date';
-                        // Format date to a cleaner layout (e.g. 2026-02-28 22:40)
-                        const wStr = post.weather ? `  ${post.weather}` : '';
-                        dateDiv.innerText = `${post.created_at ? post.created_at.substring(0, 16) : ''}${wStr}`;
-
-                        headerDiv.appendChild(authorDiv);
-                        headerDiv.appendChild(dateDiv);
-
-                        const contentDiv = document.createElement('div');
-                        // Intentionally using innerHTML to make XSS easier for the lecture
-                        contentDiv.innerHTML = post.content;
-
-                        const actionsDiv = document.createElement('div');
-                        actionsDiv.className = 'post-actions';
-
-                        const likeBtn = document.createElement('button');
-                        likeBtn.className = 'action-button like';
-
-                        // Check if this post was already liked by this browser
-                        const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]');
-                        const isLiked = likedPosts.includes(post.id);
-
-                        likeBtn.innerHTML = isLiked ? `❤️ ${post.likes || 0}` : `🤍 ${post.likes || 0}`;
-
-                        if (isLiked) {
-                            // If already liked, style it as active and disable clicking
-                            likeBtn.style.color = '#ff3b30';
-                            likeBtn.style.cursor = 'default';
-                            likeBtn.title = 'いいね済みです';
-                        } else {
-                            likeBtn.onclick = () => {
-                                fetch(`/api/posts/${post.id}/like`, { method: 'POST' })
-                                    .then(() => {
-                                        // Save to local storage to prevent multiple likes
-                                        likedPosts.push(post.id);
-                                        localStorage.setItem('likedPosts', JSON.stringify(likedPosts));
-                                        loadPosts();
-                                    });
-                            };
-                        }
-
-                        const editBtn = document.createElement('button');
-                        editBtn.className = 'action-button edit';
-                        editBtn.innerHTML = `✏️ 編集`;
-                        editBtn.onclick = () => {
-                            openEditModal(post.id, post.content);
-                        };
-
-                        const deleteBtn = document.createElement('button');
-                        deleteBtn.className = 'action-button delete';
-                        deleteBtn.innerHTML = `🗑️ 削除`;
-                        deleteBtn.onclick = () => {
-                            const secret = prompt('削除するには管理者パスワード、または投稿時に設定した「削除用パスワード」を入力してください:');
-                            if (secret) {
-                                const formData = new FormData();
-                                formData.append('secret', secret);
-                                fetch(`/api/posts/${post.id}/delete`, {
-                                    method: 'POST',
-                                    body: formData
-                                })
-                                    .then(response => {
-                                        if (response.ok) {
-                                            loadPosts();
-                                        } else {
-                                            alert('権限がありません（パスワード、またはなまえが違います）。');
-                                        }
-                                    });
-                            }
-                        };
-
-                        actionsDiv.appendChild(likeBtn);
-                        actionsDiv.appendChild(editBtn);
-                        actionsDiv.appendChild(deleteBtn);
-
-                        div.appendChild(headerDiv);
-                        div.appendChild(contentDiv);
-                        div.appendChild(actionsDiv);
-                        postsDiv.appendChild(div);
+                        renderPost(post, postsDiv);
                     });
                 });
         }
