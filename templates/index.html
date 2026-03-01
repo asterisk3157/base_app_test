@@ -4,10 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Room</title>
+    <title>3v3 Table Hockey</title>
     <!-- Bootstrap CSS CDN -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <!-- Google Fonts: Noto Sans JP -->
@@ -15,10 +14,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 
-    <!-- DOMPurify for XSS Protection -->
+    <!-- DOMPurify & Marked.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.9/purify.min.js"></script>
-    <!-- Marked.js for Markdown parsing -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Socket.IO -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <style>
         body {
@@ -29,9 +32,10 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
+            overflow: hidden;
+            /* Prevent page scrolling, layout is fixed */
         }
 
-        /* Top header */
         header {
             background-color: #2c2d30;
             color: #ffffff;
@@ -41,24 +45,107 @@
             font-weight: 500;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        /* Chat history container */
+        .view {
+            display: none;
+            flex-grow: 1;
+            height: 100%;
+            width: 100%;
+        }
+
+        .view.active {
+            display: flex !important;
+        }
+
+        /* --- Top Page --- */
+        #topView {
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .huge-btn {
+            width: 300px;
+            padding: 20px;
+            font-size: 1.2rem;
+            border-radius: 12px;
+        }
+
+        /* --- Waiting & Game Views (Split Screen) --- */
+        .split-layout {
+            display: flex;
+            flex-direction: row;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .left-panel {
+            flex: 1;
+            border-right: 1px solid #ccc;
+            background: #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #f7f7f8;
+            height: 100%;
+        }
+
+        /* --- Waiting Room Participants --- */
+        .participant-list {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .participant-tag {
+            background: white;
+            border: 1px solid #cbd5e1;
+            border-radius: 20px;
+            padding: 10px 20px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .admin-controls {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #ccc;
+            text-align: center;
+        }
+
+        /* --- Chat History Container --- */
         #posts {
             flex-grow: 1;
             overflow-y: auto;
             padding: 20px;
-            padding-bottom: 30px;
             display: flex;
             flex-direction: column;
             gap: 15px;
         }
 
-        /* Message styling */
         .message-wrapper {
             display: flex;
             flex-direction: column;
-            max-width: 75%;
+            max-width: 85%;
         }
 
         .message-wrapper.my-message {
@@ -72,7 +159,10 @@
         }
 
         .sender-name {
-            font-size: 0.8rem;
+            font-size: calc(0.8rem + 2px);
+            /* UI Fix 1: Larger */
+            font-weight: bold;
+            /* UI Fix 1: Bold */
             color: #666;
             margin-bottom: 4px;
             margin-left: 5px;
@@ -87,16 +177,15 @@
             word-wrap: break-word;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
             position: relative;
+            max-width: 100%;
         }
 
-        /* My messages: Dark grayish */
         .my-message .message-bubble {
             background-color: #3b3c3e;
             color: #ffffff;
             border-bottom-right-radius: 4px;
         }
 
-        /* Other messages: Light gray */
         .other-message .message-bubble {
             background-color: #ffffff;
             color: #333333;
@@ -104,12 +193,9 @@
             border-bottom-left-radius: 4px;
         }
 
-        /* Highlight replies to the current user */
         .reply-to-me {
             border: 2px solid #fbbf24 !important;
-            /* amber-400 */
             background-color: #fefce8 !important;
-            /* yellow-50 */
         }
 
         .message-actions {
@@ -117,7 +203,6 @@
             color: #888;
             display: flex;
             gap: 12px;
-            /* Increased gap as requested */
             margin-top: 4px;
             margin-left: 5px;
             margin-right: 5px;
@@ -133,21 +218,20 @@
             color: #333;
         }
 
-        /* Input Area */
+        /* --- Input Area --- */
         .input-area-container {
             background-color: #f7f7f8;
-            padding: 15px 20px 25px 20px;
+            padding: 10px 20px 20px 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
             width: 100%;
+            border-top: 1px solid #e5e7eb;
         }
 
-        /* Reply Banner */
         #replyBanner {
             display: none;
             width: 100%;
-            max-width: 800px;
             background-color: #e2e8f0;
             color: #334155;
             padding: 8px 15px;
@@ -159,24 +243,6 @@
             border-bottom: none;
         }
 
-        #replyBannerText {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 90%;
-            font-weight: 500;
-        }
-
-        #cancelReplyBtn {
-            cursor: pointer;
-            color: #64748b;
-        }
-
-        #cancelReplyBtn:hover {
-            color: #0f172a;
-        }
-
-        /* Wrapper that holds textarea and button securely */
         .input-wrapper {
             position: relative;
             background-color: #ffffff;
@@ -186,11 +252,9 @@
             display: flex;
             align-items: flex-end;
             width: 100%;
-            max-width: 800px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
 
-        /* Adjust radius if reply banner is active */
         .input-wrapper.reply-active {
             border-top-left-radius: 0;
             border-top-right-radius: 0;
@@ -198,7 +262,6 @@
 
         .input-wrapper:focus-within {
             border-color: #8c8f94;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
         textarea {
@@ -214,7 +277,6 @@
             overflow-y: auto;
         }
 
-        /* Light-blue submit button with white icon */
         .submit-btn {
             background-color: #38bdf8;
             color: #ffffff;
@@ -238,7 +300,6 @@
 
         .submit-btn:disabled {
             background-color: #e5e7eb;
-            color: #9ca3af;
             cursor: not-allowed;
         }
 
@@ -260,10 +321,6 @@
             border-left: 3px solid currentColor;
         }
 
-        .reply-reference:hover {
-            opacity: 1;
-        }
-
         .my-message .reply-reference {
             background: rgba(255, 255, 255, 0.15);
         }
@@ -277,11 +334,25 @@
             color: #bae6fd;
         }
 
-        /* Markdown Styles */
+        /* UI Fix 3: Ensure Markdown Heading sizes don't break bubbles */
+        .message-bubble h1 {
+            font-size: 1.8rem;
+            margin: 10px 0;
+        }
+
+        .message-bubble h2 {
+            font-size: 1.5rem;
+            margin: 8px 0;
+        }
+
+        .message-bubble h3 {
+            font-size: 1.3rem;
+            margin: 6px 0;
+        }
+
         .message-bubble table {
             width: 100%;
             margin-bottom: 1rem;
-            color: inherit;
             border-collapse: collapse;
             background-color: rgba(255, 255, 255, 0.05);
         }
@@ -294,20 +365,6 @@
 
         .message-bubble th {
             background-color: rgba(128, 128, 128, 0.2);
-        }
-
-        .message-bubble blockquote {
-            border-left: 4px solid #888;
-            padding-left: 10px;
-            color: #ccc;
-            margin: 5px 0;
-            background: rgba(0, 0, 0, 0.1);
-        }
-
-        .other-message .message-bubble blockquote {
-            color: #555;
-            background: rgba(0, 0, 0, 0.03);
-            border-left-color: #ccc;
         }
 
         .message-bubble pre {
@@ -330,7 +387,6 @@
             background: rgba(0, 0, 0, 0.3);
         }
 
-        /* Discord-style Spoiler */
         .spoiler {
             background-color: #202225;
             color: transparent;
@@ -339,17 +395,40 @@
             padding: 0 4px;
         }
 
-        .spoiler:hover,
         .spoiler.revealed {
             background-color: rgba(32, 34, 37, 0.1);
             color: inherit;
         }
 
-        /* Table Builder UI */
+        /* UI Fix 2: Table Mode Button Above Form */
+        .mode-toggle-btn {
+            background: transparent;
+            color: #64748b;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px dashed #cbd5e1;
+            border-radius: 20px;
+            padding: 4px 30px;
+            width: 100%;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .mode-toggle-btn:hover,
+        .mode-toggle-btn.active {
+            color: #38bdf8;
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.05);
+        }
+
         #tableBuilderPanel {
             display: none;
             width: 100%;
-            max-width: 800px;
             background-color: #fff;
             border: 1px solid #d1d5db;
             border-radius: 12px;
@@ -396,84 +475,675 @@
             padding: 4px;
         }
 
-        .table-controls button {
-            padding: 4px 12px;
-            background: #38bdf8;
+        /* --- Game Screen UI Elements --- */
+        #gameCanvasContainer {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        #gameOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+            width: 100%;
+        }
+
+        .team-score {
+            display: flex;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 30px;
+            align-items: center;
+        }
+
+        .team-score span {
+            color: white;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .score-circle {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .score-circle.filled-t1 {
+            background: #ef4444;
+            border-color: #ef4444;
+        }
+
+        /* Red */
+        .score-circle.filled-t2 {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+
+        /* Blue */
+
+        .center-msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            pointer-events: auto;
+            /* Allow clicking buttons */
+            text-align: center;
+        }
+
+        .ready-btn {
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            border-radius: 30px;
+            background: #22c55e;
             color: white;
             border: none;
-            border-radius: 4px;
-        }
-
-        .mode-toggle-btn {
-            background: transparent;
-            border: none;
-            color: #64748b;
-            font-size: 1.4rem;
             cursor: pointer;
-            padding: 5px;
-            margin-right: 5px;
-            transition: color 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }
 
-        .mode-toggle-btn:hover,
-        .mode-toggle-btn.active {
-            color: #38bdf8;
+        .ready-btn:hover {
+            background: #16a34a;
         }
     </style>
 </head>
 
 <body>
     <header>
-        チームチャット
+        <div id="headerTitle">チームチャット & テーブルホッケー</div>
+        <div id="headerRoomInfo" style="font-size: 0.9rem; color: #a1a1aa;"></div>
     </header>
 
-    <div id="posts">
-        <!-- Posts will be loaded here via JS -->
-    </div>
+    <!-- VIEWS CONTAINER -->
+    <div id="appContainer" style="flex-grow: 1; display: flex; overflow: hidden;">
 
-    <div class="input-area-container">
-        <!-- Reply Banner -->
-        <div id="replyBanner">
-            <div id="replyBannerText"></div>
-            <i class="bi bi-x-circle-fill" id="cancelReplyBtn" onclick="cancelReply()"></i>
+        <!-- 1. TOP PAGE -->
+        <div id="topView" class="view active">
+            <h1 style="font-weight: 700; color: #334155; margin-bottom: 40px;">3v3 Table Hockey</h1>
+
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <button class="btn btn-primary huge-btn" onclick="createRoomPrompt()">ルームを作成</button>
+                <div style="text-align: center; font-weight: 500; color: #64748b;">または</div>
+                <div id="roomListContainer"
+                    style="width: 300px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Room list injected here -->
+                </div>
+            </div>
         </div>
 
-        <!-- Table Builder Panel -->
-        <div id="tableBuilderPanel">
-            <div class="table-controls">
-                <label>行: <input type="number" id="tblRows" value="3" min="1" max="20"></label>
-                <label>列: <input type="number" id="tblCols" value="3" min="1" max="10"></label>
-                <button type="button" onclick="generateTableGrid()">グリッド生成</button>
+        <!-- 2. WAITING ROOM / GAME SCREEN (Split Layout) -->
+        <div id="gameView" class="view split-layout">
+            <!-- Left Panel: Waiting List OR Three.js Game -->
+            <div class="left-panel">
+
+                <!-- Waiting State Container -->
+                <div id="waitingStateContainer" style="display: flex; flex-direction: column; height: 100%;">
+                    <h3 style="padding: 20px 20px 0 20px; margin: 0; color: #334155;">待機中のプレイヤー</h3>
+                    <div id="participantList" class="participant-list">
+                        <!-- tags injected here -->
+                    </div>
+                    <div id="adminControls" class="admin-controls" style="display: none;">
+                        <button class="btn btn-success" id="startGameBtn"
+                            style="width: 100%; padding: 15px; font-size: 1.2rem; font-weight: bold;"
+                            onclick="startGame()">ゲーム開始</button>
+                        <small class="text-muted d-block mt-2">※2人以上で開始可能</small>
+                    </div>
+                </div>
+
+                <!-- Playing State Container -->
+                <div id="playingStateContainer" style="display: none; height: 100%; width: 100%;">
+                    <div id="gameCanvasContainer"></div>
+                    <div id="gameOverlay">
+                        <div class="score-board">
+                            <!-- Team 1 Score (Red) -->
+                            <div class="team-score">
+                                <span>Team Red</span>
+                                <div class="score-circle" id="t1-p1"></div>
+                                <div class="score-circle" id="t1-p2"></div>
+                                <div class="score-circle" id="t1-p3"></div>
+                            </div>
+                            <!-- Team 2 Score (Blue) -->
+                            <div class="team-score">
+                                <div class="score-circle" id="t2-p1"></div>
+                                <div class="score-circle" id="t2-p2"></div>
+                                <div class="score-circle" id="t2-p3"></div>
+                                <span>Team Blue</span>
+                            </div>
+                        </div>
+
+                        <div class="center-msg" id="centerMsg">
+                            <button id="readyBtn" class="ready-btn" onclick="markReady()">準備OK</button>
+                            <div id="countdownMsg" style="display: none; font-size: 5rem;">3</div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
-            <div class="table-grid" id="tableGridContainer"></div>
+
+            <!-- Right Panel: Chat -->
+            <div class="right-panel">
+                <div id="chatHeader"
+                    style="background: rgba(0,0,0,0.05); padding: 10px 20px; border-bottom: 1px solid #e5e5e5; font-weight: bold; color: #555;">
+                    全体チャット (待機ルーム)
+                </div>
+                <div id="posts">
+                    <!-- Posts will be loaded here via JS -->
+                </div>
+
+                <div class="input-area-container">
+                    <button type="button" id="toggleTableModeBtn" class="mode-toggle-btn" title="表モード"
+                        onclick="toggleTableMode()">
+                        <i class="bi bi-table"></i> 表を作成する
+                    </button>
+
+                    <!-- Reply Banner -->
+                    <div id="replyBanner">
+                        <div id="replyBannerText"></div>
+                        <i class="bi bi-x-circle-fill" id="cancelReplyBtn" onclick="cancelReply()"></i>
+                    </div>
+
+                    <!-- Table Builder Panel -->
+                    <div id="tableBuilderPanel">
+                        <div class="table-controls">
+                            <label>行: <input type="number" id="tblRows" value="3" min="1" max="20"></label>
+                            <label>列: <input type="number" id="tblCols" value="3" min="1" max="10"></label>
+                            <button type="button" onclick="generateTableGrid()">グリッド生成</button>
+                        </div>
+                        <div class="table-grid" id="tableGridContainer"></div>
+                    </div>
+
+                    <form id="postForm" class="w-100 d-flex justify-content-center m-0 align-items-end">
+                        <div class="input-wrapper flex-grow-1" id="inputWrapper">
+                            <input type="hidden" id="replyToId" value="">
+                            <textarea name="content" id="content" placeholder="メッセージを入力... (Markdown対応)" rows="1"
+                                required></textarea>
+                            <button type="submit" id="submitBtn" class="submit-btn" disabled>
+                                <i class="bi bi-arrow-up-short"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
 
-        <form id="postForm" class="w-100 d-flex justify-content-center m-0 align-items-end">
-            <button type="button" id="toggleTableModeBtn" class="mode-toggle-btn" title="表モード"
-                onclick="toggleTableMode()">
-                <i class="bi bi-table"></i>
-            </button>
-            <div class="input-wrapper flex-grow-1" id="inputWrapper">
-                <input type="hidden" id="replyToId" value="">
-                <textarea name="content" id="content" placeholder="メッセージを入力... (Markdown対応)" rows="1"
-                    required></textarea>
-                <button type="submit" id="submitBtn" class="submit-btn" disabled>
-                    <i class="bi bi-arrow-up-short"></i>
-                </button>
-            </div>
-        </form>
     </div>
 
     <script>
-        // Prompt for username on load
+        // --- Global State ---
+        const socket = io();
         let currentUsername = localStorage.getItem('chatUsername');
-        if (!currentUsername) {
-            currentUsername = prompt("チャットへようこそ！ユーザー名を入力してください:");
-            if (!currentUsername || currentUsername.trim() === "") {
-                currentUsername = "Anonymous";
-            }
-            localStorage.setItem('chatUsername', currentUsername.trim());
+        let currentRoomId = null;
+        let currentTeamId = null;
+        let roomAdmin = null;
+        let roomState = 'waiting';
+        let isSocketConnected = false;
+        let playersState = []; // [{username, team_id, is_ready}]
+
+        socket.on('connect', () => { isSocketConnected = true; loadRooms(); });
+
+        // --- Navigation & Core App Logic ---
+        function switchView(viewId) {
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
         }
+
+        function requireUsername() {
+            if (!currentUsername) {
+                let name = prompt("ユーザー名を入力してください:");
+                if (!name || name.trim() === "") name = "Anon" + Math.floor(Math.random() * 1000);
+                currentUsername = name.trim();
+                localStorage.setItem('chatUsername', currentUsername);
+            }
+        }
+
+        function loadRooms() {
+            if (document.getElementById('topView').classList.contains('active')) {
+                fetch('/api/rooms').then(r => r.json()).then(data => {
+                    const c = document.getElementById('roomListContainer');
+                    c.innerHTML = '';
+                    if (data.rooms.length === 0) {
+                        c.innerHTML = '<div style="color:#94a3b8; text-align:center;">現在ルームはありません</div>';
+                        return;
+                    }
+                    data.rooms.forEach(r => {
+                        const btn = document.createElement('button');
+                        btn.className = 'btn btn-outline-secondary';
+                        btn.textContent = `${r.name} (${r.user_count}/6人)`;
+                        btn.onclick = () => joinRoom(r.id);
+                        c.appendChild(btn);
+                    });
+                });
+            }
+        }
+
+        // Polling rooms list lightly
+        setInterval(loadRooms, 3000);
+
+        function createRoomPrompt() {
+            requireUsername();
+            const rname = prompt("ルーム名を入力してください:");
+            if (!rname) return;
+
+            fetch('/api/create_room', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ room_name: rname, username: currentUsername })
+            }).then(r => r.json()).then(data => {
+                if (data.status === 'success') {
+                    joinRoom(data.room_id);
+                }
+            });
+        }
+
+        function joinRoom(id) {
+            requireUsername();
+            currentRoomId = id;
+            socket.emit('join_room', { room_id: id, username: currentUsername });
+            switchView('gameView');
+        }
+
+        // --- Socket Event Listeners ---
+        socket.on('room_update', (data) => {
+            if (!data.room) return;
+            const room = data.room;
+            const users = data.users;
+            playersState = users;
+
+            document.getElementById('headerRoomInfo').textContent = `Room: ${room.name} | ID: ${room.id}`;
+            roomAdmin = room.admin;
+
+            // Update my state
+            const me = users.find(u => u.username === currentUsername);
+            if (me) currentTeamId = me.team_id;
+
+            if (room.status === 'waiting') {
+                document.getElementById('waitingStateContainer').style.display = 'flex';
+                document.getElementById('playingStateContainer').style.display = 'none';
+                document.getElementById('chatHeader').textContent = '全体チャット (待機ルーム)';
+                document.getElementById('chatHeader').style.color = '#555';
+
+                // Build waiting list
+                const pl = document.getElementById('participantList');
+                pl.innerHTML = '';
+                users.forEach(u => {
+                    const div = document.createElement('div');
+                    div.className = 'participant-tag';
+                    div.innerHTML = `<span>${u.username}</span> ${u.username === room.admin ? '👑' : ''}`;
+                    pl.appendChild(div);
+                });
+
+                // Admin controls
+                if (currentUsername === room.admin) {
+                    document.getElementById('adminControls').style.display = 'block';
+                    document.getElementById('startGameBtn').disabled = users.length < 2;
+                } else {
+                    document.getElementById('adminControls').style.display = 'none';
+                }
+            }
+            else if (room.status === 'playing' || room.status === 'finished') {
+                document.getElementById('waitingStateContainer').style.display = 'none';
+                document.getElementById('playingStateContainer').style.display = 'block';
+
+                const teamColor = currentTeamId === 1 ? '#ef4444' : '#3b82f6';
+                const teamName = currentTeamId === 1 ? 'Red' : 'Blue';
+                document.getElementById('chatHeader').textContent = `チームチャット (${teamName})`;
+                document.getElementById('chatHeader').style.color = teamColor;
+
+                updateScoreCircles(room.team1_score, room.team2_score);
+
+                // Ready button logic
+                const isReady = me && me.is_ready;
+                document.getElementById('readyBtn').style.display = isReady ? 'none' : 'block';
+                document.getElementById('readyBtn').textContent = isReady ? '待機中...' : '準備OK';
+                if (isReady) document.getElementById('readyBtn').style.display = 'block'; // Keep it visible to show state
+
+                if (room.status === 'finished' && !document.getElementById('countdownMsg').textContent.includes('Win')) {
+                    document.getElementById('readyBtn').style.display = 'none';
+                    document.getElementById('countdownMsg').style.display = 'block';
+                    document.getElementById('countdownMsg').textContent = `${room.team1_score >= 3 ? 'Red' : 'Blue'} Team Wins!`;
+                    setTimeout(() => { window.location.reload(); }, 5000);
+                }
+            }
+        });
+
+        socket.on('game_started', (data) => {
+            // Clear global chat locally
+            document.getElementById('posts').innerHTML = '';
+            socket.emit('join_room', { room_id: currentRoomId, username: currentUsername }); // Re-trigger room sync
+            if (!threeSceneInitialized) initThreeJsGame();
+        });
+
+        socket.on('all_ready', (data) => {
+            document.getElementById('readyBtn').style.display = 'none';
+            const msg = document.getElementById('countdownMsg');
+            msg.style.display = 'block';
+            resetPuck();
+
+            let c = data.countdown;
+            msg.textContent = c;
+            const iv = setInterval(() => {
+                c--;
+                if (c > 0) {
+                    msg.textContent = c;
+                } else if (c === 0) {
+                    msg.textContent = "START!";
+                    isGameRunning = true;
+                } else {
+                    msg.style.display = 'none';
+                    clearInterval(iv);
+                }
+            }, 1000);
+        });
+
+        socket.on('new_message', () => { if (currentRoomId) loadPosts(); });
+
+        socket.on('goal_event', (data) => {
+            isGameRunning = false;
+            document.getElementById('readyBtn').style.display = 'block';
+            document.getElementById('readyBtn').textContent = '準備OK';
+
+            const msg = document.getElementById('countdownMsg');
+            msg.style.display = 'block';
+            msg.textContent = `GOAL! Team ${data.team_scored === 1 ? 'Red' : 'Blue'}`;
+            setTimeout(() => { if (!data.game_over) msg.style.display = 'none'; }, 2000);
+        });
+
+        // --- Admin Commands ---
+        function startGame() { socket.emit('start_game', { room_id: currentRoomId }); }
+        function markReady() {
+            document.getElementById('readyBtn').textContent = '待機中...';
+            socket.emit('player_ready', { room_id: currentRoomId, username: currentUsername });
+        }
+
+        function updateScoreCircles(t1, t2) {
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`t1-p${i}`).classList.toggle('filled-t1', i <= t1);
+                document.getElementById(`t2-p${i}`).classList.toggle('filled-t2', i <= t2);
+            }
+        }
+
+
+        // -----------------------------------------------------------------------------------
+        // ---------------- THREE.JS GAME CLIENT (TABLE HOCKEY) -----------------------------
+        // -----------------------------------------------------------------------------------
+
+        let threeSceneInitialized = false;
+        let isGameRunning = false;
+        let scene, camera, renderer, table, puck;
+        let myRacket, otherRackets = {}; // Map of usernames to meshes
+        let puckVelocity = { x: 0, z: 0 };
+
+        const TABLE_WIDTH = 100;
+        const TABLE_HEIGHT = 50;
+        const RACKET_RADIUS = 3;
+        const PUCK_RADIUS = 2;
+        const GOAL_Y = 15; // Width of goal
+
+        function initThreeJsGame() {
+            threeSceneInitialized = true;
+            const container = document.getElementById('gameCanvasContainer');
+
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1e293b); // Slate 800
+
+            // Camera: Top down, slightly angled towards center
+            const aspect = container.clientWidth / container.clientHeight;
+            camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
+            camera.position.set(0, 60, 20);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
+            dirLight.position.set(0, 50, 0);
+            scene.add(dirLight);
+
+            // Materials
+            const redMat = new THREE.MeshPhongMaterial({ color: 0xef4444 });
+            const blueMat = new THREE.MeshPhongMaterial({ color: 0x3b82f6 });
+            const puckMat = new THREE.MeshPhongMaterial({ color: 0xfacc15 }); // Yellow
+
+            // Table Base
+            const tableGeo = new THREE.BoxGeometry(TABLE_WIDTH, 2, TABLE_HEIGHT);
+            const tableMat = new THREE.MeshPhongMaterial({ color: 0x334155 });
+            table = new THREE.Mesh(tableGeo, tableMat);
+            table.position.y = -1;
+            scene.add(table);
+
+            // Lines/Decorations
+            const lineGeo = new THREE.PlaneGeometry(2, TABLE_HEIGHT);
+            const lineMat = new THREE.MeshBasicMaterial({ color: 0xe2e8f0, side: THREE.DoubleSide });
+            const centerLine = new THREE.Mesh(lineGeo, lineMat);
+            centerLine.rotation.x = -Math.PI / 2;
+            centerLine.position.y = 0.01;
+            scene.add(centerLine);
+
+            // Rackets
+            playersState.forEach(p => {
+                const geo = new THREE.CylinderGeometry(RACKET_RADIUS, RACKET_RADIUS, 2, 32);
+                const mat = p.team_id === 1 ? redMat : blueMat;
+                const r = new THREE.Mesh(geo, mat);
+                r.position.y = 1;
+
+                // Positioning
+                let startX = p.team_id === 1 ? -TABLE_WIDTH / 4 : TABLE_WIDTH / 4;
+                // Spread out vertically if multiple players
+                let zOffset = (Math.random() - 0.5) * 20;
+                if (p.team_id === 1) startX -= Math.random() * 10;
+                else startX += Math.random() * 10;
+
+                r.position.set(startX, 1, zOffset);
+                scene.add(r);
+
+                if (p.username === currentUsername) {
+                    myRacket = r;
+                } else {
+                    otherRackets[p.username] = r;
+                }
+            });
+
+            // Puck
+            const pGeo = new THREE.CylinderGeometry(PUCK_RADIUS, PUCK_RADIUS, 1, 32);
+            puck = new THREE.Mesh(pGeo, puckMat);
+            puck.position.y = 0.5;
+            scene.add(puck);
+
+            // Input Handling (Raycasting)
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            let isDragging = false;
+            const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1);
+
+            container.addEventListener('pointerdown', (e) => {
+                if (!isGameRunning) return;
+                isDragging = true;
+                updateRacketFromMouse(e);
+            });
+
+            container.addEventListener('pointermove', (e) => {
+                if (!isDragging || !isGameRunning) return;
+                updateRacketFromMouse(e);
+            });
+
+            const endDrag = () => { isDragging = false; };
+            container.addEventListener('pointerup', endDrag);
+            container.addEventListener('pointerleave', endDrag);
+
+            function updateRacketFromMouse(e) {
+                const rect = renderer.domElement.getBoundingClientRect();
+                mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = - ((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                const intersectPoint = new THREE.Vector3();
+                raycaster.ray.intersectPlane(dragPlane, intersectPoint);
+
+                if (intersectPoint) {
+                    // Clamp to bounds and team side
+                    let targetX = intersectPoint.x;
+                    let targetZ = intersectPoint.z;
+
+                    targetZ = Math.max(-TABLE_HEIGHT / 2 + RACKET_RADIUS, Math.min(TABLE_HEIGHT / 2 - RACKET_RADIUS, targetZ));
+
+                    if (currentTeamId === 1) {
+                        targetX = Math.max(-TABLE_WIDTH / 2 + RACKET_RADIUS, Math.min(-RACKET_RADIUS, targetX));
+                    } else {
+                        targetX = Math.max(RACKET_RADIUS, Math.min(TABLE_WIDTH / 2 - RACKET_RADIUS, targetX));
+                    }
+
+                    myRacket.position.x = targetX;
+                    myRacket.position.z = targetZ;
+
+                    // Sync Move to Others
+                    socket.emit('player_move', {
+                        room_id: currentRoomId, username: currentUsername, team_id: currentTeamId,
+                        x: myRacket.position.x, z: myRacket.position.z
+                    });
+                }
+            }
+
+            // Resize Event
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            });
+
+            // Loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Remote syncing
+        socket.on('player_moved', (data) => {
+            if (otherRackets[data.username]) {
+                otherRackets[data.username].position.x = data.x;
+                otherRackets[data.username].position.z = data.z;
+            }
+        });
+
+        socket.on('puck_synced', (data) => {
+            // If we are not the admin (host), accept puck state
+            if (currentUsername !== roomAdmin) {
+                puck.position.x = data.x;
+                puck.position.z = data.z;
+                puckVelocity.x = data.vx;
+                puckVelocity.z = data.vz;
+            }
+        });
+
+        function resetPuck() {
+            puck.position.set(0, 0.5, 0);
+            puckVelocity.x = (Math.random() > 0.5 ? 1 : -1) * 0.5;
+            puckVelocity.z = (Math.random() - 0.5) * 0.5;
+        }
+
+        function gameLoop() {
+            requestAnimationFrame(gameLoop);
+            renderer.render(scene, camera);
+
+            if (!isGameRunning) return;
+
+            // --- HOST (Admin) Calculates Physics ---
+            if (currentUsername === roomAdmin) {
+                // Move puck
+                puck.position.x += puckVelocity.x;
+                puck.position.z += puckVelocity.z;
+
+                // Friction
+                puckVelocity.x *= 0.995;
+                puckVelocity.z *= 0.995;
+
+                // Limit speed
+                const speed = Math.sqrt(puckVelocity.x ** 2 + puckVelocity.z ** 2);
+                if (speed > 2.0) {
+                    puckVelocity.x = (puckVelocity.x / speed) * 2.0;
+                    puckVelocity.z = (puckVelocity.z / speed) * 2.0;
+                }
+
+                // Wall Collisions
+                if (puck.position.z > TABLE_HEIGHT / 2 - PUCK_RADIUS || puck.position.z < -TABLE_HEIGHT / 2 + PUCK_RADIUS) {
+                    puckVelocity.z *= -1;
+                }
+
+                // Goal detection or X wall bounce
+                if (puck.position.x > TABLE_WIDTH / 2 - PUCK_RADIUS) {
+                    if (Math.abs(puck.position.z) < GOAL_Y) {
+                        socket.emit('goal_scored', { room_id: currentRoomId, team_scored: 1 });
+                        isGameRunning = false; return;
+                    } else {
+                        puckVelocity.x *= -1;
+                    }
+                } else if (puck.position.x < -TABLE_WIDTH / 2 + PUCK_RADIUS) {
+                    if (Math.abs(puck.position.z) < GOAL_Y) {
+                        socket.emit('goal_scored', { room_id: currentRoomId, team_scored: 2 });
+                        isGameRunning = false; return;
+                    } else {
+                        puckVelocity.x *= -1;
+                    }
+                }
+
+                // Racket Collisions
+                const allRackets = Object.values(otherRackets).concat([myRacket]);
+                for (let r of allRackets) {
+                    const dx = puck.position.x - r.position.x;
+                    const dz = puck.position.z - r.position.z;
+                    const dist2 = dx * dx + dz * dz;
+                    const minDist = RACKET_RADIUS + PUCK_RADIUS;
+
+                    if (dist2 < minDist * minDist) {
+                        const dist = Math.sqrt(dist2);
+                        const nx = dx / dist; const nz = dz / dist;
+                        puckVelocity.x = nx * 1.5;
+                        puckVelocity.z = nz * 1.5;
+                        // Push out to avoid sticking
+                        const overlap = minDist - dist;
+                        puck.position.x += nx * overlap;
+                        puck.position.z += nz * overlap;
+                    }
+                }
+
+                // Sync puck
+                socket.emit('puck_sync', {
+                    room_id: currentRoomId,
+                    x: puck.position.x, z: puck.position.z,
+                    vx: puckVelocity.x, vz: puckVelocity.z
+                });
+            }
+        }
+
+
+        // -----------------------------------------------------------------------------------
+        // ---------------- EXISTING CHAT LOGIC (Adapted for Rooms) -------------------------
+        // -----------------------------------------------------------------------------------
 
         // Auto-resize textarea
         const textarea = document.getElementById('content');
@@ -482,69 +1152,45 @@
         textarea.addEventListener('input', function () {
             this.style.height = 'auto';
             this.style.height = (this.scrollHeight) + 'px';
-
-            if (this.value.trim().length > 0) {
-                submitBtn.removeAttribute('disabled');
-            } else {
-                submitBtn.setAttribute('disabled', 'true');
-            }
+            if (this.value.trim().length > 0) submitBtn.removeAttribute('disabled');
+            else submitBtn.setAttribute('disabled', 'true');
         });
 
         textarea.addEventListener('keydown', function (e) {
-            // Ignore Enter during IME composition (e.g., converting Kanji in Japanese)
             if (e.isComposing) return;
-
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                if (this.value.trim().length > 0) {
-                    document.getElementById('postForm').dispatchEvent(new Event('submit'));
-                }
+                if (this.value.trim().length > 0) document.getElementById('postForm').dispatchEvent(new Event('submit'));
             }
         });
 
-        // Backend Interactions
         function editPost(postId, currentContent) {
             const newContent = prompt("メッセージを編集:", currentContent);
             if (newContent !== null && newContent.trim() !== "" && newContent !== currentContent) {
                 const formData = new FormData();
                 formData.append('content', newContent.trim());
-                formData.append('username', localStorage.getItem('chatUsername'));
-
-                fetch(`/edit/${postId}`, {
-                    method: 'POST',
-                    body: formData
-                }).then(() => {
-                    loadPosts();
-                });
+                formData.append('username', currentUsername);
+                formData.append('room_id', currentRoomId);
+                fetch(`/edit/${postId}`, { method: 'POST', body: formData });
             }
         }
 
         function deletePost(postId) {
             if (confirm("このメッセージを削除してもよろしいですか？")) {
                 const formData = new FormData();
-                formData.append('username', localStorage.getItem('chatUsername'));
-
-                fetch(`/delete/${postId}`, {
-                    method: 'POST',
-                    body: formData
-                }).then(() => {
-                    loadPosts();
-                });
+                formData.append('username', currentUsername);
+                formData.append('room_id', currentRoomId);
+                fetch(`/delete/${postId}`, { method: 'POST', body: formData });
             }
         }
 
-        // Reply Logic
         function setReply(postId, username, contentSnippet) {
             document.getElementById('replyToId').value = postId;
-
-            // Shorten snippet for banner
             const maxLen = 30;
             const shortSnippet = contentSnippet.length > maxLen ? contentSnippet.substring(0, maxLen) + '...' : contentSnippet;
-
             document.getElementById('replyBannerText').textContent = `${username}に返信: ${shortSnippet}`;
             document.getElementById('replyBanner').style.display = 'flex';
             document.getElementById('inputWrapper').classList.add('reply-active');
-
             document.getElementById('content').focus();
         }
 
@@ -555,15 +1201,16 @@
         }
 
         function loadPosts() {
-            fetch('/api/posts')
+            if (!currentRoomId) return; // Don't load posts if not in a room
+
+            const url = `/api/posts?room_id=${currentRoomId}&team_id=${currentTeamId || 0}`;
+            fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     const postsDiv = document.getElementById('posts');
                     const isScrolledToBottom = postsDiv.scrollHeight - postsDiv.clientHeight <= postsDiv.scrollTop + 50;
-
                     postsDiv.innerHTML = '';
 
-                    // Create a lookup for reply fragments
                     const postLookup = {};
                     data.posts.forEach(p => { postLookup[p.id] = p; });
 
@@ -572,7 +1219,7 @@
                         wrapperDiv.className = 'message-wrapper';
                         wrapperDiv.id = `post-${post.id}`;
 
-                        const isMyMessage = post.username === localStorage.getItem('chatUsername');
+                        const isMyMessage = post.username === currentUsername;
                         wrapperDiv.classList.add(isMyMessage ? 'my-message' : 'other-message');
 
                         const nameDiv = document.createElement('div');
@@ -582,39 +1229,26 @@
                         const bubbleDiv = document.createElement('div');
                         bubbleDiv.className = 'message-bubble';
 
-                        // Handle Replies display
                         if (post.reply_to_id && postLookup[post.reply_to_id]) {
                             const refPost = postLookup[post.reply_to_id];
                             const refLink = document.createElement('a');
                             refLink.className = 'reply-reference';
                             refLink.href = `#post-${refPost.id}`;
 
-                            // Shorten snippet for bubble
                             const refSnippet = refPost.content.length > 50 ? refPost.content.substring(0, 50) + '...' : refPost.content;
                             refLink.textContent = `返信元: ${refPost.username} - ${refSnippet}`;
                             bubbleDiv.appendChild(refLink);
 
-                            // Highlight if the reply is TO the CURRENT USER
-                            if (refPost.username === localStorage.getItem('chatUsername') && !isMyMessage) {
+                            if (refPost.username === currentUsername && !isMyMessage) {
                                 bubbleDiv.classList.add('reply-to-me');
                             }
                         }
 
-                        // Parse Markdown & Sanitize
-                        // 1. Pre-process custom discord markdown (e.g., ||spoiler||)
+                        // Markdown parsing
                         let processedContent = post.content.replace(/\|\|(.*?)\|\|/g, '<span class="spoiler" onclick="this.classList.toggle(\'revealed\')">$1</span>');
-
-                        // 2. Configure marked inside our sanitize wrapper
-                        marked.use({
-                            gfm: true,
-                            breaks: true
-                        });
-
-                        // 3. Render and purify
+                        marked.use({ gfm: true, breaks: true });
                         let rawHtml = marked.parse(processedContent);
 
-                        // Add target=_blank to links manually since DOMPurify strips some attributes if not configured, 
-                        // or we configure DOMPurify to allow it.
                         DOMPurify.addHook('afterSanitizeAttributes', function (node) {
                             if ('target' in node) {
                                 node.setAttribute('target', '_blank');
@@ -628,35 +1262,17 @@
                             ADD_ATTR: ['onclick']
                         });
 
-                        // 4. Create a wrapper for this processed content and append to bubble
                         const contentBody = document.createElement('div');
                         contentBody.innerHTML = safeHTML;
-
-                        // Ensure all elements inside inherit the color exactly
                         bubbleDiv.appendChild(contentBody);
 
-                        // Actions and Timestamp under bubble
                         const actionsDiv = document.createElement('div');
                         actionsDiv.className = 'message-actions';
-                        // Removed conditional flex-row-reverse so the order is consistently Time -> Buttons Left-to-Right
-                        if (isMyMessage) {
-                            // If we want it aligned to the right inside its wrapper, we can do justify-content-end
-                            actionsDiv.style.justifyContent = 'flex-end';
-                        }
+                        if (isMyMessage) actionsDiv.style.justifyContent = 'flex-end';
 
                         const timeSpan = document.createElement('span');
                         timeSpan.textContent = post.timestamp || '';
 
-                        // Add span first (on the left if myMessage since it's row-reverse, otherwise right)
-                        // Actually the user requested action buttons order: Reply, Edit, Delete, right of timestamp.
-                        // So DOM order inside the flex container needs to be Time, Reply, Edit, Delete.
-                        // But wait, my-message uses flex-row-reverse. So the DOM order should just be Time, Reply, Edit, Delete
-                        // and we remove flex-row-reverse from actionsDiv, or we handle the ordering so it looks consistent.
-                        // Let's remove flex-row-reverse from actionsDiv above for simplicity and push Time to the left.
-                        // Wait, for my-message, flex-row-reverse puts Time on the right. User said "日付表示の右側に移動" (Move to the right of the date display).
-                        // Let's just remove flex-row-reverse and use regular order for both, saving the reverse effect.
-
-                        // Create buttons
                         const replyBtn = document.createElement('i');
                         replyBtn.className = 'bi bi-reply-fill';
                         replyBtn.title = '返信';
@@ -672,10 +1288,8 @@
                         deleteBtn.title = '削除';
                         if (isMyMessage) deleteBtn.onclick = () => deletePost(post.id);
 
-                        // Layout: Time, Reply, Edit, Delete
                         actionsDiv.appendChild(timeSpan);
                         actionsDiv.appendChild(replyBtn);
-
                         if (isMyMessage) {
                             actionsDiv.appendChild(editBtn);
                             actionsDiv.appendChild(deleteBtn);
@@ -695,7 +1309,6 @@
 
         // --- Table Mode Logic ---
         let isTableMode = false;
-
         function toggleTableMode() {
             isTableMode = !isTableMode;
             const btn = document.getElementById('toggleTableModeBtn');
@@ -704,21 +1317,19 @@
 
             if (isTableMode) {
                 btn.classList.add('active');
+                btn.innerHTML = '<i class="bi bi-x"></i> 表モードを閉じる';
                 panel.style.display = 'flex';
                 textarea.style.display = 'none';
                 textarea.removeAttribute('required');
                 submitBtn.removeAttribute('disabled');
-                if (document.getElementById('tableGridContainer').innerHTML === '') {
-                    generateTableGrid();
-                }
+                if (document.getElementById('tableGridContainer').innerHTML === '') generateTableGrid();
             } else {
                 btn.classList.remove('active');
+                btn.innerHTML = '<i class="bi bi-table"></i> 表を作成する';
                 panel.style.display = 'none';
                 textarea.style.display = 'block';
                 textarea.setAttribute('required', 'true');
-                if (textarea.value.trim().length === 0) {
-                    submitBtn.setAttribute('disabled', 'true');
-                }
+                if (textarea.value.trim().length === 0) submitBtn.setAttribute('disabled', 'true');
             }
         }
 
@@ -726,18 +1337,12 @@
             const rows = parseInt(document.getElementById('tblRows').value) || 3;
             const cols = parseInt(document.getElementById('tblCols').value) || 3;
             const container = document.getElementById('tableGridContainer');
-
-            let html = '<table>';
-            // Header
-            html += '<thead><tr>';
+            let html = '<table><thead><tr>';
             for (let c = 0; c < cols; c++) html += `<th><input type="text" class="tbl-cell" data-row="-1" data-col="${c}" placeholder="見出し ${c + 1}"></th>`;
             html += '</tr></thead><tbody>';
-            // Body
             for (let r = 0; r < rows; r++) {
                 html += '<tr>';
-                for (let c = 0; c < cols; c++) {
-                    html += `<td><input type="text" class="tbl-cell" data-row="${r}" data-col="${c}" placeholder="データ"></td>`;
-                }
+                for (let c = 0; c < cols; c++) html += `<td><input type="text" class="tbl-cell" data-row="${r}" data-col="${c}" placeholder="データ"></td>`;
                 html += '</tr>';
             }
             html += '</tbody></table>';
@@ -746,25 +1351,18 @@
 
         document.getElementById('postForm').addEventListener('submit', function (e) {
             e.preventDefault();
-
             let contentVal = "";
 
             if (isTableMode) {
-                // Construct Markdown Table
                 const rows = parseInt(document.getElementById('tblRows').value) || 0;
                 const cols = parseInt(document.getElementById('tblCols').value) || 0;
-
-                // Headers
-                let headerLine = "|";
-                let sepLine = "|";
+                let headerLine = "|", sepLine = "|";
                 for (let c = 0; c < cols; c++) {
                     const el = document.querySelector(`input.tbl-cell[data-row="-1"][data-col="${c}"]`);
                     headerLine += ` ${el ? el.value.replace(/\|/g, '\\|') : ''} |`;
                     sepLine += "---|";
                 }
                 contentVal += headerLine + "\n" + sepLine + "\n";
-
-                // Body
                 for (let r = 0; r < rows; r++) {
                     let rLine = "|";
                     for (let c = 0; c < cols; c++) {
@@ -777,48 +1375,31 @@
                 contentVal = document.getElementById('content').value.trim();
             }
 
-            if (!contentVal.trim()) return;
+            if (!contentVal.trim() || !currentRoomId) return;
 
             const formData = new FormData();
             formData.append('content', contentVal);
-            formData.append('username', localStorage.getItem('chatUsername'));
+            formData.append('username', currentUsername);
             formData.append('reply_to_id', document.getElementById('replyToId').value);
+            formData.append('room_id', currentRoomId);
+            formData.append('team_id', currentTeamId);
 
-            // Optimistic clearing
             if (!isTableMode) {
                 document.getElementById('content').value = '';
                 document.getElementById('content').style.height = '48px';
                 submitBtn.setAttribute('disabled', 'true');
             } else {
-                // Clear table
                 generateTableGrid();
+                toggleTableMode(); // Close mode implicitly
             }
             cancelReply();
 
-            fetch('/post', {
-                method: 'POST',
-                body: formData
-            }).then(() => {
-                loadPosts();
-                setTimeout(() => {
-                    const postsDiv = document.getElementById('posts');
-                    postsDiv.scrollTop = postsDiv.scrollHeight;
-                }, 100);
-            });
+            fetch('/post', { method: 'POST', body: formData });
+            // Socket broadcast triggers reload locally.
         });
-
-        // Load posts initially and every 2 seconds
-        loadPosts();
-        setInterval(loadPosts, 2000);
-
-        setTimeout(() => {
-            const postsDiv = document.getElementById('posts');
-            postsDiv.scrollTop = postsDiv.scrollHeight;
-        }, 300);
 
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-YvpcrYf0tY3lHB60NNkmxc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
 </body>
 
