@@ -89,7 +89,8 @@
         }
 
         .left-panel {
-            flex: 1;
+            flex: 1.25;
+            /* Narrow chat by making game area larger */
             border-right: 1px solid #ccc;
             background: #e2e8f0;
             display: flex;
@@ -102,8 +103,8 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            background-color: #f7f7f8;
-            height: 100%;
+            background-color: #ffffff;
+            overflow: hidden;
         }
 
         /* --- Waiting Room Participants --- */
@@ -1043,6 +1044,13 @@
             document.getElementById('posts').innerHTML = '';
             socket.emit('join_room', { room_id: currentRoomId, username: currentUsername }); // Re-trigger room sync
             if (!threeSceneInitialized) initThreeJsGame();
+            else {
+                // Force resize to fix hidden canvas bug
+                const container = document.getElementById('gameCanvasContainer');
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            }
         });
 
         socket.on('all_ready', (data) => {
@@ -1071,13 +1079,19 @@
 
         socket.on('goal_event', (data) => {
             isGameRunning = false;
-            document.getElementById('readyBtn').style.display = 'block';
-            document.getElementById('readyBtn').textContent = '準備OK';
-
             const msg = document.getElementById('countdownMsg');
             msg.style.display = 'block';
-            msg.textContent = `GOAL! Team ${data.team_scored === 1 ? 'Red' : 'Blue'}`;
-            setTimeout(() => { if (!data.game_over) msg.style.display = 'none'; }, 2000);
+            msg.textContent = 'GOAL!';
+            msg.style.color = data.team_scored === 1 ? '#ef4444' : '#3b82f6';
+
+            setTimeout(() => {
+                if (!data.game_over) {
+                    msg.style.display = 'none';
+                    msg.style.color = 'white'; // Reset for countdown
+                    document.getElementById('readyBtn').style.display = 'block';
+                    document.getElementById('readyBtn').textContent = '準備OK';
+                }
+            }, 2000);
         });
 
         // --- Admin Commands ---
@@ -1174,8 +1188,11 @@
 
                 if (p.username === currentUsername) {
                     myRacket = r;
+                    // Ensure the material matches the current user's team color
+                    myRacket.material = currentTeamId === 1 ? redMat : blueMat;
                 } else {
                     otherRackets[p.username] = r;
+                    // The mat above already uses p.team_id
                 }
             });
 
