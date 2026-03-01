@@ -59,6 +59,32 @@ def post():
         c.execute('INSERT INTO posts (username, content) VALUES (?, ?)', (username, content))
         conn.commit()
         conn.close()
+        conn.close()
+    return redirect(url_for('index'))
+
+@app.route('/edit/<int:post_id>', methods=['POST'])
+def edit_post(post_id):
+    content = request.form.get('content')
+    username = request.form.get('username')
+    if content and username:
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        # Verify username matches before updating
+        c.execute('UPDATE posts SET content = ? WHERE id = ? AND username = ?', (content, post_id, username))
+        conn.commit()
+        conn.close()
+    return redirect(url_for('index'))
+
+@app.route('/delete/<int:post_id>', methods=['POST'])
+def delete_post(post_id):
+    username = request.form.get('username')
+    if username:
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        # Verify username matches before deleting
+        c.execute('DELETE FROM posts WHERE id = ? AND username = ?', (post_id, username))
+        conn.commit()
+        conn.close()
     return redirect(url_for('index'))
 
 # Initialize DB before starting the server

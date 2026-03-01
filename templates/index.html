@@ -227,6 +227,36 @@
             }
         });
 
+        function editPost(postId, currentContent) {
+            const newContent = prompt("メッセージを編集:", currentContent);
+            if (newContent !== null && newContent.trim() !== "" && newContent !== currentContent) {
+                const formData = new FormData();
+                formData.append('content', newContent.trim());
+                formData.append('username', localStorage.getItem('chatUsername'));
+
+                fetch(`/edit/${postId}`, {
+                    method: 'POST',
+                    body: formData
+                }).then(() => {
+                    loadPosts();
+                });
+            }
+        }
+
+        function deletePost(postId) {
+            if (confirm("このメッセージを削除してもよろしいですか？")) {
+                const formData = new FormData();
+                formData.append('username', localStorage.getItem('chatUsername'));
+
+                fetch(`/delete/${postId}`, {
+                    method: 'POST',
+                    body: formData
+                }).then(() => {
+                    loadPosts();
+                });
+            }
+        }
+
         function loadPosts() {
             fetch('/api/posts')
                 .then(response => response.json())
@@ -246,16 +276,44 @@
                         const isMyMessage = post.username === localStorage.getItem('chatUsername');
                         wrapperDiv.classList.add(isMyMessage ? 'my-message' : 'other-message');
 
-                        const nameDiv = document.createElement('div');
-                        nameDiv.className = 'sender-name';
-                        nameDiv.textContent = post.username;
+                        // Container for name and actions
+                        const headerDiv = document.createElement('div');
+                        headerDiv.className = 'sender-name d-flex justify-content-between align-items-end';
+                        headerDiv.style.width = '100%';
+
+                        const nameSpan = document.createElement('span');
+                        nameSpan.textContent = post.username;
+                        headerDiv.appendChild(nameSpan);
 
                         const bubbleDiv = document.createElement('div');
                         bubbleDiv.className = 'message-bubble';
                         // Fix XSS: use textContent instead of innerHTML
                         bubbleDiv.textContent = post.content;
 
-                        wrapperDiv.appendChild(nameDiv);
+                        if (isMyMessage) {
+                            const actionsDiv = document.createElement('div');
+                            actionsDiv.className = 'd-flex gap-2 mb-1 me-1';
+
+                            const editBtn = document.createElement('i');
+                            editBtn.className = 'bi bi-pencil-fill text-secondary';
+                            editBtn.style.cursor = 'pointer';
+                            editBtn.style.fontSize = '0.75rem';
+                            editBtn.onclick = () => editPost(post.id, post.content);
+
+                            const deleteBtn = document.createElement('i');
+                            deleteBtn.className = 'bi bi-trash3-fill text-danger';
+                            deleteBtn.style.cursor = 'pointer';
+                            deleteBtn.style.fontSize = '0.75rem';
+                            deleteBtn.onclick = () => deletePost(post.id);
+
+                            actionsDiv.appendChild(editBtn);
+                            actionsDiv.appendChild(deleteBtn);
+
+                            // Insert actions above the bubble but next to name
+                            headerDiv.appendChild(actionsDiv);
+                        }
+
+                        wrapperDiv.appendChild(headerDiv);
                         wrapperDiv.appendChild(bubbleDiv);
                         postsDiv.appendChild(wrapperDiv);
                     });
