@@ -249,6 +249,8 @@ def delete_post(post_id):
 
 # ---------------- SOCKET.IO HANDLERS ----------------
 
+sid_to_user = {}
+
 @socketio.on('join_room')
 def handle_join_room(data):
     username = data['username']
@@ -267,7 +269,29 @@ def handle_join_room(data):
     conn.commit()
     conn.close()
     
+    sid_to_user[request.sid] = {'username': username, 'room_id': room_id}
+    
     emit('room_update', fetch_room_state(room_id), to=room_id)
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    user_info = sid_to_user.get(request.sid)
+    if user_info:
+        username = user_info['username']
+        room_id = user_info['room_id']
+        
+        # Remove from users table
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute('DELETE FROM users WHERE username = ? AND room_id = ?', (username, room_id))
+        conn.commit()
+        conn.close()
+        
+        # Cleanup mapping
+        del sid_to_user[request.sid]
+        
+        # Notify room
+        emit('room_update', fetch_room_state(room_id), to=room_id)
 
 @socketio.on('leave_room')
 def handle_leave_room(data):
