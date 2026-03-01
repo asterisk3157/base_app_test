@@ -89,8 +89,8 @@
         }
 
         .left-panel {
-            flex: 1.25;
-            /* Narrow chat by making game area larger */
+            flex: 2;
+            /* Narrow chat further by making game area 2x the chat area */
             border-right: 1px solid #ccc;
             background: #e2e8f0;
             display: flex;
@@ -180,6 +180,7 @@
         /* --- Top Page Specific --- */
         .user-profile-card {
             margin-top: 40px;
+            margin-bottom: 40px;
             padding: 24px;
             background: rgba(255, 255, 255, 0.8);
             backdrop-filter: blur(8px);
@@ -673,7 +674,6 @@
             color: white;
             text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
             pointer-events: auto;
-            /* Allow clicking buttons */
             text-align: center;
         }
 
@@ -690,6 +690,80 @@
 
         .ready-btn:hover {
             background: #16a34a;
+        }
+
+        /* --- Game Result Overlay --- */
+        .result-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: resultFadeIn 0.5s ease;
+        }
+
+        .result-overlay.win {
+            background: radial-gradient(ellipse at center, rgba(34, 197, 94, 0.95), rgba(22, 163, 74, 0.98));
+        }
+
+        .result-overlay.lose {
+            background: radial-gradient(ellipse at center, rgba(51, 65, 85, 0.95), rgba(30, 41, 59, 0.98));
+        }
+
+        .result-overlay h1 {
+            font-size: 4rem;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            margin-bottom: 10px;
+        }
+
+        .result-overlay p {
+            font-size: 1.4rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 30px;
+        }
+
+        .result-overlay .score-display {
+            font-size: 3rem;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 40px;
+            letter-spacing: 5px;
+        }
+
+        .result-overlay button {
+            padding: 15px 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border: 2px solid white;
+            border-radius: 30px;
+            background: transparent;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .result-overlay button:hover {
+            background: white;
+            color: #334155;
+        }
+
+        @keyframes resultFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(1.05);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
     </style>
 </head>
@@ -1017,6 +1091,9 @@
                 document.getElementById('waitingStateContainer').style.display = 'none';
                 document.getElementById('playingStateContainer').style.display = 'block';
 
+                // Defer Three.js init until container is visible and has dimensions
+                ensureThreeJsInit();
+
                 const teamColor = currentTeamId === 1 ? '#ef4444' : '#3b82f6';
                 const teamName = currentTeamId === 1 ? 'Red' : 'Blue';
                 document.getElementById('chatHeader').textContent = `チームチャット (${teamName})`;
@@ -1028,13 +1105,11 @@
                 const isReady = me && me.is_ready;
                 document.getElementById('readyBtn').style.display = isReady ? 'none' : 'block';
                 document.getElementById('readyBtn').textContent = isReady ? '待機中...' : '準備OK';
-                if (isReady) document.getElementById('readyBtn').style.display = 'block'; // Keep it visible to show state
+                if (isReady) document.getElementById('readyBtn').style.display = 'block';
 
-                if (room.status === 'finished' && !document.getElementById('countdownMsg').textContent.includes('Win')) {
+                if (room.status === 'finished') {
                     document.getElementById('readyBtn').style.display = 'none';
-                    document.getElementById('countdownMsg').style.display = 'block';
-                    document.getElementById('countdownMsg').textContent = `${room.team1_score >= 3 ? 'Red' : 'Blue'} Team Wins!`;
-                    setTimeout(() => { window.location.reload(); }, 5000);
+                    showGameResult(room.team1_score, room.team2_score);
                 }
             }
         });
@@ -1043,14 +1118,7 @@
             // Clear global chat locally
             document.getElementById('posts').innerHTML = '';
             socket.emit('join_room', { room_id: currentRoomId, username: currentUsername }); // Re-trigger room sync
-            if (!threeSceneInitialized) initThreeJsGame();
-            else {
-                // Force resize to fix hidden canvas bug
-                const container = document.getElementById('gameCanvasContainer');
-                camera.aspect = container.clientWidth / container.clientHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(container.clientWidth, container.clientHeight);
-            }
+            // The room_update event (triggered by join_room) will handle visibility and Three.js init
         });
 
         socket.on('all_ready', (data) => {
@@ -1115,6 +1183,69 @@
 
         let threeSceneInitialized = false;
         let isGameRunning = false;
+
+        // Robust deferred init: waits until container has real dimensions
+        function ensureThreeJsInit() {
+            const container = document.getElementById('gameCanvasContainer');
+            if (threeSceneInitialized) {
+                // Already initialized, just resize
+                if (camera && renderer && container.clientWidth > 0) {
+                    camera.aspect = container.clientWidth / container.clientHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(container.clientWidth, container.clientHeight);
+                }
+                return;
+            }
+            if (container.clientWidth > 0 && container.clientHeight > 0) {
+                initThreeJsGame();
+            } else {
+                // Container not laid out yet, retry
+                requestAnimationFrame(() => setTimeout(ensureThreeJsInit, 50));
+            }
+        }
+
+        // Show win/loss screen
+        function showGameResult(t1, t2) {
+            // Remove existing result overlay if any
+            const existing = document.querySelector('.result-overlay');
+            if (existing) return;
+
+            const winnerTeam = t1 >= 3 ? 1 : 2;
+            const isWin = currentTeamId === winnerTeam;
+
+            const overlay = document.createElement('div');
+            overlay.className = `result-overlay ${isWin ? 'win' : 'lose'}`;
+            overlay.innerHTML = `
+                <h1>${isWin ? '🏆 VICTORY!' : '💀 DEFEAT...'}</h1>
+                <p>${isWin ? 'おめでとう！あなたのチームが勝利しました！' : '残念…次こそは勝利を掴もう！'}</p>
+                <div class="score-display">${t1} - ${t2}</div>
+                <button onclick="closeResultAndReset()">待機画面に戻る</button>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        function closeResultAndReset() {
+            const overlay = document.querySelector('.result-overlay');
+            if (overlay) overlay.remove();
+
+            // Reset game state
+            threeSceneInitialized = false;
+            isGameRunning = false;
+            const container = document.getElementById('gameCanvasContainer');
+            container.innerHTML = '';
+
+            // Reset back to waiting state
+            document.getElementById('waitingStateContainer').style.display = 'flex';
+            document.getElementById('playingStateContainer').style.display = 'none';
+            document.getElementById('countdownMsg').style.display = 'none';
+            document.getElementById('readyBtn').style.display = 'none';
+
+            // Tell server to reset the room
+            fetch(`/api/reset_room/${currentRoomId}`, { method: 'POST' })
+                .then(() => {
+                    socket.emit('join_room', { room_id: currentRoomId, username: currentUsername });
+                });
+        }
         let scene, camera, renderer, table, puck;
         let myRacket, otherRackets = {}; // Map of usernames to meshes
         let puckVelocity = { x: 0, z: 0 };

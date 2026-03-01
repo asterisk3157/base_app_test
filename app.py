@@ -149,6 +149,19 @@ def join_public():
         return jsonify({'room_id': best_room, 'status': 'success'})
     return jsonify({'error': 'No available public rooms found'}), 404
 
+@app.route('/api/reset_room/<room_id>', methods=['POST'])
+def reset_room(room_id):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute('UPDATE rooms SET status = "waiting", team1_score = 0, team2_score = 0, set_number = 1 WHERE id = ?', (room_id,))
+    c.execute('UPDATE users SET team_id = 0, is_ready = 0 WHERE room_id = ?', (room_id,))
+    # Clear team chat
+    c.execute('DELETE FROM posts WHERE room_id = ? AND team_id > 0', (room_id,))
+    conn.commit()
+    conn.close()
+    socketio.emit('room_update', fetch_room_state(room_id), to=room_id)
+    return jsonify({'status': 'success'})
+
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
     room_id = request.args.get('room_id')
@@ -478,4 +491,4 @@ def fetch_room_state(room_id):
 init_db()
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0', port=5001)
+    socketio.run(app, debug=True, host='0.0.0.0', port=8080)
