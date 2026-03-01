@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
 import os
+from datetime import datetime
 
 app = Flask(__name__)
 DB_NAME = 'database.db'
@@ -9,13 +10,24 @@ def init_db():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     # Check if we need to migrate or just create fresh
-    c.execute('''CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, content TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, 
+        username TEXT, 
+        content TEXT,
+        timestamp TEXT,
+        reply_to_id INTEGER
+    )''')
     
-    # Simple migration strategy: if the table exists but doesn't have username, alter it
+    # Simple migration strategy
     c.execute("PRAGMA table_info(posts)")
     columns = [col[1] for col in c.fetchall()]
+    
     if "username" not in columns:
         c.execute("ALTER TABLE posts ADD COLUMN username TEXT DEFAULT 'Anonymous'")
+    if "timestamp" not in columns:
+        c.execute("ALTER TABLE posts ADD COLUMN timestamp TEXT")
+    if "reply_to_id" not in columns:
+        c.execute("ALTER TABLE posts ADD COLUMN reply_to_id INTEGER")
         
     conn.commit()
     conn.close()
@@ -28,10 +40,6 @@ def index():
 def get_posts():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute('SELECT * FROM posts ORDER BY id DESC')
-    # Row depends on table schema mapping. Assuming: id, username, content
-    # If the default id, content was used, content might be index 1 instead of 2.
-    # It's safer to fetch based on description or just rely on index 1 as username and 2 as content.
     # We will ensure mapping correctly below:
     c.execute('PRAGMA table_info(posts)')
     columns = [col[1] for col in c.fetchall()]
@@ -53,12 +61,22 @@ def get_posts():
 def post():
     content = request.form.get('content')
     username = request.form.get('username') or 'Anonymous'
+    reply_to = request.form.get('reply_to_id')
+    
+    # Format: 2026/03/01/11:14
+    timestamp = datetime.now().strftime('%Y/%m/%d/%H:%M')
+    
+    if reply_to == "":
+        reply_to = None
+
     if content:
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
-        c.execute('INSERT INTO posts (username, content) VALUES (?, ?)', (username, content))
+        c.execute('''
+            INSERT INTO posts (username, content, timestamp, reply_to_id) 
+            VALUES (?, ?, ?, ?)
+        ''', (username, content, timestamp, reply_to))
         conn.commit()
-        conn.close()
         conn.close()
     return redirect(url_for('index'))
 

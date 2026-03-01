@@ -8,13 +8,17 @@
     <!-- Bootstrap CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <!-- Bootstrap Icons (for the arrow) -->
+    <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts: Noto Sans JP -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 
     <style>
         body {
             background-color: #f7f7f8;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Noto Sans JP', sans-serif;
             margin: 0;
             padding: 0;
             display: flex;
@@ -40,7 +44,6 @@
             overflow-y: auto;
             padding: 20px;
             padding-bottom: 30px;
-            /* Space for the bottom input */
             display: flex;
             flex-direction: column;
             gap: 15px;
@@ -78,9 +81,10 @@
             line-height: 1.4;
             word-wrap: break-word;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            position: relative;
         }
 
-        /* My messages: Dark grayish instead of primary/bright color */
+        /* My messages: Dark grayish */
         .my-message .message-bubble {
             background-color: #3b3c3e;
             color: #ffffff;
@@ -95,13 +99,68 @@
             border-bottom-left-radius: 4px;
         }
 
-        /* Bottom input area layout */
+        .message-actions {
+            font-size: 0.75rem;
+            color: #888;
+            display: flex;
+            gap: 12px;
+            /* Increased gap as requested */
+            margin-top: 4px;
+            margin-left: 5px;
+            margin-right: 5px;
+            align-items: center;
+        }
+
+        .message-actions i {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .message-actions i:hover {
+            color: #333;
+        }
+
+        /* Input Area */
         .input-area-container {
             background-color: #f7f7f8;
             padding: 15px 20px 25px 20px;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
             width: 100%;
+        }
+
+        /* Reply Banner */
+        #replyBanner {
+            display: none;
+            width: 100%;
+            max-width: 800px;
+            background-color: #e2e8f0;
+            color: #334155;
+            padding: 8px 15px;
+            border-radius: 12px 12px 0 0;
+            font-size: 0.85rem;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #cbd5e1;
+            border-bottom: none;
+        }
+
+        #replyBannerText {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 90%;
+            font-weight: 500;
+        }
+
+        #cancelReplyBtn {
+            cursor: pointer;
+            color: #64748b;
+        }
+
+        #cancelReplyBtn:hover {
+            color: #0f172a;
         }
 
         /* Wrapper that holds textarea and button securely */
@@ -116,6 +175,12 @@
             width: 100%;
             max-width: 800px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Adjust radius if reply banner is active */
+        .input-wrapper.reply-active {
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
         }
 
         .input-wrapper:focus-within {
@@ -168,6 +233,27 @@
             font-size: 1.6rem;
             margin-top: 2px;
         }
+
+        .reply-reference {
+            background: rgba(0, 0, 0, 0.1);
+            color: inherit;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            margin-bottom: 8px;
+            opacity: 0.9;
+            text-decoration: none;
+            display: block;
+            border-left: 3px solid currentColor;
+        }
+
+        .reply-reference:hover {
+            opacity: 1;
+        }
+
+        .my-message .reply-reference {
+            background: rgba(255, 255, 255, 0.15);
+        }
     </style>
 </head>
 
@@ -181,8 +267,15 @@
     </div>
 
     <div class="input-area-container">
+        <!-- Reply Banner -->
+        <div id="replyBanner">
+            <div id="replyBannerText"></div>
+            <i class="bi bi-x-circle-fill" id="cancelReplyBtn" onclick="cancelReply()"></i>
+        </div>
+
         <form id="postForm" class="w-100 d-flex justify-content-center m-0">
-            <div class="input-wrapper">
+            <div class="input-wrapper" id="inputWrapper">
+                <input type="hidden" id="replyToId" value="">
                 <textarea name="content" id="content" placeholder="メッセージを入力..." rows="1" required></textarea>
                 <button type="submit" id="submitBtn" class="submit-btn" disabled>
                     <i class="bi bi-arrow-up-short"></i>
@@ -192,7 +285,7 @@
     </div>
 
     <script>
-        // 1. Prompt for username on load
+        // Prompt for username on load
         let currentUsername = localStorage.getItem('chatUsername');
         if (!currentUsername) {
             currentUsername = prompt("チャットへようこそ！ユーザー名を入力してください:");
@@ -202,7 +295,7 @@
             localStorage.setItem('chatUsername', currentUsername.trim());
         }
 
-        // Auto-resize textarea and manage submit button state
+        // Auto-resize textarea
         const textarea = document.getElementById('content');
         const submitBtn = document.getElementById('submitBtn');
 
@@ -217,7 +310,6 @@
             }
         });
 
-        // Submit on Enter key (without Shift)
         textarea.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
@@ -227,6 +319,7 @@
             }
         });
 
+        // Backend Interactions
         function editPost(postId, currentContent) {
             const newContent = prompt("メッセージを編集:", currentContent);
             if (newContent !== null && newContent.trim() !== "" && newContent !== currentContent) {
@@ -257,68 +350,112 @@
             }
         }
 
+        // Reply Logic
+        function setReply(postId, username, contentSnippet) {
+            document.getElementById('replyToId').value = postId;
+
+            // Shorten snippet for banner
+            const maxLen = 30;
+            const shortSnippet = contentSnippet.length > maxLen ? contentSnippet.substring(0, maxLen) + '...' : contentSnippet;
+
+            document.getElementById('replyBannerText').textContent = `${username}に返信: ${shortSnippet}`;
+            document.getElementById('replyBanner').style.display = 'flex';
+            document.getElementById('inputWrapper').classList.add('reply-active');
+
+            document.getElementById('content').focus();
+        }
+
+        function cancelReply() {
+            document.getElementById('replyToId').value = '';
+            document.getElementById('replyBanner').style.display = 'none';
+            document.getElementById('inputWrapper').classList.remove('reply-active');
+        }
+
         function loadPosts() {
             fetch('/api/posts')
                 .then(response => response.json())
                 .then(data => {
                     const postsDiv = document.getElementById('posts');
-                    // Store current scroll position to see if we should auto-scroll
                     const isScrolledToBottom = postsDiv.scrollHeight - postsDiv.clientHeight <= postsDiv.scrollTop + 50;
 
                     postsDiv.innerHTML = '';
 
+                    // Create a lookup for reply fragments
+                    const postLookup = {};
+                    data.posts.forEach(p => { postLookup[p.id] = p; });
+
                     data.posts.forEach(post => {
                         const wrapperDiv = document.createElement('div');
                         wrapperDiv.className = 'message-wrapper';
+                        wrapperDiv.id = `post-${post.id}`;
 
-                        // Check if message belongs to current user
-                        // We compare by string in case of slight casing diffs, though strict is better.
                         const isMyMessage = post.username === localStorage.getItem('chatUsername');
                         wrapperDiv.classList.add(isMyMessage ? 'my-message' : 'other-message');
 
-                        // Container for name and actions
-                        const headerDiv = document.createElement('div');
-                        headerDiv.className = 'sender-name d-flex justify-content-between align-items-end';
-                        headerDiv.style.width = '100%';
-
-                        const nameSpan = document.createElement('span');
-                        nameSpan.textContent = post.username;
-                        headerDiv.appendChild(nameSpan);
+                        const nameDiv = document.createElement('div');
+                        nameDiv.className = 'sender-name';
+                        nameDiv.textContent = post.username;
 
                         const bubbleDiv = document.createElement('div');
                         bubbleDiv.className = 'message-bubble';
-                        // Fix XSS: use textContent instead of innerHTML
-                        bubbleDiv.textContent = post.content;
+
+                        // Handle Replies display
+                        if (post.reply_to_id && postLookup[post.reply_to_id]) {
+                            const refPost = postLookup[post.reply_to_id];
+                            const refLink = document.createElement('a');
+                            refLink.className = 'reply-reference';
+                            refLink.href = `#post-${refPost.id}`;
+
+                            // Shorten snippet for bubble
+                            const refSnippet = refPost.content.length > 50 ? refPost.content.substring(0, 50) + '...' : refPost.content;
+                            refLink.textContent = `返信元: ${refPost.username} - ${refSnippet}`;
+                            bubbleDiv.appendChild(refLink);
+                        }
+
+                        // Fix XSS
+                        const contentSpan = document.createElement('span');
+                        contentSpan.textContent = post.content;
+                        bubbleDiv.appendChild(contentSpan);
+
+                        // Actions and Timestamp under bubble
+                        const actionsDiv = document.createElement('div');
+                        actionsDiv.className = 'message-actions';
+                        if (isMyMessage) {
+                            actionsDiv.classList.add('flex-row-reverse');
+                        }
+
+                        const timeSpan = document.createElement('span');
+                        timeSpan.textContent = post.timestamp || '';
+
+                        const replyBtn = document.createElement('i');
+                        replyBtn.className = 'bi bi-reply-fill';
+                        replyBtn.title = '返信';
+                        replyBtn.onclick = () => setReply(post.id, post.username, post.content);
+
+                        actionsDiv.appendChild(timeSpan);
+                        actionsDiv.appendChild(replyBtn);
 
                         if (isMyMessage) {
-                            const actionsDiv = document.createElement('div');
-                            actionsDiv.className = 'd-flex gap-2 mb-1 me-1';
-
                             const editBtn = document.createElement('i');
                             editBtn.className = 'bi bi-pencil-fill text-secondary';
-                            editBtn.style.cursor = 'pointer';
-                            editBtn.style.fontSize = '0.75rem';
+                            editBtn.title = '編集';
                             editBtn.onclick = () => editPost(post.id, post.content);
 
                             const deleteBtn = document.createElement('i');
                             deleteBtn.className = 'bi bi-trash3-fill text-danger';
-                            deleteBtn.style.cursor = 'pointer';
-                            deleteBtn.style.fontSize = '0.75rem';
+                            deleteBtn.title = '削除';
                             deleteBtn.onclick = () => deletePost(post.id);
 
                             actionsDiv.appendChild(editBtn);
                             actionsDiv.appendChild(deleteBtn);
-
-                            // Insert actions above the bubble but next to name
-                            headerDiv.appendChild(actionsDiv);
                         }
 
-                        wrapperDiv.appendChild(headerDiv);
+                        wrapperDiv.appendChild(nameDiv);
                         wrapperDiv.appendChild(bubbleDiv);
+                        wrapperDiv.appendChild(actionsDiv);
                         postsDiv.appendChild(wrapperDiv);
                     });
 
-                    // Scroll to bottom if we were previously at the bottom
                     if (isScrolledToBottom) {
                         postsDiv.scrollTop = postsDiv.scrollHeight;
                     }
@@ -333,18 +470,19 @@
             const formData = new FormData();
             formData.append('content', contentVal);
             formData.append('username', localStorage.getItem('chatUsername'));
+            formData.append('reply_to_id', document.getElementById('replyToId').value);
 
             // Optimistic clearing
             document.getElementById('content').value = '';
-            document.getElementById('content').style.height = '48px'; // Reset to min-height
+            document.getElementById('content').style.height = '48px';
             submitBtn.setAttribute('disabled', 'true');
+            cancelReply();
 
             fetch('/post', {
                 method: 'POST',
                 body: formData
             }).then(() => {
                 loadPosts();
-                // Ensure immediate scroll to bottom after self post
                 setTimeout(() => {
                     const postsDiv = document.getElementById('posts');
                     postsDiv.scrollTop = postsDiv.scrollHeight;
@@ -356,7 +494,6 @@
         loadPosts();
         setInterval(loadPosts, 2000);
 
-        // Initial scroll to bottom
         setTimeout(() => {
             const postsDiv = document.getElementById('posts');
             postsDiv.scrollTop = postsDiv.scrollHeight;
