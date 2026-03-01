@@ -78,7 +78,6 @@
 
         /* --- Waiting & Game Views (Split Screen) --- */
         .split-layout {
-            display: flex;
             flex-direction: row;
             height: 100%;
             width: 100%;
@@ -125,7 +124,38 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
-        .admin-controls {
+        .participant-tag.is-me {
+            background-color: #f0fdfa;
+            /* light teal */
+            border-color: #14b8a6;
+            color: #0f766e;
+        }
+
+        .participant-tag.empty-slot {
+            background-color: transparent;
+            border: 2px dashed #cbd5e1;
+            color: #94a3b8;
+            box-shadow: none;
+            justify-content: center;
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.5;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.5;
+            }
+        }
+
+        .admin-controls,
+        .user-controls {
             padding: 20px;
             background: white;
             border-top: 1px solid #ccc;
@@ -574,7 +604,7 @@
 
 <body>
     <header>
-        <div id="headerTitle">チームチャット & テーブルホッケー</div>
+        <div id="headerTitle"><i class="bi bi-controller"></i> CYBER HOCKEY 3v3</div>
         <div id="headerRoomInfo" style="font-size: 0.9rem; color: #a1a1aa;"></div>
     </header>
 
@@ -587,11 +617,9 @@
 
             <div style="display: flex; flex-direction: column; gap: 15px;">
                 <button class="btn btn-primary huge-btn" onclick="createRoomPrompt()">ルームを作成</button>
-                <div style="text-align: center; font-weight: 500; color: #64748b;">または</div>
-                <div id="roomListContainer"
-                    style="width: 300px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
-                    <!-- Room list injected here -->
-                </div>
+                <div style="text-align: center; font-weight: 500; color: #64748b; margin: 10px 0;">または</div>
+                <button class="btn btn-outline-success huge-btn" onclick="joinPrivateRoom()">プライベートルームに参加</button>
+                <button class="btn btn-outline-secondary huge-btn" onclick="joinPublicRoom()">パブリックルームに参加</button>
             </div>
         </div>
 
@@ -603,14 +631,23 @@
                 <!-- Waiting State Container -->
                 <div id="waitingStateContainer" style="display: flex; flex-direction: column; height: 100%;">
                     <h3 style="padding: 20px 20px 0 20px; margin: 0; color: #334155;">待機中のプレイヤー</h3>
+                    <div style="padding: 5px 20px; color: #64748b; font-size: 0.9rem;" id="waitingRoomIdDisplay"></div>
                     <div id="participantList" class="participant-list">
                         <!-- tags injected here -->
                     </div>
                     <div id="adminControls" class="admin-controls" style="display: none;">
-                        <button class="btn btn-success" id="startGameBtn"
+                        <button class="btn btn-success mb-2" id="startGameBtn"
                             style="width: 100%; padding: 15px; font-size: 1.2rem; font-weight: bold;"
                             onclick="startGame()">ゲーム開始</button>
+                        <button class="btn btn-outline-danger"
+                            style="width: 100%; padding: 10px; font-size: 1rem; font-weight: bold;"
+                            onclick="disbandRoom()">ルームを解散</button>
                         <small class="text-muted d-block mt-2">※2人以上で開始可能</small>
+                    </div>
+                    <div id="userControls" class="user-controls" style="display: none;">
+                        <button class="btn btn-outline-danger"
+                            style="width: 100%; padding: 15px; font-size: 1.1rem; font-weight: bold;"
+                            onclick="leaveRoom()">ルームを退出</button>
                     </div>
                 </div>
 
@@ -648,7 +685,7 @@
             <div class="right-panel">
                 <div id="chatHeader"
                     style="background: rgba(0,0,0,0.05); padding: 10px 20px; border-bottom: 1px solid #e5e5e5; font-weight: bold; color: #555;">
-                    全体チャット (待機ルーム)
+                    待機室チャット
                 </div>
                 <div id="posts">
                     <!-- Posts will be loaded here via JS -->
@@ -703,7 +740,7 @@
         let isSocketConnected = false;
         let playersState = []; // [{username, team_id, is_ready}]
 
-        socket.on('connect', () => { isSocketConnected = true; loadRooms(); });
+        socket.on('connect', () => { isSocketConnected = true; });
 
         // --- Navigation & Core App Logic ---
         function switchView(viewId) {
@@ -720,43 +757,53 @@
             }
         }
 
-        function loadRooms() {
-            if (document.getElementById('topView').classList.contains('active')) {
-                fetch('/api/rooms').then(r => r.json()).then(data => {
-                    const c = document.getElementById('roomListContainer');
-                    c.innerHTML = '';
-                    if (data.rooms.length === 0) {
-                        c.innerHTML = '<div style="color:#94a3b8; text-align:center;">現在ルームはありません</div>';
-                        return;
-                    }
-                    data.rooms.forEach(r => {
-                        const btn = document.createElement('button');
-                        btn.className = 'btn btn-outline-secondary';
-                        btn.textContent = `${r.name} (${r.user_count}/6人)`;
-                        btn.onclick = () => joinRoom(r.id);
-                        c.appendChild(btn);
-                    });
-                });
-            }
-        }
-
-        // Polling rooms list lightly
-        setInterval(loadRooms, 3000);
-
         function createRoomPrompt() {
             requireUsername();
             const rname = prompt("ルーム名を入力してください:");
             if (!rname) return;
 
+            const isPublic = confirm("このルームをパブリック（誰でも参加可能）にしますか？\n「キャンセル」を押すとプライベート（IDを知っている人のみ）になります。");
+
             fetch('/api/create_room', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ room_name: rname, username: currentUsername })
+                body: JSON.stringify({ room_name: rname, username: currentUsername, is_public: isPublic })
             }).then(r => r.json()).then(data => {
                 if (data.status === 'success') {
                     joinRoom(data.room_id);
                 }
             });
+        }
+
+        function joinPrivateRoom() {
+            requireUsername();
+            const rid = prompt("参加するルームIDを入力してください:");
+            if (!rid) return;
+
+            fetch(`/api/check_room/${rid}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.exists && data.status === 'waiting') {
+                        joinRoom(rid);
+                    } else if (data.exists) {
+                        alert("このルームは現在ゲーム中または終了済みです。");
+                    } else {
+                        alert("指定されたIDのルームが見つかりません。");
+                    }
+                }).catch(() => alert("エラーが発生しました。"));
+        }
+
+        function joinPublicRoom() {
+            requireUsername();
+            fetch('/api/join_public')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        joinRoom(data.room_id);
+                    } else {
+                        alert("現在参加可能なパブリックルームがありません。\nお待ち頂くか、ご自身でルームを作成してください。");
+                    }
+                }).catch(() => alert("エラーが発生しました。"));
         }
 
         function joinRoom(id) {
@@ -766,7 +813,34 @@
             switchView('gameView');
         }
 
+        function leaveRoom() {
+            if (!currentRoomId) return;
+            socket.emit('leave_room', { room_id: currentRoomId, username: currentUsername });
+            currentRoomId = null;
+            currentTeamId = null;
+            switchView('topView');
+            // Reload top page rooms if needed
+            // loadRooms(); 
+        }
+
+        function disbandRoom() {
+            if (!currentRoomId || !roomAdmin) return;
+            if (currentUsername !== roomAdmin) return;
+            if (confirm("本当にルームを解散しますか？")) {
+                socket.emit('disband_room', { room_id: currentRoomId, username: currentUsername });
+            }
+        }
+
         // --- Socket Event Listeners ---
+        socket.on('room_disbanded', (data) => {
+            if (currentRoomId === data.room_id) {
+                alert("ルームが解散されました。");
+                currentRoomId = null;
+                currentTeamId = null;
+                switchView('topView');
+            }
+        });
+
         socket.on('room_update', (data) => {
             if (!data.room) return;
             const room = data.room;
@@ -774,6 +848,7 @@
             playersState = users;
 
             document.getElementById('headerRoomInfo').textContent = `Room: ${room.name} | ID: ${room.id}`;
+            document.getElementById('waitingRoomIdDisplay').textContent = `ルームID: ${room.id} (${room.is_public ? 'パブリック' : 'プライベート'})`;
             roomAdmin = room.admin;
 
             // Update my state
@@ -783,25 +858,36 @@
             if (room.status === 'waiting') {
                 document.getElementById('waitingStateContainer').style.display = 'flex';
                 document.getElementById('playingStateContainer').style.display = 'none';
-                document.getElementById('chatHeader').textContent = '全体チャット (待機ルーム)';
+                document.getElementById('chatHeader').textContent = '待機室チャット';
                 document.getElementById('chatHeader').style.color = '#555';
 
                 // Build waiting list
                 const pl = document.getElementById('participantList');
                 pl.innerHTML = '';
-                users.forEach(u => {
+                for (let i = 0; i < 6; i++) {
                     const div = document.createElement('div');
-                    div.className = 'participant-tag';
-                    div.innerHTML = `<span>${u.username}</span> ${u.username === room.admin ? '👑' : ''}`;
+                    if (i < users.length) {
+                        const u = users[i];
+                        div.className = 'participant-tag';
+                        if (u.username === currentUsername) {
+                            div.classList.add('is-me');
+                        }
+                        div.innerHTML = `<span>${u.username} ${u.username === currentUsername ? '<small>(あなた)</small>' : ''}</span> ${u.username === room.admin ? '👑' : ''}`;
+                    } else {
+                        div.className = 'participant-tag empty-slot';
+                        div.innerHTML = `<span>Waiting...</span>`;
+                    }
                     pl.appendChild(div);
-                });
+                }
 
-                // Admin controls
+                // Controls visibility
                 if (currentUsername === room.admin) {
                     document.getElementById('adminControls').style.display = 'block';
+                    document.getElementById('userControls').style.display = 'none';
                     document.getElementById('startGameBtn').disabled = users.length < 2;
                 } else {
                     document.getElementById('adminControls').style.display = 'none';
+                    document.getElementById('userControls').style.display = 'block';
                 }
             }
             else if (room.status === 'playing' || room.status === 'finished') {

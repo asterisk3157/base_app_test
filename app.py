@@ -31,6 +31,7 @@ def init_db():
         name TEXT,
         status TEXT,
         admin_username TEXT,
+        is_public BOOLEAN DEFAULT 0,
         set_number INTEGER DEFAULT 1,
         team1_score INTEGER DEFAULT 0,
         team2_score INTEGER DEFAULT 0
@@ -57,6 +58,11 @@ def init_db():
         c.execute("ALTER TABLE posts ADD COLUMN room_id TEXT")
     if "team_id" not in columns:
         c.execute("ALTER TABLE posts ADD COLUMN team_id INTEGER")
+        
+    c.execute("PRAGMA table_info(rooms)")
+    rooms_cols = [col[1] for col in c.fetchall()]
+    if "is_public" not in rooms_cols:
+        c.execute("ALTER TABLE rooms ADD COLUMN is_public BOOLEAN DEFAULT 0")
         
     conn.commit()
     conn.close()
@@ -93,17 +99,55 @@ def create_room():
     data = request.json
     room_name = data.get('room_name')
     username = data.get('username')
+    is_public = data.get('is_public', False)
     
     room_id = str(uuid.uuid4())[:8] # Short UUID
     
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute("INSERT INTO rooms (id, name, status, admin_username) VALUES (?, ?, 'waiting', ?)", 
-              (room_id, room_name, username))
+    c.execute("INSERT INTO rooms (id, name, status, admin_username, is_public) VALUES (?, ?, 'waiting', ?, ?)", 
+              (room_id, room_name, username, is_public))
     conn.commit()
     conn.close()
     
     return jsonify({'room_id': room_id, 'status': 'success'})
+
+@app.route('/api/check_room/<room_id>', methods=['GET'])
+def check_room(room_id):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute('SELECT id, status FROM rooms WHERE id = ?', (room_id,))
+    room = c.fetchone()
+    conn.close()
+    
+    if room:
+        return jsonify({'exists': True, 'status': room[1]})
+    return jsonify({'exists': False}), 404
+
+@app.route('/api/join_public', methods=['GET'])
+def join_public():
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    # Find public rooms that are still waiting
+    c.execute('SELECT id FROM rooms WHERE is_public = 1 AND status = "waiting"')
+    rooms = c.fetchall()
+    
+    best_room = None
+    most_users = -1
+    
+    for r in rooms:
+        r_id = r[0]
+        c.execute('SELECT COUNT(*) FROM users WHERE room_id = ?', (r_id,))
+        count = c.fetchone()[0]
+        if count < 6 and count > most_users:
+            most_users = count
+            best_room = r_id
+            
+    conn.close()
+    
+    if best_room:
+        return jsonify({'room_id': best_room, 'status': 'success'})
+    return jsonify({'error': 'No available public rooms found'}), 404
 
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
@@ -238,6 +282,22 @@ def handle_leave_room(data):
         conn.close()
         emit('room_update', fetch_room_state(room_id), to=room_id)
 
+@socketio.on('disband_room')
+def handle_disband_room(data):
+    room_id = data.get('room_id')
+    username = data.get('username')
+    
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    # Verify sender is admin
+    c.execute('SELECT admin_username FROM rooms WHERE id = ?', (room_id,))
+    res = c.fetchone()
+    if res and res[0] == username:
+        c.execute('UPDATE rooms SET status = "finished" WHERE id = ?', (room_id,))
+        conn.commit()
+        emit('room_disbanded', {'room_id': room_id}, to=room_id)
+    conn.close()
+
 @socketio.on('start_game')
 def handle_start_game(data):
     room_id = data['room_id']
@@ -361,7 +421,7 @@ def fetch_room_state(room_id):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     
-    c.execute('SELECT id, name, status, admin_username, team1_score, team2_score, set_number FROM rooms WHERE id = ?', (room_id,))
+    c.execute('SELECT id, name, status, admin_username, team1_score, team2_score, set_number, is_public FROM rooms WHERE id = ?', (room_id,))
     r = c.fetchone()
     if not r:
         conn.close()
@@ -374,7 +434,8 @@ def fetch_room_state(room_id):
         'admin': r[3],
         'team1_score': r[4],
         'team2_score': r[5],
-        'set_number': r[6]
+        'set_number': r[6],
+        'is_public': bool(r[7])
     }
     
     c.execute('SELECT username, team_id, is_ready FROM users WHERE room_id = ?', (room_id,))
