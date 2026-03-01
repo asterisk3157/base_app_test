@@ -25,6 +25,10 @@ def init_db():
         c.execute('''ALTER TABLE posts ADD COLUMN delete_password TEXT''')
     except sqlite3.OperationalError:
         pass # Column already exists
+    try:
+        c.execute('''ALTER TABLE posts ADD COLUMN weather TEXT DEFAULT ""''')
+    except sqlite3.OperationalError:
+        pass # Column already exists
     
     # Fix existing rows that may not have generated defaults correctly
     c.execute('''UPDATE posts SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL''')
@@ -40,8 +44,8 @@ def index():
 def get_posts():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute('SELECT id, author, content, datetime(created_at, "localtime"), likes FROM posts ORDER BY id DESC')
-    posts = [{'id': row[0], 'author': row[1], 'content': row[2], 'created_at': row[3], 'likes': row[4] or 0} for row in c.fetchall()]
+    c.execute('SELECT id, author, content, datetime(created_at, "localtime"), likes, weather FROM posts ORDER BY id DESC')
+    posts = [{'id': row[0], 'author': row[1], 'content': row[2], 'created_at': row[3], 'likes': row[4] or 0, 'weather': row[5] or ''} for row in c.fetchall()]
     conn.close()
     return {'posts': posts}
 
@@ -52,6 +56,7 @@ def post():
         author = '名無し'
     content = request.form.get('content')
     delete_password = request.form.get('delete_password', '')
+    weather = request.form.get('weather', '')
     if content:
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
@@ -60,7 +65,7 @@ def post():
         # which might introduce SQLi if not careful. Or we can INTENTIONALLY make this vulnerable later.
         # For base app, we keep it simple but functional.
         # Fixed: explicitly insert the CURRENT_TIMESTAMP for timezone correctness in SQLite.
-        c.execute('INSERT INTO posts (author, content, created_at, delete_password) VALUES (?, ?, CURRENT_TIMESTAMP, ?)', (author, content, delete_password))
+        c.execute('INSERT INTO posts (author, content, created_at, delete_password, weather) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?)', (author, content, delete_password, weather))
         conn.commit()
         conn.close()
     return redirect(url_for('index'))

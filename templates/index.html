@@ -322,7 +322,10 @@
                 <input type="text" name="author" id="author" placeholder="なまえ（省略すると「名無し」になります）">
                 <textarea name="content" id="content" placeholder="今なにしてる？" required></textarea>
                 <input type="text" name="delete_password" id="delete_password" placeholder="削除用パスワード（任意）">
+                <input type="hidden" name="weather" id="weatherInput">
                 <div class="form-actions">
+                    <span id="currentWeatherDisplay"
+                        style="color: #86868b; font-size: 14px; margin-right: auto; align-self: center;">天気情報を取得中...</span>
                     <button type="submit">投稿する</button>
                 </div>
             </form>
@@ -422,7 +425,8 @@
                         const dateDiv = document.createElement('div');
                         dateDiv.className = 'post-date';
                         // Format date to a cleaner layout (e.g. 2026-02-28 22:40)
-                        dateDiv.innerText = post.created_at ? post.created_at.substring(0, 16) : '';
+                        const wStr = post.weather ? `  ${post.weather}` : '';
+                        dateDiv.innerText = `${post.created_at ? post.created_at.substring(0, 16) : ''}${wStr}`;
 
                         headerDiv.appendChild(authorDiv);
                         headerDiv.appendChild(dateDiv);
@@ -500,6 +504,74 @@
                     });
                 });
         }
+
+        // Weather API Integration
+        function parseWeatherCode(code) {
+            if (code === 0) return '☀️ 晴れ';
+            if (code >= 1 && code <= 3) return '⛅️ 曇り';
+            if (code >= 51 && code <= 67) return '☔️ 雨';
+            if (code >= 71 && code <= 77) return '❄️ 雪';
+            if (code >= 80 && code <= 82) return '🌧️ 強い雨';
+            if (code >= 95) return '⚡️ 雷雨';
+            return '☁️ 曇り'; // Default fallback
+        }
+
+        async function fetchWeather() {
+            try {
+                let lat = 35.6895;
+                let lon = 139.6917; // Tokyo default
+                let regionName = '関東'; // Default fallback region
+
+                try {
+                    const pos = await new Promise((resolve, reject) => {
+                        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000 });
+                    });
+                    lat = pos.coords.latitude;
+                    lon = pos.coords.longitude;
+
+                    // Simple Region logic based on Japanese latitudes/longitudes
+                    if (lat >= 41.2) {
+                        regionName = '北海道';
+                    } else if (lat >= 36.8 && lat < 41.2) {
+                        regionName = '東北';
+                    } else if (lat >= 34.8 && lat < 36.8 && lon >= 138.0) {
+                        regionName = '関東';
+                    } else if (lat >= 36.0 && lat < 38.0 && lon < 139.0) {
+                        regionName = '北陸';
+                    } else if (lat >= 34.0 && lat < 36.8 && lon >= 136.0 && lon < 138.0) {
+                        regionName = '中部';
+                    } else if (lat >= 33.0 && lat < 35.8 && lon >= 134.0 && lon < 136.0) {
+                        regionName = '近畿';
+                    } else if (lat >= 33.0 && lat < 35.5 && lon >= 131.0 && lon < 134.0) {
+                        regionName = '中国';
+                    } else if (lat >= 32.5 && lat < 34.5 && lon >= 132.0 && lon < 135.0) {
+                        regionName = '四国';
+                    } else if (lat >= 30.0 && lat < 34.0 && lon >= 128.0 && lon < 132.0) {
+                        regionName = '九州';
+                    } else if (lat < 30.0) {
+                        regionName = '沖縄';
+                    }
+                } catch (e) {
+                    console.log("Geolocation unavailable, defaulting to Kanto/Tokyo weather");
+                }
+
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+                const data = await res.json();
+                const weatherStr = parseWeatherCode(data.current_weather.weathercode);
+                const fullWeatherStr = `${regionName} ${weatherStr}`;
+
+                if (document.getElementById('currentWeatherDisplay')) {
+                    document.getElementById('currentWeatherDisplay').innerText = `現在地: ${fullWeatherStr}`;
+                    document.getElementById('weatherInput').value = fullWeatherStr;
+                }
+            } catch (err) {
+                if (document.getElementById('currentWeatherDisplay')) {
+                    document.getElementById('currentWeatherDisplay').innerText = '';
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchWeather);
 
         document.getElementById('postForm').addEventListener('submit', function (e) {
             e.preventDefault();
