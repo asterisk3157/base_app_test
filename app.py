@@ -8,7 +8,15 @@ DB_NAME = 'database.db'
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT)''')
+    # Check if we need to migrate or just create fresh
+    c.execute('''CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, content TEXT)''')
+    
+    # Simple migration strategy: if the table exists but doesn't have username, alter it
+    c.execute("PRAGMA table_info(posts)")
+    columns = [col[1] for col in c.fetchall()]
+    if "username" not in columns:
+        c.execute("ALTER TABLE posts ADD COLUMN username TEXT DEFAULT 'Anonymous'")
+        
     conn.commit()
     conn.close()
 
@@ -21,21 +29,34 @@ def get_posts():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute('SELECT * FROM posts ORDER BY id DESC')
-    posts = [{'id': row[0], 'content': row[1]} for row in c.fetchall()]
+    # Row depends on table schema mapping. Assuming: id, username, content
+    # If the default id, content was used, content might be index 1 instead of 2.
+    # It's safer to fetch based on description or just rely on index 1 as username and 2 as content.
+    # We will ensure mapping correctly below:
+    c.execute('PRAGMA table_info(posts)')
+    columns = [col[1] for col in c.fetchall()]
+    
+    c.execute('SELECT * FROM posts ORDER BY id ASC') # Oldest to newest for chat layout
+    rows = c.fetchall()
     conn.close()
+    
+    posts = []
+    for row in rows:
+        post_data = {}
+        for idx, col_name in enumerate(columns):
+            post_data[col_name] = row[idx]
+        posts.append(post_data)
+
     return {'posts': posts}
 
 @app.route('/post', methods=['POST'])
 def post():
     content = request.form.get('content')
+    username = request.form.get('username') or 'Anonymous'
     if content:
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
-        # Vulnerability Note: This is currently using parameterized queries (safe), 
-        # but students will likely ask AI to "just make it work" or "fix error",
-        # which might introduce SQLi if not careful. Or we can INTENTIONALLY make this vulnerable later.
-        # For base app, we keep it simple but functional.
-        c.execute('INSERT INTO posts (content) VALUES (?)', (content,))
+        c.execute('INSERT INTO posts (username, content) VALUES (?, ?)', (username, content))
         conn.commit()
         conn.close()
     return redirect(url_for('index'))

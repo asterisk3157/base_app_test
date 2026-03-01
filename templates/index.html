@@ -4,87 +4,306 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Board</title>
+    <title>Chat Room</title>
+    <!-- Bootstrap CSS CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <!-- Bootstrap Icons (for the arrow) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    
     <style>
         body {
-            font-family: sans-serif;
-            max-width: 600px;
-            margin: 0 auto;
+            background-color: #f7f7f8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Top header */
+        header {
+            background-color: #2c2d30;
+            color: #ffffff;
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        /* Chat history container */
+        #posts {
+            flex-grow: 1;
+            overflow-y: auto;
             padding: 20px;
+            padding-bottom: 30px; /* Space for the bottom input */
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
 
-        h1 {
-            border-bottom: 2px solid #333;
+        /* Message styling */
+        .message-wrapper {
+            display: flex;
+            flex-direction: column;
+            max-width: 75%;
         }
 
-        form {
-            margin-bottom: 20px;
+        .message-wrapper.my-message {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .message-wrapper.other-message {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+        .sender-name {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 4px;
+            margin-left: 5px;
+            margin-right: 5px;
+        }
+
+        .message-bubble {
+            padding: 12px 18px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+            word-wrap: break-word;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        /* My messages: Dark grayish instead of primary/bright color */
+        .my-message .message-bubble {
+            background-color: #3b3c3e;
+            color: #ffffff;
+            border-bottom-right-radius: 4px;
+        }
+
+        /* Other messages: Light gray */
+        .other-message .message-bubble {
+            background-color: #ffffff;
+            color: #333333;
+            border: 1px solid #e5e5e5;
+            border-bottom-left-radius: 4px;
+        }
+
+        /* Bottom input area layout */
+        .input-area-container {
+            background-color: #f7f7f8;
+            padding: 15px 20px 25px 20px;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        /* Wrapper that holds textarea and button securely */
+        .input-wrapper {
+            position: relative;
+            background-color: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 24px;
+            padding: 5px 10px;
+            display: flex;
+            align-items: flex-end;
+            width: 100%;
+            max-width: 800px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .input-wrapper:focus-within {
+            border-color: #8c8f94;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
         textarea {
             width: 100%;
-            height: 80px;
-            margin-bottom: 10px;
-        }
-
-        button {
-            padding: 10px 20px;
-            cursor: pointer;
-        }
-
-        .post {
-            border: 1px solid #ccc;
+            border: none;
+            outline: none;
+            resize: none;
             padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
+            font-size: 1rem;
+            background: transparent;
+            max-height: 150px;
+            min-height: 48px;
+            overflow-y: auto;
         }
+
+        /* Light-blue submit button with white icon */
+        .submit-btn {
+            background-color: #38bdf8;
+            color: #ffffff;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-bottom: 6px;
+            margin-right: 4px;
+            transition: background-color 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .submit-btn:hover {
+            background-color: #0ea5e9;
+        }
+
+        .submit-btn:disabled {
+            background-color: #e5e7eb;
+            color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .submit-btn i {
+            font-size: 1.2rem;
+            margin-top: 2px;
+        }
+        
     </style>
 </head>
 
 <body>
-    <h1>ひとこと掲示板</h1>
-    <form id="postForm">
-        <textarea name="content" id="content" placeholder="今なにしてる？" required></textarea>
-        <button type="submit">投稿する</button>
-    </form>
-    <hr>
+    <header>
+        チームチャット
+    </header>
+
     <div id="posts">
         <!-- Posts will be loaded here via JS -->
     </div>
 
+    <div class="input-area-container">
+        <form id="postForm" class="w-100 d-flex justify-content-center m-0">
+            <div class="input-wrapper">
+                <textarea name="content" id="content" placeholder="メッセージを入力..." rows="1" required></textarea>
+                <button type="submit" id="submitBtn" class="submit-btn" disabled>
+                    <i class="bi bi-arrow-up-short"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+
     <script>
+        // 1. Prompt for username on load
+        let currentUsername = localStorage.getItem('chatUsername');
+        if (!currentUsername) {
+            currentUsername = prompt("チャットへようこそ！ユーザー名を入力してください:");
+            if (!currentUsername || currentUsername.trim() === "") {
+                currentUsername = "Anonymous";
+            }
+            localStorage.setItem('chatUsername', currentUsername.trim());
+        }
+
+        // Auto-resize textarea and manage submit button state
+        const textarea = document.getElementById('content');
+        const submitBtn = document.getElementById('submitBtn');
+
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            
+            if (this.value.trim().length > 0) {
+                submitBtn.removeAttribute('disabled');
+            } else {
+                submitBtn.setAttribute('disabled', 'true');
+            }
+        });
+
+        // Submit on Enter key (without Shift)
+        textarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (this.value.trim().length > 0) {
+                    document.getElementById('postForm').dispatchEvent(new Event('submit'));
+                }
+            }
+        });
+
         function loadPosts() {
             fetch('/api/posts')
                 .then(response => response.json())
                 .then(data => {
                     const postsDiv = document.getElementById('posts');
+                    // Store current scroll position to see if we should auto-scroll
+                    const isScrolledToBottom = postsDiv.scrollHeight - postsDiv.clientHeight <= postsDiv.scrollTop + 50;
+                    
                     postsDiv.innerHTML = '';
+                    
                     data.posts.forEach(post => {
-                        const div = document.createElement('div');
-                        div.className = 'post';
-                        // Intentionally using innerHTML to make XSS easier for the lecture
-                        div.innerHTML = post.content;
-                        postsDiv.appendChild(div);
+                        const wrapperDiv = document.createElement('div');
+                        wrapperDiv.className = 'message-wrapper';
+                        
+                        // Check if message belongs to current user
+                        // We compare by string in case of slight casing diffs, though strict is better.
+                        const isMyMessage = post.username === localStorage.getItem('chatUsername');
+                        wrapperDiv.classList.add(isMyMessage ? 'my-message' : 'other-message');
+
+                        const nameDiv = document.createElement('div');
+                        nameDiv.className = 'sender-name';
+                        nameDiv.textContent = post.username;
+                        
+                        const bubbleDiv = document.createElement('div');
+                        bubbleDiv.className = 'message-bubble';
+                        // Intentionally using innerHTML to make XSS easier for the lecture (as per original code)
+                        bubbleDiv.innerHTML = post.content;
+                        
+                        wrapperDiv.appendChild(nameDiv);
+                        wrapperDiv.appendChild(bubbleDiv);
+                        postsDiv.appendChild(wrapperDiv);
                     });
+
+                    // Scroll to bottom if we were previously at the bottom
+                    if (isScrolledToBottom) {
+                        postsDiv.scrollTop = postsDiv.scrollHeight;
+                    }
                 });
         }
 
         document.getElementById('postForm').addEventListener('submit', function (e) {
             e.preventDefault();
-            const formData = new FormData(this);
+            const contentVal = document.getElementById('content').value.trim();
+            if (!contentVal) return;
+
+            const formData = new FormData();
+            formData.append('content', contentVal);
+            formData.append('username', localStorage.getItem('chatUsername'));
+
+            // Optimistic clearing
+            document.getElementById('content').value = '';
+            document.getElementById('content').style.height = 'auto';
+            submitBtn.setAttribute('disabled', 'true');
+
             fetch('/post', {
                 method: 'POST',
                 body: formData
             }).then(() => {
-                document.getElementById('content').value = '';
                 loadPosts();
+                // Ensure immediate scroll to bottom after self post
+                setTimeout(() => {
+                    const postsDiv = document.getElementById('posts');
+                    postsDiv.scrollTop = postsDiv.scrollHeight;
+                }, 100);
             });
         });
 
         // Load posts initially and every 2 seconds
         loadPosts();
         setInterval(loadPosts, 2000);
+        
+        // Initial scroll to bottom
+        setTimeout(() => {
+            const postsDiv = document.getElementById('posts');
+            postsDiv.scrollTop = postsDiv.scrollHeight;
+        }, 300);
+        
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmxc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 </body>
-
 </html>
