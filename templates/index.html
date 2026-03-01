@@ -15,6 +15,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 
+    <!-- DOMPurify for XSS Protection -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.9/purify.min.js"></script>
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
     <style>
         body {
             background-color: #f7f7f8;
@@ -271,6 +276,149 @@
         .my-message .message-bubble a {
             color: #bae6fd;
         }
+
+        /* Markdown Styles */
+        .message-bubble table {
+            width: 100%;
+            margin-bottom: 1rem;
+            color: inherit;
+            border-collapse: collapse;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .message-bubble th,
+        .message-bubble td {
+            border: 1px solid rgba(128, 128, 128, 0.3);
+            padding: 0.5rem;
+        }
+
+        .message-bubble th {
+            background-color: rgba(128, 128, 128, 0.2);
+        }
+
+        .message-bubble blockquote {
+            border-left: 4px solid #888;
+            padding-left: 10px;
+            color: #ccc;
+            margin: 5px 0;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .other-message .message-bubble blockquote {
+            color: #555;
+            background: rgba(0, 0, 0, 0.03);
+            border-left-color: #ccc;
+        }
+
+        .message-bubble pre {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 10px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .message-bubble code {
+            background: rgba(128, 128, 128, 0.2);
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .my-message .message-bubble code {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        /* Discord-style Spoiler */
+        .spoiler {
+            background-color: #202225;
+            color: transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+
+        .spoiler:hover,
+        .spoiler.revealed {
+            background-color: rgba(32, 34, 37, 0.1);
+            color: inherit;
+        }
+
+        /* Table Builder UI */
+        #tableBuilderPanel {
+            display: none;
+            width: 100%;
+            max-width: 800px;
+            background-color: #fff;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .table-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .table-controls input {
+            width: 60px;
+            padding: 4px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .table-grid {
+            overflow-x: auto;
+            border: 1px solid #eee;
+        }
+
+        .table-grid table {
+            width: max-content;
+            border-collapse: collapse;
+        }
+
+        .table-grid td,
+        .table-grid th {
+            padding: 2px;
+            border: 1px solid #ccc;
+        }
+
+        .table-grid input {
+            width: 100px;
+            border: none;
+            outline: none;
+            padding: 4px;
+        }
+
+        .table-controls button {
+            padding: 4px 12px;
+            background: #38bdf8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        .mode-toggle-btn {
+            background: transparent;
+            border: none;
+            color: #64748b;
+            font-size: 1.4rem;
+            cursor: pointer;
+            padding: 5px;
+            margin-right: 5px;
+            transition: color 0.2s;
+        }
+
+        .mode-toggle-btn:hover,
+        .mode-toggle-btn.active {
+            color: #38bdf8;
+        }
     </style>
 </head>
 
@@ -290,10 +438,25 @@
             <i class="bi bi-x-circle-fill" id="cancelReplyBtn" onclick="cancelReply()"></i>
         </div>
 
-        <form id="postForm" class="w-100 d-flex justify-content-center m-0">
-            <div class="input-wrapper" id="inputWrapper">
+        <!-- Table Builder Panel -->
+        <div id="tableBuilderPanel">
+            <div class="table-controls">
+                <label>行: <input type="number" id="tblRows" value="3" min="1" max="20"></label>
+                <label>列: <input type="number" id="tblCols" value="3" min="1" max="10"></label>
+                <button type="button" onclick="generateTableGrid()">グリッド生成</button>
+            </div>
+            <div class="table-grid" id="tableGridContainer"></div>
+        </div>
+
+        <form id="postForm" class="w-100 d-flex justify-content-center m-0 align-items-end">
+            <button type="button" id="toggleTableModeBtn" class="mode-toggle-btn" title="表モード"
+                onclick="toggleTableMode()">
+                <i class="bi bi-table"></i>
+            </button>
+            <div class="input-wrapper flex-grow-1" id="inputWrapper">
                 <input type="hidden" id="replyToId" value="">
-                <textarea name="content" id="content" placeholder="メッセージを入力..." rows="1" required></textarea>
+                <textarea name="content" id="content" placeholder="メッセージを入力... (Markdown対応)" rows="1"
+                    required></textarea>
                 <button type="submit" id="submitBtn" class="submit-btn" disabled>
                     <i class="bi bi-arrow-up-short"></i>
                 </button>
@@ -437,21 +600,39 @@
                             }
                         }
 
-                        // Fix XSS & Auto-link URLs
-                        // 1. Create a dummy element to safely escape user text (prevents HTML injection)
-                        const safeContentDiv = document.createElement('div');
-                        safeContentDiv.textContent = post.content;
-                        let safeHTML = safeContentDiv.innerHTML;
+                        // Parse Markdown & Sanitize
+                        // 1. Pre-process custom discord markdown (e.g., ||spoiler||)
+                        let processedContent = post.content.replace(/\|\|(.*?)\|\|/g, '<span class="spoiler" onclick="this.classList.toggle(\'revealed\')">$1</span>');
 
-                        // 2. Run regex on the safe HTML to convert URLs into real <a> tags
-                        const urlRegex = /(https?:\/\/[^\s]+)/g;
-                        safeHTML = safeHTML.replace(urlRegex, function (url) {
-                            return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+                        // 2. Configure marked inside our sanitize wrapper
+                        marked.use({
+                            gfm: true,
+                            breaks: true
                         });
 
-                        // 3. Create a wrapper for this processed content and append to bubble
-                        const contentBody = document.createElement('span');
+                        // 3. Render and purify
+                        let rawHtml = marked.parse(processedContent);
+
+                        // Add target=_blank to links manually since DOMPurify strips some attributes if not configured, 
+                        // or we configure DOMPurify to allow it.
+                        DOMPurify.addHook('afterSanitizeAttributes', function (node) {
+                            if ('target' in node) {
+                                node.setAttribute('target', '_blank');
+                                node.setAttribute('rel', 'noopener noreferrer');
+                            }
+                        });
+
+                        let safeHTML = DOMPurify.sanitize(rawHtml, {
+                            ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'code', 'pre', 'blockquote', 'span', 'del', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+                            ALLOWED_ATTR: ['href', 'class', 'target', 'rel', 'onclick'],
+                            ADD_ATTR: ['onclick']
+                        });
+
+                        // 4. Create a wrapper for this processed content and append to bubble
+                        const contentBody = document.createElement('div');
                         contentBody.innerHTML = safeHTML;
+
+                        // Ensure all elements inside inherit the color exactly
                         bubbleDiv.appendChild(contentBody);
 
                         // Actions and Timestamp under bubble
@@ -512,10 +693,91 @@
                 });
         }
 
+        // --- Table Mode Logic ---
+        let isTableMode = false;
+
+        function toggleTableMode() {
+            isTableMode = !isTableMode;
+            const btn = document.getElementById('toggleTableModeBtn');
+            const panel = document.getElementById('tableBuilderPanel');
+            const textarea = document.getElementById('content');
+
+            if (isTableMode) {
+                btn.classList.add('active');
+                panel.style.display = 'flex';
+                textarea.style.display = 'none';
+                textarea.removeAttribute('required');
+                submitBtn.removeAttribute('disabled');
+                if (document.getElementById('tableGridContainer').innerHTML === '') {
+                    generateTableGrid();
+                }
+            } else {
+                btn.classList.remove('active');
+                panel.style.display = 'none';
+                textarea.style.display = 'block';
+                textarea.setAttribute('required', 'true');
+                if (textarea.value.trim().length === 0) {
+                    submitBtn.setAttribute('disabled', 'true');
+                }
+            }
+        }
+
+        function generateTableGrid() {
+            const rows = parseInt(document.getElementById('tblRows').value) || 3;
+            const cols = parseInt(document.getElementById('tblCols').value) || 3;
+            const container = document.getElementById('tableGridContainer');
+
+            let html = '<table>';
+            // Header
+            html += '<thead><tr>';
+            for (let c = 0; c < cols; c++) html += `<th><input type="text" class="tbl-cell" data-row="-1" data-col="${c}" placeholder="見出し ${c + 1}"></th>`;
+            html += '</tr></thead><tbody>';
+            // Body
+            for (let r = 0; r < rows; r++) {
+                html += '<tr>';
+                for (let c = 0; c < cols; c++) {
+                    html += `<td><input type="text" class="tbl-cell" data-row="${r}" data-col="${c}" placeholder="データ"></td>`;
+                }
+                html += '</tr>';
+            }
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
         document.getElementById('postForm').addEventListener('submit', function (e) {
             e.preventDefault();
-            const contentVal = document.getElementById('content').value.trim();
-            if (!contentVal) return;
+
+            let contentVal = "";
+
+            if (isTableMode) {
+                // Construct Markdown Table
+                const rows = parseInt(document.getElementById('tblRows').value) || 0;
+                const cols = parseInt(document.getElementById('tblCols').value) || 0;
+
+                // Headers
+                let headerLine = "|";
+                let sepLine = "|";
+                for (let c = 0; c < cols; c++) {
+                    const el = document.querySelector(`input.tbl-cell[data-row="-1"][data-col="${c}"]`);
+                    headerLine += ` ${el ? el.value.replace(/\|/g, '\\|') : ''} |`;
+                    sepLine += "---|";
+                }
+                contentVal += headerLine + "\n" + sepLine + "\n";
+
+                // Body
+                for (let r = 0; r < rows; r++) {
+                    let rLine = "|";
+                    for (let c = 0; c < cols; c++) {
+                        const el = document.querySelector(`input.tbl-cell[data-row="${r}"][data-col="${c}"]`);
+                        rLine += ` ${el ? el.value.replace(/\|/g, '\\|') : ''} |`;
+                    }
+                    contentVal += rLine + "\n";
+                }
+            } else {
+                contentVal = document.getElementById('content').value.trim();
+            }
+
+            if (!contentVal.trim()) return;
 
             const formData = new FormData();
             formData.append('content', contentVal);
@@ -523,9 +785,14 @@
             formData.append('reply_to_id', document.getElementById('replyToId').value);
 
             // Optimistic clearing
-            document.getElementById('content').value = '';
-            document.getElementById('content').style.height = '48px';
-            submitBtn.setAttribute('disabled', 'true');
+            if (!isTableMode) {
+                document.getElementById('content').value = '';
+                document.getElementById('content').style.height = '48px';
+                submitBtn.setAttribute('disabled', 'true');
+            } else {
+                // Clear table
+                generateTableGrid();
+            }
             cancelReply();
 
             fetch('/post', {
