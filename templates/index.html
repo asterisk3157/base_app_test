@@ -6,64 +6,496 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Board</title>
     <style>
+        /* Apple-like Typography & Color Palette (Dark Mode Default) */
+        :root {
+            --bg-color: #000000;
+            --text-color: #f5f5f7;
+            --card-bg: rgba(30, 30, 30, 0.7);
+            --card-border: rgba(255, 255, 255, 0.15);
+            --apple-blue: #0A84FF;
+            /* Apple's dark mode blue accent */
+            --apple-blue-hover: #409CFF;
+            --secondary-text: #86868b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            font-family: sans-serif;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 680px;
         }
 
         h1 {
-            border-bottom: 2px solid #333;
+            font-size: 48px;
+            font-weight: 700;
+            letter-spacing: -0.015em;
+            text-align: center;
+            margin-bottom: 40px;
+            color: var(--text-color);
         }
 
-        form {
-            margin-bottom: 20px;
+        /* Glassmorphism Form Area */
+        .post-form-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+            margin-bottom: 40px;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .post-form-card:focus-within {
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            font-family: inherit;
+            color: var(--text-color);
+            outline: none;
+            margin-bottom: 16px;
+        }
+
+        input[type="text"] {
+            font-size: 16px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 8px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            border-bottom: 1px solid var(--apple-blue);
         }
 
         textarea {
-            width: 100%;
-            height: 80px;
-            margin-bottom: 10px;
+            height: 100px;
+            resize: none;
+            font-size: 18px;
+        }
+
+        input[type="text"]::placeholder,
+        textarea::placeholder {
+            color: var(--secondary-text);
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
         }
 
         button {
-            padding: 10px 20px;
+            background-color: var(--apple-blue);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 980px;
+            /* Fully rounded */
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background-color: var(--apple-blue-hover);
+            transform: scale(1.02);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        /* Posts List Area */
+        #posts {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
 
         .post {
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
+            background: rgba(44, 44, 46, 0.8);
+            border-radius: 16px;
+            padding: 20px 24px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+            font-size: 17px;
+            word-wrap: break-word;
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 8px;
+        }
+
+        .post-author {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--secondary-text);
+        }
+
+        .post-date {
+            font-size: 12px;
+            color: var(--secondary-text);
+            opacity: 0.8;
+        }
+
+        .post-actions {
+            display: flex;
+            gap: 16px;
+            margin-top: 14px;
+            border-top: 1px solid var(--card-border);
+            padding-top: 12px;
+        }
+
+        .action-button {
+            background: transparent;
+            color: var(--secondary-text);
+            border: none;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: color 0.2s ease;
+            padding: 0;
+            border-radius: 0;
+        }
+
+        .action-button:hover {
+            color: var(--text-color);
+            background: transparent;
+            transform: none;
+        }
+
+        .action-button.like:hover:not(:disabled) {
+            color: #ff3b30;
+            /* Apple red */
+        }
+
+        .action-button.edit:hover {
+            color: var(--apple-blue);
+        }
+
+        .action-button.delete:hover {
+            color: #ff3b30;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 36px;
+                margin-bottom: 30px;
+            }
+
+            .post-form-card,
+            .modal-content {
+                padding: 20px;
+            }
+
+            textarea {
+                font-size: 16px;
+            }
+
+            .post {
+                padding: 16px 20px;
+                font-size: 16px;
+            }
+        }
+
+        /* Custom Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 24px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            transform: scale(0.95) translateY(10px);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1) translateY(0);
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .modal-content input[type="password"],
+        .modal-content textarea {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 12px;
+            color: var(--text-color);
+            margin-bottom: 16px;
+            width: 100%;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .modal-content input[type="password"]:focus,
+        .modal-content textarea:focus {
+            border-color: var(--apple-blue);
+        }
+
+        .modal-content textarea {
+            height: 120px;
+            resize: none;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .modal-actions .btn-cancel {
+            background: transparent;
+            color: var(--text-color);
+            border: 1px solid var(--card-border);
+        }
+
+        .modal-actions .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.1);
         }
     </style>
 </head>
 
 <body>
-    <h1>ひとこと掲示板</h1>
-    <form id="postForm">
-        <textarea name="content" id="content" placeholder="今なにしてる？" required></textarea>
-        <button type="submit">投稿する</button>
-    </form>
-    <hr>
-    <div id="posts">
-        <!-- Posts will be loaded here via JS -->
+    <div class="container">
+        <h1>ひとこと掲示板</h1>
+
+        <div class="post-form-card">
+            <form id="postForm">
+                <input type="text" name="author" id="author" placeholder="なまえ（省略すると「名無し」になります）">
+                <textarea name="content" id="content" placeholder="今なにしてる？" required></textarea>
+                <input type="text" name="delete_password" id="delete_password" placeholder="削除用パスワード（任意）">
+                <div class="form-actions">
+                    <button type="submit">投稿する</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="posts">
+            <!-- Posts will be loaded here via JS -->
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">投稿を編集</div>
+            <input type="password" id="editPassword" placeholder="現在の削除用パスワード（必須）">
+            <textarea id="editContentText" placeholder="新しい内容を入力してください"></textarea>
+            <input type="text" id="editNewPassword" placeholder="新しいパスワード（変更する場合のみ入力）">
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeEditModal()">キャンセル</button>
+                <button onclick="submitEdit()">保存</button>
+            </div>
+        </div>
     </div>
 
     <script>
+        let currentEditPostId = null;
+
+        function openEditModal(postId, currentContent) {
+            currentEditPostId = postId;
+            document.getElementById('editContentText').value = currentContent;
+
+            // Security feedback: Do not auto-fill passwords so the user explicitly types it
+            document.getElementById('editPassword').value = '';
+
+            document.getElementById('editNewPassword').value = '';
+            document.getElementById('editModal').classList.add('active');
+
+            document.getElementById('editPassword').focus();
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+            currentEditPostId = null;
+        }
+
+        function submitEdit() {
+            if (!currentEditPostId) return;
+            const secret = document.getElementById('editPassword').value;
+            const newContent = document.getElementById('editContentText').value;
+            const newPassword = document.getElementById('editNewPassword').value;
+
+            if (secret && newContent && newContent.trim() !== "") {
+                const formData = new FormData();
+                formData.append('secret', secret);
+                formData.append('content', newContent);
+                if (newPassword && newPassword.trim() !== "") {
+                    formData.append('new_password', newPassword);
+                }
+                fetch(`/api/posts/${currentEditPostId}/edit`, {
+                    method: 'POST',
+                    body: formData
+                })
+                    .then(response => {
+                        if (response.ok) {
+                            if (newPassword && newPassword.trim() !== "") {
+                                // Update saved password if they changed it successfully
+                                localStorage.setItem('lastPostPassword', newPassword);
+                            }
+                            closeEditModal();
+                            loadPosts();
+                        } else {
+                            alert('権限がありません（パスワードが違います）。');
+                        }
+                    });
+            } else {
+                alert('パスワードと新しい内容を入力してください。');
+            }
+        }
+
         function loadPosts() {
             fetch('/api/posts')
                 .then(response => response.json())
                 .then(data => {
                     const postsDiv = document.getElementById('posts');
                     postsDiv.innerHTML = '';
-                    data.posts.forEach(post => {
+                    data.posts.forEach((post) => {
                         const div = document.createElement('div');
                         div.className = 'post';
+
+                        const headerDiv = document.createElement('div');
+                        headerDiv.className = 'post-header';
+
+                        const authorDiv = document.createElement('div');
+                        authorDiv.className = 'post-author';
+                        authorDiv.innerText = post.author || '名無し';
+
+                        const dateDiv = document.createElement('div');
+                        dateDiv.className = 'post-date';
+                        // Format date to a cleaner layout (e.g. 2026-02-28 22:40)
+                        dateDiv.innerText = post.created_at ? post.created_at.substring(0, 16) : '';
+
+                        headerDiv.appendChild(authorDiv);
+                        headerDiv.appendChild(dateDiv);
+
+                        const contentDiv = document.createElement('div');
                         // Intentionally using innerHTML to make XSS easier for the lecture
-                        div.innerHTML = post.content;
+                        contentDiv.innerHTML = post.content;
+
+                        const actionsDiv = document.createElement('div');
+                        actionsDiv.className = 'post-actions';
+
+                        const likeBtn = document.createElement('button');
+                        likeBtn.className = 'action-button like';
+
+                        // Check if this post was already liked by this browser
+                        const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]');
+                        const isLiked = likedPosts.includes(post.id);
+
+                        likeBtn.innerHTML = isLiked ? `❤️ ${post.likes || 0}` : `🤍 ${post.likes || 0}`;
+
+                        if (isLiked) {
+                            // If already liked, style it as active and disable clicking
+                            likeBtn.style.color = '#ff3b30';
+                            likeBtn.style.cursor = 'default';
+                            likeBtn.title = 'いいね済みです';
+                        } else {
+                            likeBtn.onclick = () => {
+                                fetch(`/api/posts/${post.id}/like`, { method: 'POST' })
+                                    .then(() => {
+                                        // Save to local storage to prevent multiple likes
+                                        likedPosts.push(post.id);
+                                        localStorage.setItem('likedPosts', JSON.stringify(likedPosts));
+                                        loadPosts();
+                                    });
+                            };
+                        }
+
+                        const editBtn = document.createElement('button');
+                        editBtn.className = 'action-button edit';
+                        editBtn.innerHTML = `✏️ 編集`;
+                        editBtn.onclick = () => {
+                            openEditModal(post.id, post.content);
+                        };
+
+                        const deleteBtn = document.createElement('button');
+                        deleteBtn.className = 'action-button delete';
+                        deleteBtn.innerHTML = `🗑️ 削除`;
+                        deleteBtn.onclick = () => {
+                            const secret = prompt('削除するには管理者パスワード、または投稿時に設定した「削除用パスワード」を入力してください:');
+                            if (secret) {
+                                const formData = new FormData();
+                                formData.append('secret', secret);
+                                fetch(`/api/posts/${post.id}/delete`, {
+                                    method: 'POST',
+                                    body: formData
+                                })
+                                    .then(response => {
+                                        if (response.ok) {
+                                            loadPosts();
+                                        } else {
+                                            alert('権限がありません（パスワード、またはなまえが違います）。');
+                                        }
+                                    });
+                            }
+                        };
+
+                        actionsDiv.appendChild(likeBtn);
+                        actionsDiv.appendChild(editBtn);
+                        actionsDiv.appendChild(deleteBtn);
+
+                        div.appendChild(headerDiv);
+                        div.appendChild(contentDiv);
+                        div.appendChild(actionsDiv);
                         postsDiv.appendChild(div);
                     });
                 });
@@ -72,13 +504,37 @@
         document.getElementById('postForm').addEventListener('submit', function (e) {
             e.preventDefault();
             const formData = new FormData(this);
+
+            // Remember the password they used locally
+            const postPass = formData.get('delete_password');
+            if (postPass) {
+                localStorage.setItem('lastPostPassword', postPass);
+            }
+
             fetch('/post', {
                 method: 'POST',
                 body: formData
             }).then(() => {
                 document.getElementById('content').value = '';
-                loadPosts();
+                loadPosts(); // Reload to show the new post
             });
+        });
+
+        // Add Ctrl+Enter or Cmd+Enter shortcut for edit submission
+        document.getElementById('editContentText').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault(); // Prevent default newline
+                submitEdit();
+            }
+        });
+
+        // Add Ctrl+Enter or Cmd+Enter shortcut for submission
+        document.getElementById('content').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault(); // Prevent default newline
+                // Dispatch submit event on the form
+                document.getElementById('postForm').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            }
         });
 
         // Load posts initially and every 2 seconds
