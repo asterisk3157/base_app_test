@@ -478,8 +478,9 @@
                 formData.append('content', content);
                 formData.append('delete_password', deletePassword);
 
-                // Keep weather string empty or fetch it here if strictly needed. For now empty is fine for replies.
-                formData.append('weather', '');
+                // Include weather string the same way as main posts
+                const weatherStr = document.getElementById('weatherInput') ? document.getElementById('weatherInput').value : '';
+                formData.append('weather', weatherStr);
 
                 fetch(`/post`, {
                     method: 'POST',
