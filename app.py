@@ -58,7 +58,8 @@ def get_posts():
         if p['parent_id'] and p['parent_id'] in post_dict:
             # all_posts is newest first, so inserting at 0 makes replies chronological
             post_dict[p['parent_id']]['replies'].insert(0, p)
-        elif not p['parent_id']:
+        else:
+            # If it has no parent, OR its parent is deleted/missing, it becomes a top-level post
             top_level_posts.append(p)
             
     conn.close()
@@ -168,14 +169,16 @@ def delete_post(post_id):
         conn.close()
         return {'status': 'error', 'message': 'Unauthorized'}, 403
 
-    def delete_recursive(p_id):
-        c.execute('SELECT id FROM posts WHERE parent_id = ?', (p_id,))
-        children = c.fetchall()
-        for child in children:
-            delete_recursive(child[0])
-        c.execute('DELETE FROM posts WHERE id = ?', (p_id,))
+    # Find the parent of the post being deleted
+    c.execute('SELECT parent_id FROM posts WHERE id = ?', (post_id,))
+    parent_row = c.fetchone()
+    if parent_row:
+        parent_id_val = parent_row[0]
+        # Reattach all children of this post to its parent (grandparent of the children)
+        # This prevents other replies from being deleted when the user only wants to delete one.
+        c.execute('UPDATE posts SET parent_id = ? WHERE parent_id = ?', (parent_id_val, post_id))
 
-    delete_recursive(post_id)
+    c.execute('DELETE FROM posts WHERE id = ?', (post_id,))
     conn.commit()
     conn.close()
     return {'status': 'success'}
