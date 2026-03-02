@@ -354,12 +354,14 @@
         /* --- Input Area --- */
         .input-area-container {
             background-color: #f7f7f8;
-            padding: 10px 20px 20px 20px;
+            padding: 8px 15px 10px 15px;
             display: flex;
             flex-direction: column;
             align-items: center;
             width: 100%;
             border-top: 1px solid #e5e7eb;
+            flex-shrink: 0;
+            /* Item 4: prevent input area from being hidden */
         }
 
         #replyBanner {
@@ -868,6 +870,12 @@
                 <button class="btn btn-outline-secondary huge-btn" onclick="joinPublicRoom()">パブリックルームに参加</button>
             </div>
 
+            <!-- Item 2: Manual Button -->
+            <button class="btn btn-outline-secondary"
+                style="margin-bottom: 15px; border-radius: 20px; padding: 10px 30px;" onclick="showManual()">
+                <i class="bi bi-book"></i> 遊び方・操作説明
+            </button>
+
             <div class="user-profile-card">
                 <div class="label">Playing as</div>
                 <div class="name-container">
@@ -877,12 +885,6 @@
                     </button>
                 </div>
             </div>
-
-            <!-- Item 2: Manual Button -->
-            <button class="btn btn-outline-secondary" style="margin-top: 10px; border-radius: 20px; padding: 10px 30px;"
-                onclick="showManual()">
-                <i class="bi bi-book"></i> 遊び方・操作説明
-            </button>
         </div>
 
         <!-- 2. WAITING ROOM / GAME SCREEN (Split Layout) -->
@@ -1402,10 +1404,14 @@
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x1e293b); // Slate 800
 
-            // Camera: Top down, slightly angled towards center
+            // Camera: Top down - adaptive for narrow screens (item 3)
             const aspect = container.clientWidth / container.clientHeight;
-            camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
-            camera.position.set(0, 60, 20);
+            // Use wider FOV on narrow screens to show full table
+            const fov = aspect < 1 ? 90 : (aspect < 1.5 ? 75 : 60);
+            camera = new THREE.PerspectiveCamera(fov, aspect, 0.1, 1000);
+            // Raise camera higher on narrow screens
+            const camY = aspect < 1 ? 90 : (aspect < 1.5 ? 75 : 60);
+            camera.position.set(0, camY, 20);
             camera.lookAt(0, 0, 0);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -1614,25 +1620,38 @@
                     puckVelocity.z = (puckVelocity.z / speed) * 2.0;
                 }
 
-                // Wall Collisions
-                if (puck.position.z > TABLE_HEIGHT / 2 - PUCK_RADIUS || puck.position.z < -TABLE_HEIGHT / 2 + PUCK_RADIUS) {
-                    puckVelocity.z *= -1;
-                }
+                // Wall Collisions (with corner fix - item 2)
+                const halfW = TABLE_WIDTH / 2 - PUCK_RADIUS;
+                const halfH = TABLE_HEIGHT / 2 - PUCK_RADIUS;
+
+                // Clamp puck position first
+                if (puck.position.z > halfH) { puck.position.z = halfH; puckVelocity.z = -Math.abs(puckVelocity.z); }
+                if (puck.position.z < -halfH) { puck.position.z = -halfH; puckVelocity.z = Math.abs(puckVelocity.z); }
 
                 // Goal detection or X wall bounce
-                if (puck.position.x > TABLE_WIDTH / 2 - PUCK_RADIUS) {
+                if (puck.position.x > halfW) {
                     if (Math.abs(puck.position.z) < GOAL_Y) {
                         socket.emit('goal_scored', { room_id: currentRoomId, team_scored: 1 });
                         isGameRunning = false; return;
                     } else {
-                        puckVelocity.x *= -1;
+                        puck.position.x = halfW;
+                        puckVelocity.x = -Math.abs(puckVelocity.x);
+                        // Corner: add sideways nudge to escape
+                        if (Math.abs(puck.position.z) > halfH - 3) {
+                            puckVelocity.z += (puck.position.z > 0 ? -0.5 : 0.5);
+                        }
                     }
-                } else if (puck.position.x < -TABLE_WIDTH / 2 + PUCK_RADIUS) {
+                } else if (puck.position.x < -halfW) {
                     if (Math.abs(puck.position.z) < GOAL_Y) {
                         socket.emit('goal_scored', { room_id: currentRoomId, team_scored: 2 });
                         isGameRunning = false; return;
                     } else {
-                        puckVelocity.x *= -1;
+                        puck.position.x = -halfW;
+                        puckVelocity.x = Math.abs(puckVelocity.x);
+                        // Corner: add sideways nudge to escape
+                        if (Math.abs(puck.position.z) > halfH - 3) {
+                            puckVelocity.z += (puck.position.z > 0 ? -0.5 : 0.5);
+                        }
                     }
                 }
 
