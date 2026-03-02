@@ -298,13 +298,26 @@ def handle_disconnect():
         c = conn.cursor()
         c.execute('DELETE FROM users WHERE username = ? AND room_id = ?', (username, room_id))
         conn.commit()
-        conn.close()
         
         # Cleanup mapping
         del sid_to_user[request.sid]
         
-        # Notify room
-        emit('room_update', fetch_room_state(room_id), to=room_id)
+        # Check if room is now empty (Item 5)
+        c.execute('SELECT COUNT(*) FROM users WHERE room_id = ?', (room_id,))
+        remaining = c.fetchone()[0]
+        
+        if remaining == 0:
+            # Auto-delete room when all players left
+            c.execute('UPDATE rooms SET status = "finished" WHERE id = ?', (room_id,))
+            c.execute('DELETE FROM posts WHERE room_id = ?', (room_id,))
+            conn.commit()
+            conn.close()
+            emit('room_disbanded', {'room_id': room_id}, to=room_id)
+        else:
+            conn.close()
+            # Item 4: Notify clients to remove the disconnected player's racket
+            emit('player_disconnected', {'username': username}, to=room_id)
+            emit('room_update', fetch_room_state(room_id), to=room_id)
 
 @socketio.on('leave_room')
 def handle_leave_room(data):

@@ -34,20 +34,27 @@
             height: 100vh;
             min-height: 100vh;
             overflow: hidden;
+            /* Item 1: Prevent text selection on mobile */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
         }
 
         header {
             background-color: #2c2d30;
             color: #ffffff;
-            padding: 10px 20px;
+            padding: 8px 15px;
             text-align: center;
-            font-size: 1.2rem;
+            font-size: 1rem;
             font-weight: 500;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             z-index: 10;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
+            /* Item 6: prevent header from being squished */
         }
 
         .view {
@@ -768,6 +775,76 @@
                 transform: scale(1);
             }
         }
+
+        /* Item 1: Allow text selection in chat/input areas */
+        #posts,
+        .message-bubble,
+        #content,
+        .input-area-container {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            user-select: text;
+        }
+
+        /* Item 2: Manual Modal */
+        .manual-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 9998;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: resultFadeIn 0.3s ease;
+        }
+
+        .manual-content {
+            background: white;
+            border-radius: 16px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 30px;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .manual-content h2 {
+            margin-top: 0;
+            color: #334155;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .manual-content h3 {
+            color: #475569;
+            margin-top: 20px;
+        }
+
+        .manual-content p,
+        .manual-content li {
+            color: #64748b;
+            line-height: 1.7;
+        }
+
+        .manual-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #94a3b8;
+        }
+
+        .manual-close:hover {
+            color: #334155;
+        }
     </style>
 </head>
 
@@ -800,6 +877,12 @@
                     </button>
                 </div>
             </div>
+
+            <!-- Item 2: Manual Button -->
+            <button class="btn btn-outline-secondary" style="margin-top: 10px; border-radius: 20px; padding: 10px 30px;"
+                onclick="showManual()">
+                <i class="bi bi-book"></i> 遊び方・操作説明
+            </button>
         </div>
 
         <!-- 2. WAITING ROOM / GAME SCREEN (Split Layout) -->
@@ -1190,6 +1273,38 @@
             socket.emit('player_ready', { room_id: currentRoomId, username: currentUsername });
         }
 
+        // Item 2: Show instruction manual
+        function showManual() {
+            const overlay = document.createElement('div');
+            overlay.className = 'manual-overlay';
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+            overlay.innerHTML = `
+                <div class="manual-content">
+                    <button class="manual-close" onclick="this.closest('.manual-overlay').remove()">&times;</button>
+                    <h2>🏒 CYBER HOCKEY 3v3 遊び方</h2>
+                    <h3>🎮 ゲーム概要</h3>
+                    <p>最大3人ずつの2チームに分かれて、エアホッケーをするゲームです。<br><strong>先に3点</strong>取ったチームが勝利！</p>
+                    <h3>🕹️ 操作方法</h3>
+                    <ul>
+                        <li><strong>PC</strong>: マウスを動かすとラケットが追従します</li>
+                        <li><strong>スマホ/タブレット</strong>: 指で画面をタッチしてラケットを操作</li>
+                        <li>ラケットは<strong>自分のチーム側のみ</strong>移動可能</li>
+                        <li>自分のラケットには<strong>金色のリング</strong>が付いています</li>
+                    </ul>
+                    <h3>📡 ルームの作り方</h3>
+                    <ul>
+                        <li><strong>ルームを作成</strong>して、ルームIDを友達に共有</li>
+                        <li>パブリックルームなら誰でも参加OK</li>
+                        <li>参加者が揃ったら管理者が「ゲーム開始」を押す</li>
+                        <li>全員が「準備OK」を押すとカウントダウン開始！</li>
+                    </ul>
+                    <h3>💬 チャット</h3>
+                    <p>待機中は全員、ゲーム中はチーム内のみでチャットができます。<br>Markdown対応です！</p>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
         function updateScoreCircles(t1, t2) {
             for (let i = 1; i <= 3; i++) {
                 document.getElementById(`t1-p${i}`).classList.toggle('filled-t1', i <= t1);
@@ -1440,6 +1555,14 @@
             }
         });
 
+        // Item 4: Handle disconnected player - remove their racket
+        socket.on('player_disconnected', (data) => {
+            if (otherRackets[data.username]) {
+                scene.remove(otherRackets[data.username]);
+                delete otherRackets[data.username];
+            }
+        });
+
         socket.on('puck_synced', (data) => {
             // If we are not the admin (host), accept puck state
             if (currentUsername !== roomAdmin) {
@@ -1476,8 +1599,16 @@
                 puckVelocity.x *= 0.995;
                 puckVelocity.z *= 0.995;
 
-                // Limit speed
+                // Item 3: Clamp puck position to prevent out-of-bounds
+                puck.position.x = Math.max(-TABLE_WIDTH / 2 + PUCK_RADIUS, Math.min(TABLE_WIDTH / 2 - PUCK_RADIUS, puck.position.x));
+                puck.position.z = Math.max(-TABLE_HEIGHT / 2 + PUCK_RADIUS, Math.min(TABLE_HEIGHT / 2 - PUCK_RADIUS, puck.position.z));
+
+                // Item 3: If puck is nearly stopped, give it a nudge to prevent stalling
                 const speed = Math.sqrt(puckVelocity.x ** 2 + puckVelocity.z ** 2);
+                if (speed < 0.05) {
+                    puckVelocity.x = (Math.random() > 0.5 ? 1 : -1) * 0.3;
+                    puckVelocity.z = (Math.random() - 0.5) * 0.3;
+                }
                 if (speed > 2.0) {
                     puckVelocity.x = (puckVelocity.x / speed) * 2.0;
                     puckVelocity.z = (puckVelocity.z / speed) * 2.0;
