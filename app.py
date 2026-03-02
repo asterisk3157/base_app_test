@@ -359,8 +359,8 @@ def handle_start_game(data):
     for u in team2:
         c.execute('UPDATE users SET team_id = 2, is_ready = 0 WHERE username = ? AND room_id = ?', (u, room_id))
         
-    # Clear global waiting room chat
-    c.execute('DELETE FROM posts WHERE room_id = ? AND (team_id IS NULL OR team_id = 0)', (room_id,))
+        
+    # Note: Waiting room chat is now preserved until room is disbanded
     
     conn.commit()
     conn.close()

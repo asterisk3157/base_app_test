@@ -90,13 +90,14 @@
 
         .left-panel {
             flex: 2;
-            /* Narrow chat further by making game area 2x the chat area */
             border-right: 1px solid #ccc;
             background: #e2e8f0;
             display: flex;
             flex-direction: column;
             overflow: hidden;
             position: relative;
+            min-height: 0;
+            /* Item 1: prevent flex overflow */
         }
 
         .right-panel {
@@ -105,6 +106,8 @@
             flex-direction: column;
             background-color: #ffffff;
             overflow: hidden;
+            min-height: 0;
+            /* Item 1: prevent flex overflow */
         }
 
         /* --- Waiting Room Participants --- */
@@ -1008,6 +1011,8 @@
             currentRoomId = id;
             socket.emit('join_room', { room_id: id, username: currentUsername });
             switchView('gameView');
+            // Item 2: Load chat history immediately on join
+            setTimeout(() => loadPosts(), 300);
         }
 
         function leaveRoom() {
@@ -1057,6 +1062,8 @@
                 document.getElementById('playingStateContainer').style.display = 'none';
                 document.getElementById('chatHeader').textContent = '待機室チャット';
                 document.getElementById('chatHeader').style.color = '#555';
+                // Item 2: ensure chat loads on waiting room too
+                loadPosts();
 
                 // Build waiting list
                 const pl = document.getElementById('participantList');
@@ -1094,23 +1101,30 @@
                 // Defer Three.js init until container is visible and has dimensions
                 ensureThreeJsInit();
 
+                // Item 3: Show team member count in chat header
                 const teamColor = currentTeamId === 1 ? '#ef4444' : '#3b82f6';
                 const teamName = currentTeamId === 1 ? 'Red' : 'Blue';
-                document.getElementById('chatHeader').textContent = `チームチャット (${teamName})`;
+                const teamCount = users.filter(u => u.team_id === currentTeamId).length;
+                document.getElementById('chatHeader').textContent = `チームチャット (${teamName}) - ${teamCount}人`;
                 document.getElementById('chatHeader').style.color = teamColor;
 
                 updateScoreCircles(room.team1_score, room.team2_score);
 
-                // Ready button logic
-                const isReady = me && me.is_ready;
-                document.getElementById('readyBtn').style.display = isReady ? 'none' : 'block';
-                document.getElementById('readyBtn').textContent = isReady ? '待機中...' : '準備OK';
-                if (isReady) document.getElementById('readyBtn').style.display = 'block';
+                // Item 4: Ready button logic - don't show during GOAL display
+                if (!goalDisplayActive) {
+                    const isReady = me && me.is_ready;
+                    document.getElementById('readyBtn').style.display = isReady ? 'none' : 'block';
+                    document.getElementById('readyBtn').textContent = isReady ? '待機中...' : '準備OK';
+                    if (isReady) document.getElementById('readyBtn').style.display = 'block';
+                }
 
                 if (room.status === 'finished') {
                     document.getElementById('readyBtn').style.display = 'none';
                     showGameResult(room.team1_score, room.team2_score);
                 }
+
+                // Item 2: Load team chat on game start
+                loadPosts();
             }
         });
 
@@ -1125,16 +1139,19 @@
             document.getElementById('readyBtn').style.display = 'none';
             const msg = document.getElementById('countdownMsg');
             msg.style.display = 'block';
-            resetPuck();
+            const kickoffDir = resetPuck(); // Item 8: returns kickoff direction
 
             let c = data.countdown;
-            msg.textContent = c;
+            // Item 8: Show first attacker during countdown
+            const attackTeam = kickoffDir > 0 ? 'Red' : 'Blue';
+            const attackColor = kickoffDir > 0 ? '#ef4444' : '#3b82f6';
+            msg.innerHTML = `<div>${c}</div><div style="font-size:1.2rem; color:${attackColor}">${attackTeam} → Attack!</div>`;
             const iv = setInterval(() => {
                 c--;
                 if (c > 0) {
-                    msg.textContent = c;
+                    msg.innerHTML = `<div>${c}</div><div style="font-size:1.2rem; color:${attackColor}">${attackTeam} → Attack!</div>`;
                 } else if (c === 0) {
-                    msg.textContent = "START!";
+                    msg.innerHTML = 'START!';
                     isGameRunning = true;
                 } else {
                     msg.style.display = 'none';
@@ -1147,15 +1164,19 @@
 
         socket.on('goal_event', (data) => {
             isGameRunning = false;
+            goalDisplayActive = true; // Item 4: prevent room_update from showing ready btn
             const msg = document.getElementById('countdownMsg');
             msg.style.display = 'block';
             msg.textContent = 'GOAL!';
             msg.style.color = data.team_scored === 1 ? '#ef4444' : '#3b82f6';
+            // Item 4: Hide ready button during GOAL display
+            document.getElementById('readyBtn').style.display = 'none';
 
             setTimeout(() => {
+                goalDisplayActive = false;
                 if (!data.game_over) {
                     msg.style.display = 'none';
-                    msg.style.color = 'white'; // Reset for countdown
+                    msg.style.color = 'white';
                     document.getElementById('readyBtn').style.display = 'block';
                     document.getElementById('readyBtn').textContent = '準備OK';
                 }
@@ -1183,6 +1204,9 @@
 
         let threeSceneInitialized = false;
         let isGameRunning = false;
+        let goalDisplayActive = false; // Item 4: flag to block ready button during GOAL
+        let lastSyncTime = 0; // Item 7: throttle network sync
+        let lastMoveSyncTime = 0; // Item 7: throttle move sync
 
         // Robust deferred init: waits until container has real dimensions
         function ensureThreeJsInit() {
@@ -1309,7 +1333,6 @@
 
                 // Positioning
                 let startX = p.team_id === 1 ? -TABLE_WIDTH / 4 : TABLE_WIDTH / 4;
-                // Spread out vertically if multiple players
                 let zOffset = (Math.random() - 0.5) * 20;
                 if (p.team_id === 1) startX -= Math.random() * 10;
                 else startX += Math.random() * 10;
@@ -1319,11 +1342,18 @@
 
                 if (p.username === currentUsername) {
                     myRacket = r;
-                    // Ensure the material matches the current user's team color
                     myRacket.material = currentTeamId === 1 ? redMat : blueMat;
+
+                    // Item 5: Add glowing ring to identify own racket
+                    const ringGeo = new THREE.RingGeometry(RACKET_RADIUS + 0.5, RACKET_RADIUS + 1.5, 32);
+                    const ringMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+                    const ring = new THREE.Mesh(ringGeo, ringMat);
+                    ring.rotation.x = -Math.PI / 2;
+                    ring.position.y = 1.5;
+                    r.add(ring); // Attach as child so it moves with racket
+
                 } else {
                     otherRackets[p.username] = r;
-                    // The mat above already uses p.team_id
                 }
             });
 
@@ -1333,26 +1363,27 @@
             puck.position.y = 0.5;
             scene.add(puck);
 
-            // Input Handling (Raycasting)
+            // Item 6: Improved Input Handling - pointer follow (no drag required)
             const raycaster = new THREE.Raycaster();
             const mouse = new THREE.Vector2();
-            let isDragging = false;
             const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -1);
 
-            container.addEventListener('pointerdown', (e) => {
-                if (!isGameRunning) return;
-                isDragging = true;
-                updateRacketFromMouse(e);
-            });
-
+            // Item 6: Always follow pointer - no click needed
             container.addEventListener('pointermove', (e) => {
-                if (!isDragging || !isGameRunning) return;
+                if (!isGameRunning || !myRacket) return;
+                e.preventDefault();
                 updateRacketFromMouse(e);
             });
 
-            const endDrag = () => { isDragging = false; };
-            container.addEventListener('pointerup', endDrag);
-            container.addEventListener('pointerleave', endDrag);
+            // Also update on touch for mobile
+            container.addEventListener('pointerdown', (e) => {
+                if (!isGameRunning || !myRacket) return;
+                e.preventDefault();
+                updateRacketFromMouse(e);
+            });
+
+            // Prevent touch scrolling on game canvas
+            container.style.touchAction = 'none';
 
             function updateRacketFromMouse(e) {
                 const rect = renderer.domElement.getBoundingClientRect();
@@ -1364,7 +1395,6 @@
                 raycaster.ray.intersectPlane(dragPlane, intersectPoint);
 
                 if (intersectPoint) {
-                    // Clamp to bounds and team side
                     let targetX = intersectPoint.x;
                     let targetZ = intersectPoint.z;
 
@@ -1379,11 +1409,15 @@
                     myRacket.position.x = targetX;
                     myRacket.position.z = targetZ;
 
-                    // Sync Move to Others
-                    socket.emit('player_move', {
-                        room_id: currentRoomId, username: currentUsername, team_id: currentTeamId,
-                        x: myRacket.position.x, z: myRacket.position.z
-                    });
+                    // Item 7: Throttle move sync to ~30fps
+                    const now = performance.now();
+                    if (now - lastMoveSyncTime > 33) {
+                        lastMoveSyncTime = now;
+                        socket.emit('player_move', {
+                            room_id: currentRoomId, username: currentUsername, team_id: currentTeamId,
+                            x: myRacket.position.x, z: myRacket.position.z
+                        });
+                    }
                 }
             }
 
@@ -1416,10 +1450,14 @@
             }
         });
 
+        // Item 8: resetPuck returns kickoff direction (positive = towards Blue/right)
         function resetPuck() {
+            if (!puck) return 1;
             puck.position.set(0, 0.5, 0);
-            puckVelocity.x = (Math.random() > 0.5 ? 1 : -1) * 0.5;
+            const dir = (Math.random() > 0.5 ? 1 : -1);
+            puckVelocity.x = dir * 0.5;
             puckVelocity.z = (Math.random() - 0.5) * 0.5;
+            return dir; // positive = heading right (Team 1 Red attacks), negative = heading left (Team 2 Blue attacks)
         }
 
         function gameLoop() {
@@ -1487,12 +1525,16 @@
                     }
                 }
 
-                // Sync puck
-                socket.emit('puck_sync', {
-                    room_id: currentRoomId,
-                    x: puck.position.x, z: puck.position.z,
-                    vx: puckVelocity.x, vz: puckVelocity.z
-                });
+                // Item 7: Throttle puck sync to ~20fps (every 50ms)
+                const syncNow = performance.now();
+                if (syncNow - lastSyncTime > 50) {
+                    lastSyncTime = syncNow;
+                    socket.emit('puck_sync', {
+                        room_id: currentRoomId,
+                        x: puck.position.x, z: puck.position.z,
+                        vx: puckVelocity.x, vz: puckVelocity.z
+                    });
+                }
             }
         }
 
