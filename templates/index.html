@@ -372,23 +372,12 @@
             <input type="text" id="replyAuthor" placeholder="なまえ（省略すると「名無し」になります）">
             <textarea id="replyContentText" placeholder="返信内容を入力してください"></textarea>
             <input type="text" id="replyDeletePassword" placeholder="削除用パスワード（任意）">
-            <div class="modal-actions">
-                <button class="btn-cancel" onclick="closeReplyModal()">キャンセル</button>
-                <button onclick="submitReply()">返信する</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Reply Modal -->
-    <div id="replyModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">返信する</div>
-            <input type="text" id="replyAuthor" placeholder="なまえ（省略すると「名無し」になります）">
-            <textarea id="replyContentText" placeholder="返信内容を入力してください"></textarea>
-            <input type="text" id="replyDeletePassword" placeholder="削除用パスワード（任意）">
-            <div class="modal-actions">
-                <button class="btn-cancel" onclick="closeReplyModal()">キャンセル</button>
-                <button onclick="submitReply()">返信する</button>
+            <div class="modal-actions" style="display: flex; align-items: center; justify-content: space-between;">
+                <span id="currentReplyWeatherDisplay" style="color: #86868b; font-size: 14px;">天気情報を取得中...</span>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn-cancel" onclick="closeReplyModal()">キャンセル</button>
+                    <button onclick="submitReply()">返信する</button>
+                </div>
             </div>
         </div>
     </div>
@@ -674,9 +663,15 @@
                     document.getElementById('currentWeatherDisplay').innerText = `現在地: ${fullWeatherStr}`;
                     document.getElementById('weatherInput').value = fullWeatherStr;
                 }
+                if (document.getElementById('currentReplyWeatherDisplay')) {
+                    document.getElementById('currentReplyWeatherDisplay').innerText = `現在地: ${fullWeatherStr}`;
+                }
             } catch (err) {
                 if (document.getElementById('currentWeatherDisplay')) {
                     document.getElementById('currentWeatherDisplay').innerText = '';
+                }
+                if (document.getElementById('currentReplyWeatherDisplay')) {
+                    document.getElementById('currentReplyWeatherDisplay').innerText = '';
                 }
             }
         }
