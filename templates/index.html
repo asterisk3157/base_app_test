@@ -1277,8 +1277,10 @@
             // Kickoff direction: only admin resets puck and emits direction
             if (currentUsername === roomAdmin) {
                 const kickoffDir = resetPuck();
-                kickoffDisplayTeam = kickoffDir > 0 ? 'Red' : 'Blue';
-                kickoffDisplayColor = kickoffDir > 0 ? '#ef4444' : '#3b82f6';
+                // dir > 0 = ball goes right (towards Blue side), so Blue is being attacked = Blue's side
+                // User wants: team the ball goes TOWARDS = first attacker
+                kickoffDisplayTeam = kickoffDir > 0 ? 'Blue' : 'Red';
+                kickoffDisplayColor = kickoffDir > 0 ? '#3b82f6' : '#ef4444';
                 socket.emit('kickoff_direction', { room_id: currentRoomId, dir: kickoffDir });
             } else {
                 // Non-admin: wait for kickoff_synced to set display, show generic countdown
@@ -1313,8 +1315,8 @@
 
         // Kickoff direction sync: non-admin clients receive the admin's kickoff direction
         socket.on('kickoff_synced', (data) => {
-            kickoffDisplayTeam = data.dir > 0 ? 'Red' : 'Blue';
-            kickoffDisplayColor = data.dir > 0 ? '#ef4444' : '#3b82f6';
+            kickoffDisplayTeam = data.dir > 0 ? 'Blue' : 'Red';
+            kickoffDisplayColor = data.dir > 0 ? '#3b82f6' : '#ef4444';
             // Update the current countdown display if visible
             const msg = document.getElementById('countdownMsg');
             if (msg.style.display === 'block') {
@@ -1525,6 +1527,40 @@
             centerLine.rotation.x = -Math.PI / 2;
             centerLine.position.y = 0.01;
             scene.add(centerLine);
+
+            // Goal Posts (Item 3)
+            const goalPostMat = new THREE.MeshPhongMaterial({ color: 0xfacc15, emissive: 0xfacc15, emissiveIntensity: 0.3 });
+            const postRadius = 1.5;
+            const postHeight = 4;
+            const postGeo = new THREE.CylinderGeometry(postRadius, postRadius, postHeight, 16);
+
+            // Right goal (Team 2 / Blue side)
+            const rPost1 = new THREE.Mesh(postGeo, goalPostMat);
+            rPost1.position.set(TABLE_WIDTH / 2, postHeight / 2 - 1, GOAL_Y);
+            scene.add(rPost1);
+            const rPost2 = new THREE.Mesh(postGeo, goalPostMat);
+            rPost2.position.set(TABLE_WIDTH / 2, postHeight / 2 - 1, -GOAL_Y);
+            scene.add(rPost2);
+
+            // Left goal (Team 1 / Red side)
+            const lPost1 = new THREE.Mesh(postGeo, goalPostMat);
+            lPost1.position.set(-TABLE_WIDTH / 2, postHeight / 2 - 1, GOAL_Y);
+            scene.add(lPost1);
+            const lPost2 = new THREE.Mesh(postGeo, goalPostMat);
+            lPost2.position.set(-TABLE_WIDTH / 2, postHeight / 2 - 1, -GOAL_Y);
+            scene.add(lPost2);
+
+            // Goal area highlight (glowing floor strip)
+            const goalFloorGeo = new THREE.PlaneGeometry(3, GOAL_Y * 2);
+            const goalFloorMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
+            const rGoalFloor = new THREE.Mesh(goalFloorGeo, goalFloorMat);
+            rGoalFloor.rotation.x = -Math.PI / 2;
+            rGoalFloor.position.set(TABLE_WIDTH / 2 - 1.5, 0.02, 0);
+            scene.add(rGoalFloor);
+            const lGoalFloor = new THREE.Mesh(goalFloorGeo, goalFloorMat);
+            lGoalFloor.rotation.x = -Math.PI / 2;
+            lGoalFloor.position.set(-TABLE_WIDTH / 2 + 1.5, 0.02, 0);
+            scene.add(lGoalFloor);
 
             // Rackets
             playersState.forEach(p => {
@@ -2067,8 +2103,8 @@
                 bgScene.add(mesh);
                 shapes.push({
                     mesh: mesh,
-                    rotSpeed: { x: (Math.random() - 0.5) * 0.005, y: (Math.random() - 0.5) * 0.005 },
-                    floatSpeed: 0.002 + Math.random() * 0.003,
+                    rotSpeed: { x: (Math.random() - 0.5) * 0.02, y: (Math.random() - 0.5) * 0.02 },
+                    floatSpeed: 0.008 + Math.random() * 0.012,
                     floatOffset: Math.random() * Math.PI * 2
                 });
             }
@@ -2085,7 +2121,7 @@
                 shapes.forEach(s => {
                     s.mesh.rotation.x += s.rotSpeed.x;
                     s.mesh.rotation.y += s.rotSpeed.y;
-                    s.mesh.position.y += Math.sin(t + s.floatOffset) * s.floatSpeed * 0.3;
+                    s.mesh.position.y += Math.sin(t * 1.5 + s.floatOffset) * s.floatSpeed;
                 });
                 bgRenderer.render(bgScene, bgCamera);
             }
