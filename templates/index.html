@@ -1029,6 +1029,7 @@
         let roomState = 'waiting';
         let isSocketConnected = false;
         let playersState = []; // [{username, team_id, is_ready}]
+        let hasClosedResult = false; // Prevent double result screen
 
         socket.on('connect', () => { isSocketConnected = true; });
 
@@ -1264,6 +1265,7 @@
         socket.on('game_started', (data) => {
             // Clear global chat locally
             document.getElementById('posts').innerHTML = '';
+            hasClosedResult = false; // Reset for new game
             socket.emit('join_room', { room_id: currentRoomId, username: currentUsername }); // Re-trigger room sync
             // The room_update event (triggered by join_room) will handle visibility and Three.js init
         });
@@ -1430,6 +1432,7 @@
 
         // Show win/loss screen
         function showGameResult(t1, t2) {
+            if (hasClosedResult) return; // Already dismissed, don't show again
             // Remove existing result overlay if any
             const existing = document.querySelector('.result-overlay');
             if (existing) return;
@@ -1453,6 +1456,7 @@
             if (overlay) overlay.remove();
 
             // Notify server this player is back from result screen
+            hasClosedResult = true; // Prevent re-showing
             socket.emit('player_back_to_waiting', { room_id: currentRoomId, username: currentUsername });
 
             // Reset game state
@@ -1728,9 +1732,9 @@
 
                 // Speed limit
                 const speed = Math.sqrt(puckVelocity.x ** 2 + puckVelocity.z ** 2);
-                if (speed > 2.0) {
-                    puckVelocity.x = (puckVelocity.x / speed) * 2.0;
-                    puckVelocity.z = (puckVelocity.z / speed) * 2.0;
+                if (speed > 1.5) {
+                    puckVelocity.x = (puckVelocity.x / speed) * 1.5;
+                    puckVelocity.z = (puckVelocity.z / speed) * 1.5;
                 }
 
                 // Wall Collisions - proper corner handling
