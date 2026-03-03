@@ -78,6 +78,17 @@
             overflow-y: auto;
             min-height: 0;
             padding: 40px 20px;
+            position: relative;
+        }
+
+        #topBgCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100% !important;
+            height: 100% !important;
+            z-index: 0;
+            pointer-events: none;
         }
 
         .huge-btn {
@@ -860,12 +871,11 @@
     <div id="appContainer" style="flex-grow: 1; display: flex; overflow: hidden;">
 
         <!-- 1. TOP PAGE -->
-        <div id="topView" class="view active" style="position: relative;">
+        <div id="topView" class="view active">
             <!-- Three.js background canvas -->
-            <canvas id="topBgCanvas"
-                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;"></canvas>
+            <canvas id="topBgCanvas"></canvas>
             <h1
-                style="font-weight: 700; color: #334155; margin-bottom: 30px; padding-top: 60px; z-index: 1; position: relative;">
+                style="font-weight: 700; color: #334155; margin-bottom: 30px; padding-top: 120px; z-index: 1; position: relative;">
                 CYBER HOCKEY 3v3</h1>
 
             <div class="top-btns" style="z-index: 1; position: relative;">
@@ -1257,30 +1267,40 @@
             // The room_update event (triggered by join_room) will handle visibility and Three.js init
         });
 
-        let kickoffDisplayTeam = 'Red';
-        let kickoffDisplayColor = '#ef4444';
+        let kickoffDisplayTeam = '';
+        let kickoffDisplayColor = '';
         socket.on('all_ready', (data) => {
             document.getElementById('readyBtn').style.display = 'none';
             const msg = document.getElementById('countdownMsg');
             msg.style.display = 'block';
 
-            // Kickoff direction: only admin resets puck; others wait for sync
-            let kickoffDir = 1;
+            // Kickoff direction: only admin resets puck and emits direction
             if (currentUsername === roomAdmin) {
-                kickoffDir = resetPuck();
-                // Emit the direction to all clients so they display the same info
+                const kickoffDir = resetPuck();
+                kickoffDisplayTeam = kickoffDir > 0 ? 'Red' : 'Blue';
+                kickoffDisplayColor = kickoffDir > 0 ? '#ef4444' : '#3b82f6';
                 socket.emit('kickoff_direction', { room_id: currentRoomId, dir: kickoffDir });
+            } else {
+                // Non-admin: wait for kickoff_synced to set display, show generic countdown
+                kickoffDisplayTeam = '';
+                kickoffDisplayColor = '#ffffff';
             }
 
-            // Show countdown with attack info (will be updated by kickoff_direction event for non-admins)
             let c = data.countdown;
-            const attackTeam = kickoffDir > 0 ? 'Red' : 'Blue';
-            const attackColor = kickoffDir > 0 ? '#ef4444' : '#3b82f6';
-            msg.innerHTML = `<div>${c}</div><div style="font-size:1.2rem; color:${attackColor}">${attackTeam} → Attack!</div>`;
+            // Admin shows attack info now, non-admin shows just the number until sync arrives
+            if (kickoffDisplayTeam) {
+                msg.innerHTML = `<div>${c}</div><div style="font-size:1.2rem; color:${kickoffDisplayColor}">${kickoffDisplayTeam} \u2192 Attack!</div>`;
+            } else {
+                msg.innerHTML = `<div>${c}</div><div style="font-size:1.2rem; color:#999">\u2026</div>`;
+            }
             const iv = setInterval(() => {
                 c--;
                 if (c > 0) {
-                    msg.innerHTML = `<div>${c}</div><div style="font-size:1.2rem; color:${kickoffDisplayColor}">${kickoffDisplayTeam} → Attack!</div>`;
+                    if (kickoffDisplayTeam) {
+                        msg.innerHTML = `<div>${c}</div><div style="font-size:1.2rem; color:${kickoffDisplayColor}">${kickoffDisplayTeam} \u2192 Attack!</div>`;
+                    } else {
+                        msg.innerHTML = `<div>${c}</div>`;
+                    }
                 } else if (c === 0) {
                     msg.innerHTML = 'START!';
                     isGameRunning = true;
@@ -1300,7 +1320,7 @@
             if (msg.style.display === 'block') {
                 const currentCount = msg.querySelector('div');
                 if (currentCount) {
-                    msg.innerHTML = `<div>${currentCount.textContent}</div><div style="font-size:1.2rem; color:${kickoffDisplayColor}">${kickoffDisplayTeam} → Attack!</div>`;
+                    msg.innerHTML = `<div>${currentCount.textContent}</div><div style="font-size:1.2rem; color:${kickoffDisplayColor}">${kickoffDisplayTeam} \u2192 Attack!</div>`;
                 }
             }
         });
@@ -1666,56 +1686,57 @@
                 puckVelocity.x *= 0.995;
                 puckVelocity.z *= 0.995;
 
-                // Item 3: Clamp puck position to prevent out-of-bounds
-                puck.position.x = Math.max(-TABLE_WIDTH / 2 + PUCK_RADIUS, Math.min(TABLE_WIDTH / 2 - PUCK_RADIUS, puck.position.x));
-                puck.position.z = Math.max(-TABLE_HEIGHT / 2 + PUCK_RADIUS, Math.min(TABLE_HEIGHT / 2 - PUCK_RADIUS, puck.position.z));
-
-                // Item 3: If puck is nearly stopped, give it a nudge to prevent stalling
+                // Speed limit
                 const speed = Math.sqrt(puckVelocity.x ** 2 + puckVelocity.z ** 2);
-                if (speed < 0.05) {
-                    puckVelocity.x = (Math.random() > 0.5 ? 1 : -1) * 0.3;
-                    puckVelocity.z = (Math.random() - 0.5) * 0.3;
-                }
                 if (speed > 2.0) {
                     puckVelocity.x = (puckVelocity.x / speed) * 2.0;
                     puckVelocity.z = (puckVelocity.z / speed) * 2.0;
                 }
 
-                // Wall Collisions (with corner fix - item 2)
+                // Wall Collisions - proper corner handling
                 const halfW = TABLE_WIDTH / 2 - PUCK_RADIUS;
                 const halfH = TABLE_HEIGHT / 2 - PUCK_RADIUS;
 
-                // Clamp puck position first
-                if (puck.position.z > halfH) { puck.position.z = halfH; puckVelocity.z = -Math.abs(puckVelocity.z); }
-                if (puck.position.z < -halfH) { puck.position.z = -halfH; puckVelocity.z = Math.abs(puckVelocity.z); }
+                // Z walls (top/bottom)
+                if (puck.position.z > halfH) {
+                    puck.position.z = halfH;
+                    puckVelocity.z = -Math.abs(puckVelocity.z);
+                    if (Math.abs(puckVelocity.z) < 0.1) puckVelocity.z = -0.3;
+                }
+                if (puck.position.z < -halfH) {
+                    puck.position.z = -halfH;
+                    puckVelocity.z = Math.abs(puckVelocity.z);
+                    if (Math.abs(puckVelocity.z) < 0.1) puckVelocity.z = 0.3;
+                }
 
-                // Goal detection or X wall bounce
+                // X walls (left/right) with goal detection
                 if (puck.position.x > halfW) {
                     if (Math.abs(puck.position.z) < GOAL_Y) {
                         socket.emit('goal_scored', { room_id: currentRoomId, team_scored: 1 });
                         isGameRunning = false; return;
                     } else {
-                        puck.position.x = halfW;
+                        puck.position.x = halfW - 1;
                         puckVelocity.x = -Math.abs(puckVelocity.x);
-                        // Corner: add sideways nudge to escape
-                        if (Math.abs(puck.position.z) > halfH - 3) {
-                            puckVelocity.z += (puck.position.z > 0 ? -0.5 : 0.5);
-                        }
+                        if (Math.abs(puckVelocity.x) < 0.2) puckVelocity.x = -0.5;
+                        // Corner: push puck towards center Z
+                        puckVelocity.z += (puck.position.z > 0 ? -0.8 : 0.8);
                     }
                 } else if (puck.position.x < -halfW) {
                     if (Math.abs(puck.position.z) < GOAL_Y) {
                         socket.emit('goal_scored', { room_id: currentRoomId, team_scored: 2 });
                         isGameRunning = false; return;
                     } else {
-                        puck.position.x = -halfW;
+                        puck.position.x = -halfW + 1;
                         puckVelocity.x = Math.abs(puckVelocity.x);
-                        // Corner: add sideways nudge to escape
-                        if (Math.abs(puck.position.z) > halfH - 3) {
-                            puckVelocity.z += (puck.position.z > 0 ? -0.5 : 0.5);
-                        }
+                        if (Math.abs(puckVelocity.x) < 0.2) puckVelocity.x = 0.5;
+                        // Corner: push puck towards center Z
+                        puckVelocity.z += (puck.position.z > 0 ? -0.8 : 0.8);
                     }
                 }
 
+                // Final clamp to ensure puck stays within bounds
+                puck.position.x = Math.max(-halfW, Math.min(halfW, puck.position.x));
+                puck.position.z = Math.max(-halfH, Math.min(halfH, puck.position.z));
                 // Racket Collisions
                 const allRackets = Object.values(otherRackets).concat([myRacket]);
                 for (let r of allRackets) {
