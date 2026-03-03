@@ -176,10 +176,11 @@ def get_posts():
     params = [room_id]
     
     if team_id and team_id != "0" and team_id != "null":
-        query += ' AND (team_id = ? OR team_id IS NULL OR team_id = 0)'
+        # Strictly show only this team's chat (no waiting room chat mixed in)
+        query += ' AND team_id = ?'
         params.append(int(team_id))
     else:
-        # If no team, only fetch global/waiting room chats (team_id is null or 0)
+        # Waiting room: only fetch global/waiting room chats (team_id is null or 0)
         query += ' AND (team_id IS NULL OR team_id = 0)'
         
     query += ' ORDER BY id ASC'
@@ -314,10 +315,37 @@ def handle_disconnect():
             conn.close()
             emit('room_disbanded', {'room_id': room_id}, to=room_id)
         else:
-            conn.close()
-            # Item 4: Notify clients to remove the disconnected player's racket
-            emit('player_disconnected', {'username': username}, to=room_id)
-            emit('room_update', fetch_room_state(room_id), to=room_id)
+            # Check if a team has 0 members during a game (auto-loss)
+            c.execute('SELECT status FROM rooms WHERE id = ?', (room_id,))
+            room_status = c.fetchone()
+            if room_status and room_status[0] == 'playing':
+                c.execute('SELECT COUNT(*) FROM users WHERE room_id = ? AND team_id = 1', (room_id,))
+                t1_count = c.fetchone()[0]
+                c.execute('SELECT COUNT(*) FROM users WHERE room_id = ? AND team_id = 2', (room_id,))
+                t2_count = c.fetchone()[0]
+                
+                if t1_count == 0 and t2_count > 0:
+                    # Team 1 has no players - Team 2 wins
+                    c.execute('UPDATE rooms SET team1_score = 0, team2_score = 3, status = "finished" WHERE id = ?', (room_id,))
+                    conn.commit()
+                    conn.close()
+                    emit('goal_event', {'team_scored': 2, 'team1_score': 0, 'team2_score': 3, 'game_over': True, 'winner': 2}, to=room_id)
+                    emit('room_update', fetch_room_state(room_id), to=room_id)
+                elif t2_count == 0 and t1_count > 0:
+                    # Team 2 has no players - Team 1 wins
+                    c.execute('UPDATE rooms SET team1_score = 3, team2_score = 0, status = "finished" WHERE id = ?', (room_id,))
+                    conn.commit()
+                    conn.close()
+                    emit('goal_event', {'team_scored': 1, 'team1_score': 3, 'team2_score': 0, 'game_over': True, 'winner': 1}, to=room_id)
+                    emit('room_update', fetch_room_state(room_id), to=room_id)
+                else:
+                    conn.close()
+                    emit('player_disconnected', {'username': username}, to=room_id)
+                    emit('room_update', fetch_room_state(room_id), to=room_id)
+            else:
+                conn.close()
+                emit('player_disconnected', {'username': username}, to=room_id)
+                emit('room_update', fetch_room_state(room_id), to=room_id)
 
 @socketio.on('leave_room')
 def handle_leave_room(data):
@@ -413,6 +441,11 @@ def handle_puck_sync(data):
     # The 'host' client (e.g. admin) calculates physics and syncs puck state
     # payload: {room_id, x, z, vx, vz}
     emit('puck_synced', data, to=data['room_id'], include_self=False)
+
+@socketio.on('kickoff_direction')
+def handle_kickoff_direction(data):
+    # Relay kickoff direction from admin to all clients
+    emit('kickoff_synced', data, to=data['room_id'], include_self=False)
 
 @socketio.on('goal_scored')
 def handle_goal(data):

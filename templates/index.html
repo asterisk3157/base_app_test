@@ -852,7 +852,7 @@
 
 <body>
     <header>
-        <div id="headerTitle"><i class="bi bi-controller"></i> CYBER HOCKEY 3v3</div>
+        <div id="headerTitle">CYBER HOCKEY 3v3</div>
         <div id="headerRoomInfo" style="font-size: 0.9rem; color: #a1a1aa;"></div>
     </header>
 
@@ -860,23 +860,29 @@
     <div id="appContainer" style="flex-grow: 1; display: flex; overflow: hidden;">
 
         <!-- 1. TOP PAGE -->
-        <div id="topView" class="view active">
-            <h1 style="font-weight: 700; color: #334155; margin-bottom: 40px; padding-top: 80px;">CYBER HOCKEY 3v3</h1>
+        <div id="topView" class="view active" style="position: relative;">
+            <!-- Three.js background canvas -->
+            <canvas id="topBgCanvas"
+                style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;"></canvas>
+            <h1
+                style="font-weight: 700; color: #334155; margin-bottom: 30px; padding-top: 60px; z-index: 1; position: relative;">
+                CYBER HOCKEY 3v3</h1>
 
-            <div class="top-btns">
+            <div class="top-btns" style="z-index: 1; position: relative;">
                 <button class="btn btn-primary huge-btn" onclick="createRoomPrompt()">ルームを作成</button>
                 <div style="text-align: center; font-weight: 500; color: #64748b; margin: 10px 0;">または</div>
                 <button class="btn btn-outline-success huge-btn" onclick="joinPrivateRoom()">プライベートルームに参加</button>
                 <button class="btn btn-outline-secondary huge-btn" onclick="joinPublicRoom()">パブリックルームに参加</button>
             </div>
 
-            <!-- Item 2: Manual Button -->
+            <!-- Manual Button -->
             <button class="btn btn-outline-secondary"
-                style="margin-bottom: 15px; border-radius: 20px; padding: 10px 30px;" onclick="showManual()">
+                style="margin-bottom: 15px; border-radius: 20px; padding: 10px 30px; z-index: 1; position: relative;"
+                onclick="showManual()">
                 <i class="bi bi-book"></i> 遊び方・操作説明
             </button>
 
-            <div class="user-profile-card">
+            <div class="user-profile-card" style="z-index: 1; position: relative;">
                 <div class="label">Playing as</div>
                 <div class="name-container">
                     <span id="currentNameDisplay" class="name-text">-</span>
@@ -895,7 +901,17 @@
                 <!-- Waiting State Container -->
                 <div id="waitingStateContainer" style="display: flex; flex-direction: column; height: 100%;">
                     <h3 style="padding: 20px 20px 0 20px; margin: 0; color: #334155;">待機中のプレイヤー</h3>
-                    <div style="padding: 5px 20px; color: #64748b; font-size: 0.9rem;" id="waitingRoomIdDisplay"></div>
+                    <div style="padding: 5px 20px; color: #64748b; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;"
+                        id="waitingRoomIdDisplay">
+                        <span id="roomIdText"></span>
+                        <button onclick="copyRoomId()"
+                            style="background: none; border: 1px solid #cbd5e1; border-radius: 6px; padding: 2px 8px; cursor: pointer; font-size: 0.8rem; color: #64748b;"
+                            title="コピー">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                        <span id="copyFeedback"
+                            style="color: #22c55e; font-size: 0.75rem; display: none;">Copied!</span>
+                    </div>
                     <div id="participantList" class="participant-list">
                         <!-- tags injected here -->
                     </div>
@@ -1091,6 +1107,26 @@
                 }).catch(() => alert("エラーが発生しました。"));
         }
 
+        function copyRoomId() {
+            if (!currentRoomId) return;
+            navigator.clipboard.writeText(currentRoomId).then(() => {
+                const fb = document.getElementById('copyFeedback');
+                fb.style.display = 'inline';
+                setTimeout(() => { fb.style.display = 'none'; }, 1500);
+            }).catch(() => {
+                // Fallback for unsecured contexts
+                const tmp = document.createElement('textarea');
+                tmp.value = currentRoomId;
+                document.body.appendChild(tmp);
+                tmp.select();
+                document.execCommand('copy');
+                document.body.removeChild(tmp);
+                const fb = document.getElementById('copyFeedback');
+                fb.style.display = 'inline';
+                setTimeout(() => { fb.style.display = 'none'; }, 1500);
+            });
+        }
+
         function joinRoom(id) {
             requireUsername();
             currentRoomId = id;
@@ -1105,9 +1141,8 @@
             socket.emit('leave_room', { room_id: currentRoomId, username: currentUsername });
             currentRoomId = null;
             currentTeamId = null;
+            document.getElementById('headerRoomInfo').textContent = '';
             switchView('topView');
-            // Reload top page rooms if needed
-            // loadRooms(); 
         }
 
         function disbandRoom() {
@@ -1124,6 +1159,7 @@
                 alert("ルームが解散されました。");
                 currentRoomId = null;
                 currentTeamId = null;
+                document.getElementById('headerRoomInfo').textContent = '';
                 switchView('topView');
             }
         });
@@ -1135,7 +1171,8 @@
             playersState = users;
 
             document.getElementById('headerRoomInfo').textContent = `Room: ${room.name} | ID: ${room.id}`;
-            document.getElementById('waitingRoomIdDisplay').textContent = `ルームID: ${room.id} (${room.is_public ? 'パブリック' : 'プライベート'})`;
+            const roomIdText = document.getElementById('roomIdText');
+            if (roomIdText) roomIdText.textContent = `ルームID: ${room.id} (${room.is_public ? 'パブリック' : 'プライベート'})`;
             roomAdmin = room.admin;
 
             // Update my state
@@ -1220,21 +1257,30 @@
             // The room_update event (triggered by join_room) will handle visibility and Three.js init
         });
 
+        let kickoffDisplayTeam = 'Red';
+        let kickoffDisplayColor = '#ef4444';
         socket.on('all_ready', (data) => {
             document.getElementById('readyBtn').style.display = 'none';
             const msg = document.getElementById('countdownMsg');
             msg.style.display = 'block';
-            const kickoffDir = resetPuck(); // Item 8: returns kickoff direction
 
+            // Kickoff direction: only admin resets puck; others wait for sync
+            let kickoffDir = 1;
+            if (currentUsername === roomAdmin) {
+                kickoffDir = resetPuck();
+                // Emit the direction to all clients so they display the same info
+                socket.emit('kickoff_direction', { room_id: currentRoomId, dir: kickoffDir });
+            }
+
+            // Show countdown with attack info (will be updated by kickoff_direction event for non-admins)
             let c = data.countdown;
-            // Item 8: Show first attacker during countdown
             const attackTeam = kickoffDir > 0 ? 'Red' : 'Blue';
             const attackColor = kickoffDir > 0 ? '#ef4444' : '#3b82f6';
             msg.innerHTML = `<div>${c}</div><div style="font-size:1.2rem; color:${attackColor}">${attackTeam} → Attack!</div>`;
             const iv = setInterval(() => {
                 c--;
                 if (c > 0) {
-                    msg.innerHTML = `<div>${c}</div><div style="font-size:1.2rem; color:${attackColor}">${attackTeam} → Attack!</div>`;
+                    msg.innerHTML = `<div>${c}</div><div style="font-size:1.2rem; color:${kickoffDisplayColor}">${kickoffDisplayTeam} → Attack!</div>`;
                 } else if (c === 0) {
                     msg.innerHTML = 'START!';
                     isGameRunning = true;
@@ -1243,6 +1289,20 @@
                     clearInterval(iv);
                 }
             }, 1000);
+        });
+
+        // Kickoff direction sync: non-admin clients receive the admin's kickoff direction
+        socket.on('kickoff_synced', (data) => {
+            kickoffDisplayTeam = data.dir > 0 ? 'Red' : 'Blue';
+            kickoffDisplayColor = data.dir > 0 ? '#ef4444' : '#3b82f6';
+            // Update the current countdown display if visible
+            const msg = document.getElementById('countdownMsg');
+            if (msg.style.display === 'block') {
+                const currentCount = msg.querySelector('div');
+                if (currentCount) {
+                    msg.innerHTML = `<div>${currentCount.textContent}</div><div style="font-size:1.2rem; color:${kickoffDisplayColor}">${kickoffDisplayTeam} → Attack!</div>`;
+                }
+            }
         });
 
         socket.on('new_message', () => { if (currentRoomId) loadPosts(); });
@@ -1374,6 +1434,7 @@
             isGameRunning = false;
             const container = document.getElementById('gameCanvasContainer');
             container.innerHTML = '';
+            document.getElementById('headerRoomInfo').textContent = '';
 
             // Reset back to waiting state
             document.getElementById('waitingStateContainer').style.display = 'flex';
@@ -1943,6 +2004,80 @@
             fetch('/post', { method: 'POST', body: formData });
             // Socket broadcast triggers reload locally.
         });
+
+        // --- Three.js Top Page Background ---
+        (function initTopBackground() {
+            const canvas = document.getElementById('topBgCanvas');
+            if (!canvas) return;
+            const bgScene = new THREE.Scene();
+            const bgCamera = new THREE.PerspectiveCamera(60, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+            bgCamera.position.z = 30;
+            const bgRenderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            bgRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            bgRenderer.setClearColor(0xf7f7f8, 1);
+
+            // Create floating geometric shapes
+            const shapes = [];
+            const geos = [
+                new THREE.IcosahedronGeometry(1, 0),
+                new THREE.OctahedronGeometry(1, 0),
+                new THREE.TorusGeometry(0.7, 0.3, 8, 16),
+                new THREE.TetrahedronGeometry(1, 0)
+            ];
+            const colors = [0xcbd5e1, 0x94a3b8, 0xe2e8f0, 0xa5b4cf, 0xb8c5d9];
+
+            for (let i = 0; i < 20; i++) {
+                const geo = geos[Math.floor(Math.random() * geos.length)];
+                const mat = new THREE.MeshPhongMaterial({
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    transparent: true,
+                    opacity: 0.3 + Math.random() * 0.2,
+                    flatShading: true
+                });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(
+                    (Math.random() - 0.5) * 40,
+                    (Math.random() - 0.5) * 30,
+                    (Math.random() - 0.5) * 20 - 5
+                );
+                mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+                const scale = 0.5 + Math.random() * 1.5;
+                mesh.scale.set(scale, scale, scale);
+                bgScene.add(mesh);
+                shapes.push({
+                    mesh: mesh,
+                    rotSpeed: { x: (Math.random() - 0.5) * 0.005, y: (Math.random() - 0.5) * 0.005 },
+                    floatSpeed: 0.002 + Math.random() * 0.003,
+                    floatOffset: Math.random() * Math.PI * 2
+                });
+            }
+
+            const ambLight = new THREE.AmbientLight(0xffffff, 0.8);
+            bgScene.add(ambLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.3);
+            dirLight.position.set(5, 10, 5);
+            bgScene.add(dirLight);
+
+            function animateBg() {
+                requestAnimationFrame(animateBg);
+                const t = Date.now() * 0.001;
+                shapes.forEach(s => {
+                    s.mesh.rotation.x += s.rotSpeed.x;
+                    s.mesh.rotation.y += s.rotSpeed.y;
+                    s.mesh.position.y += Math.sin(t + s.floatOffset) * s.floatSpeed * 0.3;
+                });
+                bgRenderer.render(bgScene, bgCamera);
+            }
+            animateBg();
+
+            window.addEventListener('resize', () => {
+                if (canvas.clientWidth > 0 && canvas.clientHeight > 0) {
+                    bgCamera.aspect = canvas.clientWidth / canvas.clientHeight;
+                    bgCamera.updateProjectionMatrix();
+                    bgRenderer.setSize(canvas.clientWidth, canvas.clientHeight);
+                }
+            });
+        })();
 
     </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
