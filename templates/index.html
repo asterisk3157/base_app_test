@@ -6,16 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Board</title>
     <style>
-        /* Apple-like Typography & Color Palette (Dark Mode Default) */
+        /* Kawaii / Cute Pastel Color Palette */
         :root {
-            --bg-color: #000000;
-            --text-color: #f5f5f7;
-            --card-bg: rgba(30, 30, 30, 0.7);
-            --card-border: rgba(255, 255, 255, 0.15);
-            --apple-blue: #0A84FF;
-            /* Apple's dark mode blue accent */
-            --apple-blue-hover: #409CFF;
-            --secondary-text: #86868b;
+            --bg-color: #FFF0F5;
+            /* Lavender Blush (very soft pink) */
+            --text-color: #5C4d4d;
+            /* Soft warm charcoal/brown instead of harsh black */
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-border: rgba(255, 182, 193, 0.4);
+            /* Light pink border */
+            --apple-blue: #FFB6C1;
+            /* Main accent is now light pink */
+            --apple-blue-hover: #FFC0CB;
+            /* Brighter pink on hover */
+            --secondary-text: #9d8b8b;
+            /* Soft gray-brown */
+            --cute-shadow: 0 8px 24px rgba(255, 182, 193, 0.2);
         }
 
         * {
@@ -25,8 +31,11 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: "Hiragino Maru Gothic ProN", "Kosugi Maru", "Varela Round", "Meiryo", sans-serif;
             background-color: var(--bg-color);
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(255, 255, 255, 0.4) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(255, 240, 245, 0.8) 0%, transparent 50%);
             color: var(--text-color);
             line-height: 1.5;
             min-height: 100vh;
@@ -52,18 +61,20 @@
         /* Glassmorphism Form Area */
         .post-form-card {
             background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--card-border);
-            border-radius: 20px;
-            padding: 24px;
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 2px solid var(--card-border);
+            border-radius: 30px;
+            /* Much rounder */
+            padding: 30px;
+            box-shadow: var(--cute-shadow);
             margin-bottom: 40px;
             transition: box-shadow 0.3s ease;
         }
 
         .post-form-card:focus-within {
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 12px 32px rgba(255, 182, 193, 0.35);
+            transform: translateY(-2px);
         }
 
         input[type="text"],
@@ -107,24 +118,28 @@
 
         button {
             background-color: var(--apple-blue);
-            color: white;
+            color: #5C4d4d;
+            /* Soft dark text on pink */
             border: none;
-            padding: 12px 24px;
+            padding: 12px 28px;
             border-radius: 980px;
             /* Fully rounded */
             font-size: 16px;
-            font-weight: 600;
+            font-weight: bold;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            /* Bouncy hover*/
+            box-shadow: 0 4px 12px rgba(255, 182, 193, 0.4);
         }
 
         button:hover {
             background-color: var(--apple-blue-hover);
-            transform: scale(1.02);
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 6px 16px rgba(255, 182, 193, 0.6);
         }
 
         button:active {
-            transform: scale(0.98);
+            transform: scale(0.95);
         }
 
         /* Posts List Area */
@@ -135,23 +150,28 @@
         }
 
         .post {
-            background: rgba(44, 44, 46, 0.8);
-            border-radius: 16px;
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 24px;
             padding: 20px 24px;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03);
+            box-shadow: var(--cute-shadow);
             font-size: 17px;
             word-wrap: break-word;
         }
 
         .reply-post {
             margin-left: 24px;
-            border-left: 3px solid rgba(255, 255, 255, 0.1);
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 0 16px 16px 0;
+            border-left: 4px dashed var(--apple-blue);
+            /* Cute dashed line */
+            background: transparent;
+            border-radius: 0 24px 24px 0;
             padding: 16px 20px;
             margin-top: -8px;
             margin-bottom: 16px;
             box-shadow: none;
+            border-top: none;
+            border-right: none;
+            border-bottom: none;
         }
 
         .post-header {
@@ -186,25 +206,29 @@
             color: var(--secondary-text);
             border: none;
             font-size: 14px;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 4px;
-            transition: color 0.2s ease;
-            padding: 0;
-            border-radius: 0;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            padding: 4px 8px;
+            border-radius: 12px;
+            box-shadow: none;
+            /* Override base button shadow */
         }
 
         .action-button:hover {
-            color: var(--text-color);
-            background: transparent;
-            transform: none;
+            color: var(--apple-blue);
+            background: rgba(255, 182, 193, 0.15);
+            /* Soft pink highlight */
+            transform: scale(1.1);
+            box-shadow: none;
         }
 
         .action-button.like:hover:not(:disabled) {
-            color: #ff3b30;
-            /* Apple red */
+            color: #ff6b81;
+            /* Cuter red/pink */
         }
 
         .action-button.edit:hover {
@@ -212,7 +236,7 @@
         }
 
         .action-button.delete:hover {
-            color: #ff3b30;
+            color: #ff6b81;
         }
 
         @media (max-width: 600px) {
@@ -247,9 +271,10 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: rgba(255, 240, 245, 0.7);
+            /* Pinkish transparent overlay instead of stark black */
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -265,15 +290,15 @@
         }
 
         .modal-content {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 20px;
-            padding: 24px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid var(--card-border);
+            border-radius: 30px;
+            padding: 30px;
             width: 90%;
             max-width: 500px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            transform: scale(0.95) translateY(10px);
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: var(--cute-shadow);
+            transform: scale(0.85) translateY(20px);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
         .modal-overlay.active .modal-content {
