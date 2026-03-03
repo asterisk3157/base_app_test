@@ -1208,7 +1208,8 @@
                         if (u.username === currentUsername) {
                             div.classList.add('is-me');
                         }
-                        div.innerHTML = `<span>${u.username} ${u.username === currentUsername ? '<small>(あなた)</small>' : ''}</span> ${u.username === room.admin ? '👑' : ''}`;
+                        const resultBadge = u.in_result ? ' <span style="background:#f59e0b;color:#fff;padding:1px 6px;border-radius:8px;font-size:0.7rem;margin-left:4px;">リザルト画面</span>' : '';
+                        div.innerHTML = `<span>${u.username} ${u.username === currentUsername ? '<small>(あなた)</small>' : ''}${resultBadge}</span> ${u.username === room.admin ? '👑' : ''}`;
                     } else {
                         div.className = 'participant-tag empty-slot';
                         div.innerHTML = `<span>Waiting...</span>`;
@@ -1220,7 +1221,7 @@
                 if (currentUsername === room.admin) {
                     document.getElementById('adminControls').style.display = 'block';
                     document.getElementById('userControls').style.display = 'none';
-                    document.getElementById('startGameBtn').disabled = users.length < 2;
+                    document.getElementById('startGameBtn').disabled = users.length < 2 || users.some(u => u.in_result);
                 } else {
                     document.getElementById('adminControls').style.display = 'none';
                     document.getElementById('userControls').style.display = 'block';
@@ -1450,6 +1451,9 @@
         function closeResultAndReset() {
             const overlay = document.querySelector('.result-overlay');
             if (overlay) overlay.remove();
+
+            // Notify server this player is back from result screen
+            socket.emit('player_back_to_waiting', { room_id: currentRoomId, username: currentUsername });
 
             // Reset game state
             threeSceneInitialized = false;

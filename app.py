@@ -63,6 +63,12 @@ def init_db():
     rooms_cols = [col[1] for col in c.fetchall()]
     if "is_public" not in rooms_cols:
         c.execute("ALTER TABLE rooms ADD COLUMN is_public BOOLEAN DEFAULT 0")
+    
+    # Migration: add in_result column to users
+    c.execute("PRAGMA table_info(users)")
+    user_cols = [col[1] for col in c.fetchall()]
+    if "in_result" not in user_cols:
+        c.execute("ALTER TABLE users ADD COLUMN in_result BOOLEAN DEFAULT 0")
         
     conn.commit()
     conn.close()
@@ -154,7 +160,7 @@ def reset_room(room_id):
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute('UPDATE rooms SET status = "waiting", team1_score = 0, team2_score = 0, set_number = 1 WHERE id = ?', (room_id,))
-    c.execute('UPDATE users SET team_id = 0, is_ready = 0 WHERE room_id = ?', (room_id,))
+    c.execute('UPDATE users SET team_id = 0, is_ready = 0, in_result = 0 WHERE room_id = ?', (room_id,))
     # Clear team chat
     c.execute('DELETE FROM posts WHERE room_id = ? AND team_id > 0', (room_id,))
     conn.commit()
@@ -485,6 +491,9 @@ def handle_goal(data):
         game_over = True
         winner = 2
         c.execute('UPDATE rooms SET status = "finished" WHERE id = ?', (room_id,))
+    
+    if game_over:
+        c.execute('UPDATE users SET in_result = 1 WHERE room_id = ?', (room_id,))
         
     conn.commit()
     conn.close()
@@ -499,6 +508,17 @@ def handle_goal(data):
     
     emit('room_update', fetch_room_state(room_id), to=room_id)
 
+@socketio.on('player_back_to_waiting')
+def handle_player_back(data):
+    username = data.get('username')
+    room_id = data.get('room_id')
+    if username and room_id:
+        conn = sqlite3.connect(DB_NAME)
+        c = conn.cursor()
+        c.execute('UPDATE users SET in_result = 0 WHERE username = ? AND room_id = ?', (username, room_id))
+        conn.commit()
+        conn.close()
+        emit('room_update', fetch_room_state(room_id), to=room_id)
 
 def fetch_room_state(room_id):
     conn = sqlite3.connect(DB_NAME)
@@ -521,13 +541,14 @@ def fetch_room_state(room_id):
         'is_public': bool(r[7])
     }
     
-    c.execute('SELECT username, team_id, is_ready FROM users WHERE room_id = ?', (room_id,))
+    c.execute('SELECT username, team_id, is_ready, COALESCE(in_result, 0) FROM users WHERE room_id = ?', (room_id,))
     users = []
     for u in c.fetchall():
         users.append({
             'username': u[0],
             'team_id': u[1],
-            'is_ready': bool(u[2])
+            'is_ready': bool(u[2]),
+            'in_result': bool(u[3])
         })
         
     conn.close()
