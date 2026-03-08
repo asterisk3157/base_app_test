@@ -163,18 +163,31 @@
         }
 
         .reply-post {
-            margin-left: 24px;
-            border-left: 4px dashed var(--apple-blue);
-            /* Cute dashed line */
-            background: transparent;
-            border-radius: 0 24px 24px 0;
-            padding: 16px 20px;
-            margin-top: -8px;
-            margin-bottom: 16px;
+            margin-left: 28px;
+            border-left: 3px dashed var(--apple-blue);
+            background: rgba(255, 228, 235, 0.25);
+            border-radius: 0 20px 20px 0;
+            padding: 14px 18px;
+            margin-top: 10px;
+            margin-bottom: 4px;
             box-shadow: none;
             border-top: none;
             border-right: none;
             border-bottom: none;
+            position: relative;
+        }
+
+        .reply-to-label {
+            font-size: 12px;
+            color: var(--apple-blue);
+            font-weight: 600;
+            margin-bottom: 4px;
+            opacity: 0.85;
+        }
+
+        .replies-group {
+            margin-top: 8px;
+            padding-left: 0;
         }
 
         .post-header {
@@ -550,11 +563,19 @@
             }
         }
 
-        function renderPost(post, containerDiv, isReply = false) {
+        function renderPost(post, containerDiv, isReply = false, parentAuthor = '') {
             const div = document.createElement('div');
             div.className = 'post';
             if (isReply) {
                 div.classList.add('reply-post');
+            }
+
+            // Show "replying to" label for replies
+            if (isReply && parentAuthor) {
+                const replyLabel = document.createElement('div');
+                replyLabel.className = 'reply-to-label';
+                replyLabel.innerText = `↩️ ${parentAuthor || '名無し'} への返信`;
+                div.appendChild(replyLabel);
             }
 
             const headerDiv = document.createElement('div');
@@ -645,17 +666,18 @@
             div.appendChild(headerDiv);
             div.appendChild(contentDiv);
             div.appendChild(actionsDiv);
-            containerDiv.appendChild(div);
 
-            // Render nested replies
+            // Render nested replies INSIDE this post's div
             if (post.replies && post.replies.length > 0) {
                 const repliesContainer = document.createElement('div');
                 repliesContainer.className = 'replies-group';
                 post.replies.forEach(reply => {
-                    renderPost(reply, repliesContainer, true);
+                    renderPost(reply, repliesContainer, true, post.author);
                 });
-                containerDiv.appendChild(repliesContainer);
+                div.appendChild(repliesContainer);
             }
+
+            containerDiv.appendChild(div);
         }
 
         function loadPosts() {
