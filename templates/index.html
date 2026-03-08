@@ -441,12 +441,11 @@
             <input type="text" id="replyAuthor" placeholder="なまえ（省略すると「名無し」になります）">
             <textarea id="replyContentText" placeholder="返信内容を入力してください"></textarea>
             <input type="text" id="replyDeletePassword" placeholder="編集用パスワード（任意）">
-            <div class="modal-actions" style="display: flex; align-items: center; justify-content: space-between;">
-                <span id="currentReplyWeatherDisplay" style="color: #86868b; font-size: 14px;">天気情報を取得中...</span>
-                <div style="display: flex; gap: 12px;">
-                    <button class="btn-cancel" onclick="closeReplyModal()">キャンセル</button>
-                    <button onclick="submitReply()">返信する</button>
-                </div>
+            <span id="currentReplyWeatherDisplay"
+                style="color: #9d8b8b; font-size: 13px; display: block; margin-bottom: 10px;">天気情報を取得中...</span>
+            <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 12px; flex-wrap: nowrap;">
+                <button class="btn-cancel" onclick="closeReplyModal()">キャンセル</button>
+                <button onclick="submitReply()">返信する</button>
             </div>
         </div>
     </div>
