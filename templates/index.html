@@ -402,7 +402,7 @@
             <form id="postForm">
                 <input type="text" name="author" id="author" placeholder="なまえ（省略すると「名無し」になります）">
                 <textarea name="content" id="content" placeholder="今なにしてる？" required></textarea>
-                <input type="text" name="delete_password" id="delete_password" placeholder="削除用パスワード（任意）">
+                <input type="text" name="delete_password" id="delete_password" placeholder="編集用パスワード（任意）">
                 <input type="hidden" name="weather" id="weatherInput">
                 <div class="form-actions">
                     <span id="currentWeatherDisplay"
@@ -421,7 +421,7 @@
     <div id="editModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">投稿を編集</div>
-            <input type="password" id="editPassword" placeholder="現在の削除用パスワード（必須）">
+            <input type="password" id="editPassword" placeholder="現在の編集用パスワード（必須）">
             <textarea id="editContentText" placeholder="新しい内容を入力してください"></textarea>
             <input type="text" id="editNewPassword" placeholder="新しいパスワード（変更する場合のみ入力）">
             <div class="modal-actions">
@@ -437,7 +437,7 @@
             <div class="modal-header">返信する</div>
             <input type="text" id="replyAuthor" placeholder="なまえ（省略すると「名無し」になります）">
             <textarea id="replyContentText" placeholder="返信内容を入力してください"></textarea>
-            <input type="text" id="replyDeletePassword" placeholder="削除用パスワード（任意）">
+            <input type="text" id="replyDeletePassword" placeholder="編集用パスワード（任意）">
             <div class="modal-actions" style="display: flex; align-items: center; justify-content: space-between;">
                 <span id="currentReplyWeatherDisplay" style="color: #86868b; font-size: 14px;">天気情報を取得中...</span>
                 <div style="display: flex; gap: 12px;">
@@ -619,7 +619,7 @@
             deleteBtn.className = 'action-button delete';
             deleteBtn.innerHTML = `🗑️ 削除`;
             deleteBtn.onclick = () => {
-                const secret = prompt('削除するには管理者パスワード、または投稿時に設定した「削除用パスワード」を入力してください:');
+                const secret = prompt('削除するには管理者パスワード、または投稿時に設定した「編集用パスワード」を入力してください:');
                 if (secret) {
                     const formData = new FormData();
                     formData.append('secret', secret);
