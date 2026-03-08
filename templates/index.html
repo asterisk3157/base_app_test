@@ -9,18 +9,12 @@
         /* Kawaii / Cute Pastel Color Palette */
         :root {
             --bg-color: #FFF0F5;
-            /* Lavender Blush (very soft pink) */
             --text-color: #5C4d4d;
-            /* Soft warm charcoal/brown instead of harsh black */
             --card-bg: rgba(255, 255, 255, 0.85);
             --card-border: rgba(255, 182, 193, 0.4);
-            /* Light pink border */
-            --apple-blue: #FFB6C1;
-            /* Main accent is now light pink */
-            --apple-blue-hover: #FFC0CB;
-            /* Brighter pink on hover */
+            --accent: #FFB6C1;
+            --accent-hover: #FFC0CB;
             --secondary-text: #9d8b8b;
-            /* Soft gray-brown */
             --cute-shadow: 0 8px 24px rgba(255, 182, 193, 0.2);
         }
 
@@ -100,7 +94,7 @@
         }
 
         input[type="text"]:focus {
-            border-bottom: 1px solid var(--apple-blue);
+            border-bottom: 1px solid var(--accent);
         }
 
         textarea {
@@ -120,23 +114,20 @@
         }
 
         button {
-            background-color: var(--apple-blue);
+            background-color: var(--accent);
             color: #5C4d4d;
-            /* Soft dark text on pink */
             border: none;
             padding: 12px 28px;
             border-radius: 980px;
-            /* Fully rounded */
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            /* Bouncy hover*/
             box-shadow: 0 4px 12px rgba(255, 182, 193, 0.4);
         }
 
         button:hover {
-            background-color: var(--apple-blue-hover);
+            background-color: var(--accent-hover);
             transform: scale(1.05) translateY(-2px);
             box-shadow: 0 6px 16px rgba(255, 182, 193, 0.6);
         }
@@ -164,7 +155,7 @@
 
         .reply-post {
             margin-left: 28px;
-            border-left: 3px dashed var(--apple-blue);
+            border-left: 3px dashed var(--accent);
             background: rgba(255, 228, 235, 0.25);
             border-radius: 0 20px 20px 0;
             padding: 14px 18px;
@@ -179,7 +170,7 @@
 
         .reply-to-label {
             font-size: 12px;
-            color: var(--apple-blue);
+            color: var(--accent);
             font-weight: 600;
             margin-bottom: 4px;
             opacity: 0.85;
@@ -235,20 +226,19 @@
         }
 
         .action-button:hover {
-            color: var(--apple-blue);
+            color: var(--accent);
             background: rgba(255, 182, 193, 0.15);
-            /* Soft pink highlight */
             transform: scale(1.1);
             box-shadow: none;
         }
 
         .action-button.like:hover:not(:disabled) {
             color: #ff6b81;
-            /* Cuter red/pink */
         }
 
+        .action-button.reply:hover,
         .action-button.edit:hover {
-            color: var(--apple-blue);
+            color: var(--accent);
         }
 
         .action-button.delete:hover {
@@ -367,9 +357,9 @@
 
         .modal-content input[type="password"],
         .modal-content textarea {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(255, 245, 248, 0.5);
             border: 1px solid var(--card-border);
-            border-radius: 12px;
+            border-radius: 16px;
             padding: 12px;
             color: var(--text-color);
             margin-bottom: 16px;
@@ -381,7 +371,7 @@
 
         .modal-content input[type="password"]:focus,
         .modal-content textarea:focus {
-            border-color: var(--apple-blue);
+            border-color: var(--accent);
         }
 
         .modal-content textarea {
@@ -600,7 +590,7 @@
             actionsDiv.className = 'post-actions';
 
             const replyBtn = document.createElement('button');
-            replyBtn.className = 'action-button edit'; // Reusing edit icon style for now
+            replyBtn.className = 'action-button reply';
             replyBtn.innerHTML = `💬 返信`;
             replyBtn.onclick = () => {
                 openReplyModal(post.id);
@@ -739,7 +729,7 @@
                         regionName = '沖縄';
                     }
                 } catch (e) {
-                    console.log("Geolocation unavailable, defaulting to Kanto/Tokyo weather");
+                    console.log('Geolocation unavailable, defaulting to New York weather');
                 }
 
                 const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);

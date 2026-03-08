@@ -8,35 +8,25 @@ DB_NAME = 'database.db'
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY AUTOINCREMENT, author TEXT, content TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, likes INTEGER DEFAULT 0)''')
-    try:
-        c.execute('''ALTER TABLE posts ADD COLUMN author TEXT DEFAULT '名無し' ''')
-    except sqlite3.OperationalError:
-        pass # Column already exists
-    try:
-        c.execute('''ALTER TABLE posts ADD COLUMN created_at TIMESTAMP''')
-    except sqlite3.OperationalError:
-        pass # Column already exists
-    try:
-        c.execute('''ALTER TABLE posts ADD COLUMN likes INTEGER DEFAULT 0''')
-    except sqlite3.OperationalError:
-        pass # Column already exists
-    try:
-        c.execute('''ALTER TABLE posts ADD COLUMN delete_password TEXT''')
-    except sqlite3.OperationalError:
-        pass # Column already exists
-    try:
-        c.execute('''ALTER TABLE posts ADD COLUMN weather TEXT DEFAULT ""''')
-    except sqlite3.OperationalError:
-        pass # Column already exists
-    try:
-        c.execute('''ALTER TABLE posts ADD COLUMN parent_id INTEGER''')
-    except sqlite3.OperationalError:
-        pass # Column already exists
-    
-    # Fix existing rows that may not have generated defaults correctly
-    c.execute('''UPDATE posts SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL''')
-    c.execute('''UPDATE posts SET likes = 0 WHERE likes IS NULL''')
+    c.execute('''CREATE TABLE IF NOT EXISTS posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        author TEXT DEFAULT '名無し',
+        content TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        likes INTEGER DEFAULT 0,
+        delete_password TEXT,
+        weather TEXT DEFAULT "",
+        parent_id INTEGER
+    )''')
+    # Migration for older databases that may be missing newer columns
+    for col, col_def in [('delete_password', 'TEXT'), ('weather', 'TEXT DEFAULT ""'), ('parent_id', 'INTEGER')]:
+        try:
+            c.execute(f'ALTER TABLE posts ADD COLUMN {col} {col_def}')
+        except sqlite3.OperationalError:
+            pass
+    # Fix rows with missing defaults
+    c.execute('UPDATE posts SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL')
+    c.execute('UPDATE posts SET likes = 0 WHERE likes IS NULL')
     conn.commit()
     conn.close()
 
@@ -73,19 +63,13 @@ def post():
     content = request.form.get('content')
     delete_password = request.form.get('delete_password', '')
     weather = request.form.get('weather', '')
-    parent_id = request.form.get('parent_id')
-    if parent_id == '':
-        parent_id = None
-        
+    parent_id = request.form.get('parent_id') or None
+
     if content:
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
-        # Vulnerability Note: This is currently using parameterized queries (safe), 
-        # but students will likely ask AI to "just make it work" or "fix error",
-        # which might introduce SQLi if not careful. Or we can INTENTIONALLY make this vulnerable later.
-        # For base app, we keep it simple but functional.
-        # Fixed: explicitly insert the CURRENT_TIMESTAMP for timezone correctness in SQLite.
-        c.execute('INSERT INTO posts (author, content, created_at, delete_password, weather, parent_id) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, ?)', (author, content, delete_password, weather, parent_id))
+        c.execute('INSERT INTO posts (author, content, created_at, delete_password, weather, parent_id) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, ?)',
+                  (author, content, delete_password, weather, parent_id))
         conn.commit()
         conn.close()
     return redirect(url_for('index'))
@@ -99,34 +83,34 @@ def like_post(post_id):
     conn.close()
     return {'status': 'success'}
 
+def verify_password(cursor, post_id, secret):
+    """Verify that the provided secret matches the admin password or the post's edit password.
+    Returns (True, row) if authorized, (False, row) otherwise. row is None if post not found."""
+    cursor.execute('SELECT delete_password FROM posts WHERE id = ?', (post_id,))
+    row = cursor.fetchone()
+    if not row:
+        return False, None
+    db_password = row[0]
+    if secret == 'admin123':
+        return True, row
+    if db_password and secret == db_password:
+        return True, row
+    return False, row
+
 @app.route('/api/posts/<int:post_id>/edit', methods=['POST'])
 def edit_post(post_id):
     secret = request.form.get('secret', '')
     new_content = request.form.get('content', '')
     new_password = request.form.get('new_password', '')
-    
+
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute('SELECT delete_password FROM posts WHERE id = ?', (post_id,))
-    row = c.fetchone()
-    
-    if not row:
+    valid, row = verify_password(c, post_id, secret)
+
+    if row is None:
         conn.close()
         return {'status': 'error', 'message': 'Post not found'}, 404
-        
-    db_password = row[0]
-    
-    # Securely check password: 
-    # If the database password is empty/None, ONLY admin can edit/delete it.
-    # Otherwise, it must match either admin or the specific post password.
-    if secret == 'admin123':
-        valid_edit = True
-    elif db_password and secret == db_password:
-        valid_edit = True
-    else:
-        valid_edit = False
-    
-    if not valid_edit:
+    if not valid:
         conn.close()
         return {'status': 'error', 'message': 'Unauthorized'}, 403
 
@@ -135,48 +119,29 @@ def edit_post(post_id):
     if new_password:
         c.execute('UPDATE posts SET delete_password = ? WHERE id = ?', (new_password, post_id))
     conn.commit()
-        
     conn.close()
     return {'status': 'success'}
 
 @app.route('/api/posts/<int:post_id>/delete', methods=['POST'])
 def delete_post(post_id):
-    # Check if the provided secret matches admin password or the custom post delete_password
     secret = request.form.get('secret', '')
-    
+
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    c.execute('SELECT delete_password FROM posts WHERE id = ?', (post_id,))
-    row = c.fetchone()
-    
-    if not row:
+    valid, row = verify_password(c, post_id, secret)
+
+    if row is None:
         conn.close()
         return {'status': 'error', 'message': 'Post not found'}, 404
-        
-    db_password = row[0]
-    
-    # Securely check password: 
-    # If the database password is empty/None, ONLY admin can edit/delete it.
-    # Otherwise, it must match either admin or the specific post password.
-    if secret == 'admin123':
-        valid_delete = True
-    elif db_password and secret == db_password:
-        valid_delete = True
-    else:
-        valid_delete = False
-    
-    if not valid_delete:
+    if not valid:
         conn.close()
         return {'status': 'error', 'message': 'Unauthorized'}, 403
 
-    # Find the parent of the post being deleted
+    # Reattach children to the deleted post's parent
     c.execute('SELECT parent_id FROM posts WHERE id = ?', (post_id,))
     parent_row = c.fetchone()
     if parent_row:
-        parent_id_val = parent_row[0]
-        # Reattach all children of this post to its parent (grandparent of the children)
-        # This prevents other replies from being deleted when the user only wants to delete one.
-        c.execute('UPDATE posts SET parent_id = ? WHERE parent_id = ?', (parent_id_val, post_id))
+        c.execute('UPDATE posts SET parent_id = ? WHERE parent_id = ?', (parent_row[0], post_id))
 
     c.execute('DELETE FROM posts WHERE id = ?', (post_id,))
     conn.commit()
