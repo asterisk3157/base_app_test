@@ -42,6 +42,9 @@
             display: flex;
             justify-content: center;
             padding: 40px 20px;
+            overflow-x: hidden;
+            /* Prevent horizontal scroll from floating petals */
+            position: relative;
         }
 
         .container {
@@ -261,6 +264,44 @@
 
             .reply-post {
                 margin-left: 20px;
+            }
+        }
+
+        /* 🌸 Sakura Petal Animation (March-April seasonal) */
+        .sakura-petal {
+            position: fixed;
+            top: -40px;
+            z-index: 9999;
+            pointer-events: none;
+            font-size: 20px;
+            opacity: 0.85;
+            animation: sakura-fall linear forwards;
+        }
+
+        @keyframes sakura-fall {
+            0% {
+                transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+                opacity: 0.9;
+            }
+
+            25% {
+                transform: translateY(25vh) translateX(30px) rotate(90deg) scale(0.95);
+                opacity: 0.85;
+            }
+
+            50% {
+                transform: translateY(50vh) translateX(-20px) rotate(180deg) scale(0.9);
+                opacity: 0.75;
+            }
+
+            75% {
+                transform: translateY(75vh) translateX(40px) rotate(270deg) scale(0.85);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: translateY(110vh) translateX(-10px) rotate(360deg) scale(0.8);
+                opacity: 0;
             }
         }
 
@@ -742,6 +783,56 @@
         // Load posts initially and every 2 seconds
         loadPosts();
         setInterval(loadPosts, 2000);
+
+        // 🌸 Sakura Petal Animation (March ~ April)
+        (function initSakura() {
+            const month = new Date().getMonth(); // 0-indexed: 2=March, 3=April
+            if (month !== 2 && month !== 3) return; // Only March and April
+
+            const petalChars = ['🌸', '🌸', '🌸', '✿', '❀', '💮'];
+            const maxPetals = 25; // Number of petals on screen at once
+            let activePetals = 0;
+
+            function spawnPetal() {
+                if (activePetals >= maxPetals) return;
+
+                const petal = document.createElement('div');
+                petal.className = 'sakura-petal';
+                petal.innerText = petalChars[Math.floor(Math.random() * petalChars.length)];
+
+                // Random horizontal position
+                petal.style.left = Math.random() * 100 + 'vw';
+
+                // Random size
+                const size = 16 + Math.random() * 18;
+                petal.style.fontSize = size + 'px';
+
+                // Random fall duration (6-14 seconds)
+                const duration = 6 + Math.random() * 8;
+                petal.style.animationDuration = duration + 's';
+
+                // Random delay so they don't all start at once
+                const delay = Math.random() * 3;
+                petal.style.animationDelay = delay + 's';
+
+                document.body.appendChild(petal);
+                activePetals++;
+
+                // Remove petal after animation completes
+                setTimeout(() => {
+                    petal.remove();
+                    activePetals--;
+                }, (duration + delay) * 1000);
+            }
+
+            // Spawn petals continuously
+            setInterval(spawnPetal, 600);
+
+            // Initial burst of petals
+            for (let i = 0; i < 10; i++) {
+                setTimeout(spawnPetal, i * 200);
+            }
+        })();
     </script>
 </body>
 
