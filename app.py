@@ -262,10 +262,21 @@ def delete_post(post_id):
         c.execute('DELETE FROM posts WHERE id = ? AND username = ?', (post_id, username))
         conn.commit()
         conn.close()
-        if room_id:
+    if room_id:
             socketio.emit('new_message', {'room_id': room_id}, to=room_id)
             
     return jsonify({'status': 'success'})
+
+def check_and_auto_reset_room(room_id, c):
+    c.execute('SELECT status FROM rooms WHERE id = ?', (room_id,))
+    room_status = c.fetchone()
+    if room_status and room_status[0] == 'finished':
+        c.execute('SELECT COUNT(*) FROM users WHERE room_id = ? AND in_result = 1', (room_id,))
+        still_in_result = c.fetchone()[0]
+        if still_in_result == 0:
+            c.execute('UPDATE rooms SET status = "waiting", team1_score = 0, team2_score = 0, set_number = 1 WHERE id = ?', (room_id,))
+            c.execute('UPDATE users SET team_id = 0, is_ready = 0 WHERE room_id = ?', (room_id,))
+            c.execute('DELETE FROM posts WHERE room_id = ? AND team_id > 0', (room_id,))
 
 # ---------------- SOCKET.IO HANDLERS ----------------
 
@@ -345,10 +356,14 @@ def handle_disconnect():
                     emit('goal_event', {'team_scored': 1, 'team1_score': 3, 'team2_score': 0, 'game_over': True, 'winner': 1}, to=room_id)
                     emit('room_update', fetch_room_state(room_id), to=room_id)
                 else:
+                    check_and_auto_reset_room(room_id, c)
+                    conn.commit()
                     conn.close()
                     emit('player_disconnected', {'username': username}, to=room_id)
                     emit('room_update', fetch_room_state(room_id), to=room_id)
             else:
+                check_and_auto_reset_room(room_id, c)
+                conn.commit()
                 conn.close()
                 emit('player_disconnected', {'username': username}, to=room_id)
                 emit('room_update', fetch_room_state(room_id), to=room_id)
@@ -362,6 +377,7 @@ def handle_leave_room(data):
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
         c.execute('DELETE FROM users WHERE username = ? AND room_id = ?', (username, room_id))
+        check_and_auto_reset_room(room_id, c)
         conn.commit()
         conn.close()
         emit('room_update', fetch_room_state(room_id), to=room_id)
@@ -516,6 +532,7 @@ def handle_player_back(data):
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
         c.execute('UPDATE users SET in_result = 0 WHERE username = ? AND room_id = ?', (username, room_id))
+        check_and_auto_reset_room(room_id, c)
         conn.commit()
         conn.close()
         emit('room_update', fetch_room_state(room_id), to=room_id)

@@ -1029,7 +1029,6 @@
         let roomState = 'waiting';
         let isSocketConnected = false;
         let playersState = []; // [{username, team_id, is_ready}]
-        let hasClosedResult = false; // Prevent double result screen
 
         socket.on('connect', () => { isSocketConnected = true; });
 
@@ -1190,7 +1189,9 @@
             const me = users.find(u => u.username === currentUsername);
             if (me) currentTeamId = me.team_id;
 
-            if (room.status === 'waiting') {
+            const showWaiting = room.status === 'waiting' || (room.status === 'finished' && (!me || !me.in_result));
+
+            if (showWaiting) {
                 document.getElementById('waitingStateContainer').style.display = 'flex';
                 document.getElementById('playingStateContainer').style.display = 'none';
                 document.getElementById('chatHeader').textContent = '待機室チャット';
@@ -1228,7 +1229,7 @@
                     document.getElementById('userControls').style.display = 'block';
                 }
             }
-            else if (room.status === 'playing' || room.status === 'finished') {
+            else if (room.status === 'playing' || (room.status === 'finished' && me && me.in_result)) {
                 document.getElementById('waitingStateContainer').style.display = 'none';
                 document.getElementById('playingStateContainer').style.display = 'block';
 
@@ -1252,7 +1253,7 @@
                     if (isReady) document.getElementById('readyBtn').style.display = 'block';
                 }
 
-                if (room.status === 'finished') {
+                if (room.status === 'finished' && me && me.in_result) {
                     document.getElementById('readyBtn').style.display = 'none';
                     showGameResult(room.team1_score, room.team2_score);
                 }
@@ -1265,7 +1266,6 @@
         socket.on('game_started', (data) => {
             // Clear global chat locally
             document.getElementById('posts').innerHTML = '';
-            hasClosedResult = false; // Reset for new game
             socket.emit('join_room', { room_id: currentRoomId, username: currentUsername }); // Re-trigger room sync
             // The room_update event (triggered by join_room) will handle visibility and Three.js init
         });
@@ -1432,7 +1432,6 @@
 
         // Show win/loss screen
         function showGameResult(t1, t2) {
-            if (hasClosedResult) return; // Already dismissed, don't show again
             // Remove existing result overlay if any
             const existing = document.querySelector('.result-overlay');
             if (existing) return;
@@ -1456,7 +1455,6 @@
             if (overlay) overlay.remove();
 
             // Notify server this player is back from result screen
-            hasClosedResult = true; // Prevent re-showing
             socket.emit('player_back_to_waiting', { room_id: currentRoomId, username: currentUsername });
 
             // Reset game state
@@ -1471,12 +1469,6 @@
             document.getElementById('playingStateContainer').style.display = 'none';
             document.getElementById('countdownMsg').style.display = 'none';
             document.getElementById('readyBtn').style.display = 'none';
-
-            // Tell server to reset the room
-            fetch(`/api/reset_room/${currentRoomId}`, { method: 'POST' })
-                .then(() => {
-                    socket.emit('join_room', { room_id: currentRoomId, username: currentUsername });
-                });
         }
         let scene, camera, renderer, table, puck;
         let myRacket, otherRackets = {}; // Map of usernames to meshes
@@ -1732,9 +1724,9 @@
 
                 // Speed limit
                 const speed = Math.sqrt(puckVelocity.x ** 2 + puckVelocity.z ** 2);
-                if (speed > 1.5) {
-                    puckVelocity.x = (puckVelocity.x / speed) * 1.5;
-                    puckVelocity.z = (puckVelocity.z / speed) * 1.5;
+                if (speed > 1.2) {
+                    puckVelocity.x = (puckVelocity.x / speed) * 1.2;
+                    puckVelocity.z = (puckVelocity.z / speed) * 1.2;
                 }
 
                 // Wall Collisions - proper corner handling
