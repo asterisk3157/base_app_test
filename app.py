@@ -278,6 +278,60 @@ def check_and_auto_reset_room(room_id, c):
             c.execute('UPDATE users SET team_id = 0, is_ready = 0 WHERE room_id = ?', (room_id,))
             c.execute('DELETE FROM posts WHERE room_id = ? AND team_id > 0', (room_id,))
 
+def handle_user_departure(username, room_id):
+    conn = sqlite3.connect(DB_NAME)
+    c = conn.cursor()
+    c.execute('DELETE FROM users WHERE username = ? AND room_id = ?', (username, room_id))
+    
+    c.execute('SELECT COUNT(*) FROM users WHERE room_id = ?', (room_id,))
+    remaining = c.fetchone()[0]
+    
+    if remaining == 0:
+        # Auto-delete room when all players left
+        c.execute('UPDATE rooms SET status = "finished" WHERE id = ?', (room_id,))
+        c.execute('DELETE FROM posts WHERE room_id = ?', (room_id,))
+        conn.commit()
+        conn.close()
+        socketio.emit('room_disbanded', {'room_id': room_id}, to=room_id)
+        return
+        
+    # Check admin transfer
+    c.execute('SELECT status, admin_username FROM rooms WHERE id = ?', (room_id,))
+    room_data = c.fetchone()
+    if room_data:
+        room_status, admin_username = room_data
+        if username == admin_username:
+            # Pick a new admin
+            c.execute('SELECT username FROM users WHERE room_id = ? ORDER BY id ASC LIMIT 1', (room_id,))
+            new_admin = c.fetchone()
+            if new_admin:
+                c.execute('UPDATE rooms SET admin_username = ? WHERE id = ?', (new_admin[0], room_id))
+                
+        # Auto-loss check during playing
+        if room_status == 'playing':
+            c.execute('SELECT COUNT(*) FROM users WHERE room_id = ? AND team_id = 1', (room_id,))
+            t1_count = c.fetchone()[0]
+            c.execute('SELECT COUNT(*) FROM users WHERE room_id = ? AND team_id = 2', (room_id,))
+            t2_count = c.fetchone()[0]
+            
+            if t1_count == 0 and t2_count > 0:
+                c.execute('UPDATE rooms SET team1_score = 0, team2_score = 3, status = "finished" WHERE id = ?', (room_id,))
+                c.execute('UPDATE users SET in_result = 1 WHERE room_id = ?', (room_id,))
+                conn.commit()
+                socketio.emit('goal_event', {'team_scored': 2, 'team1_score': 0, 'team2_score': 3, 'game_over': True, 'winner': 2}, to=room_id)
+            elif t2_count == 0 and t1_count > 0:
+                c.execute('UPDATE rooms SET team1_score = 3, team2_score = 0, status = "finished" WHERE id = ?', (room_id,))
+                c.execute('UPDATE users SET in_result = 1 WHERE room_id = ?', (room_id,))
+                conn.commit()
+                socketio.emit('goal_event', {'team_scored': 1, 'team1_score': 3, 'team2_score': 0, 'game_over': True, 'winner': 1}, to=room_id)
+                
+    check_and_auto_reset_room(room_id, c)
+    conn.commit()
+    conn.close()
+    
+    socketio.emit('player_disconnected', {'username': username}, to=room_id)
+    socketio.emit('room_update', fetch_room_state(room_id), to=room_id)
+
 # ---------------- SOCKET.IO HANDLERS ----------------
 
 sid_to_user = {}
@@ -310,63 +364,9 @@ def handle_disconnect():
     if user_info:
         username = user_info['username']
         room_id = user_info['room_id']
-        
-        # Remove from users table
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute('DELETE FROM users WHERE username = ? AND room_id = ?', (username, room_id))
-        conn.commit()
-        
+        handle_user_departure(username, room_id)
         # Cleanup mapping
         del sid_to_user[request.sid]
-        
-        # Check if room is now empty (Item 5)
-        c.execute('SELECT COUNT(*) FROM users WHERE room_id = ?', (room_id,))
-        remaining = c.fetchone()[0]
-        
-        if remaining == 0:
-            # Auto-delete room when all players left
-            c.execute('UPDATE rooms SET status = "finished" WHERE id = ?', (room_id,))
-            c.execute('DELETE FROM posts WHERE room_id = ?', (room_id,))
-            conn.commit()
-            conn.close()
-            emit('room_disbanded', {'room_id': room_id}, to=room_id)
-        else:
-            # Check if a team has 0 members during a game (auto-loss)
-            c.execute('SELECT status FROM rooms WHERE id = ?', (room_id,))
-            room_status = c.fetchone()
-            if room_status and room_status[0] == 'playing':
-                c.execute('SELECT COUNT(*) FROM users WHERE room_id = ? AND team_id = 1', (room_id,))
-                t1_count = c.fetchone()[0]
-                c.execute('SELECT COUNT(*) FROM users WHERE room_id = ? AND team_id = 2', (room_id,))
-                t2_count = c.fetchone()[0]
-                
-                if t1_count == 0 and t2_count > 0:
-                    # Team 1 has no players - Team 2 wins
-                    c.execute('UPDATE rooms SET team1_score = 0, team2_score = 3, status = "finished" WHERE id = ?', (room_id,))
-                    conn.commit()
-                    conn.close()
-                    emit('goal_event', {'team_scored': 2, 'team1_score': 0, 'team2_score': 3, 'game_over': True, 'winner': 2}, to=room_id)
-                    emit('room_update', fetch_room_state(room_id), to=room_id)
-                elif t2_count == 0 and t1_count > 0:
-                    # Team 2 has no players - Team 1 wins
-                    c.execute('UPDATE rooms SET team1_score = 3, team2_score = 0, status = "finished" WHERE id = ?', (room_id,))
-                    conn.commit()
-                    conn.close()
-                    emit('goal_event', {'team_scored': 1, 'team1_score': 3, 'team2_score': 0, 'game_over': True, 'winner': 1}, to=room_id)
-                    emit('room_update', fetch_room_state(room_id), to=room_id)
-                else:
-                    check_and_auto_reset_room(room_id, c)
-                    conn.commit()
-                    conn.close()
-                    emit('player_disconnected', {'username': username}, to=room_id)
-                    emit('room_update', fetch_room_state(room_id), to=room_id)
-            else:
-                check_and_auto_reset_room(room_id, c)
-                conn.commit()
-                conn.close()
-                emit('player_disconnected', {'username': username}, to=room_id)
-                emit('room_update', fetch_room_state(room_id), to=room_id)
 
 @socketio.on('leave_room')
 def handle_leave_room(data):
@@ -374,13 +374,7 @@ def handle_leave_room(data):
     room_id = data.get('room_id')
     if room_id and username:
         leave_room(room_id)
-        conn = sqlite3.connect(DB_NAME)
-        c = conn.cursor()
-        c.execute('DELETE FROM users WHERE username = ? AND room_id = ?', (username, room_id))
-        check_and_auto_reset_room(room_id, c)
-        conn.commit()
-        conn.close()
-        emit('room_update', fetch_room_state(room_id), to=room_id)
+        handle_user_departure(username, room_id)
 
 @socketio.on('disband_room')
 def handle_disband_room(data):

@@ -1380,13 +1380,13 @@
                         <li><strong>スマホ/タブレット</strong>: 指で画面をタッチしてラケットを操作</li>
                         <li>ラケットは<strong>自分のチーム側のみ</strong>移動可能</li>
                         <li>自分のラケットには<strong>金色のリング</strong>が付いています</li>
+                        <li><strong>カウントダウン中（3, 2, 1）</strong>からラケットを動かしてポジション取りが可能です！</li>
                     </ul>
-                    <h3>📡 ルームの作り方</h3>
+                    <h3>📡 ルール・進行</h3>
                     <ul>
-                        <li><strong>ルームを作成</strong>して、ルームIDを友達に共有</li>
-                        <li>パブリックルームなら誰でも参加OK</li>
-                        <li>参加者が揃ったら管理者が「ゲーム開始」を押す</li>
-                        <li>全員が「準備OK」を押すとカウントダウン開始！</li>
+                        <li>点数を取ったチームが、次のキックオフで<strong>後攻（パックを受け取る側）</strong>になります。</li>
+                        <li>通信切断などでチームメンバーが0人になった場合は、そのチームの棄権（敗北）となります。</li>
+                        <li>パブリックルームなら誰でも参加OK！参加者が揃ったら管理者が「ゲーム開始」を押します。</li>
                     </ul>
                     <h3>💬 チャット</h3>
                     <p>待機中は全員、ゲーム中はチーム内のみでチャットができます。<br>Markdown対応です！</p>
@@ -1450,7 +1450,7 @@
                 <p>${isWin ? 'おめでとう！あなたのチームが勝利しました！' : '残念…次こそは勝利を掴もう！'}</p>
                 <div class="score-display">${t1} - ${t2}</div>
                 <button onclick="closeResultAndReset()">待機画面に戻る</button>
-                <button class="btn btn-outline-danger" style="margin-top: 10px; width: auto; font-size: 1rem; border: none; background: transparent; color: #f87171; text-decoration: underline;" onclick="leaveRoomFromResult()">ルームを退出する</button>
+                <button class="btn" style="margin-top: 15px; width: auto; font-size: 1rem; border: 2px solid #ef4444; background: #fee2e2; color: #b91c1c; text-decoration: none; padding: 6px 20px; border-radius: 8px; font-weight: 600;" onclick="leaveRoomFromResult()">ルームを退出する</button>
             `;
             document.body.appendChild(overlay);
         }
@@ -1620,7 +1620,7 @@
 
             // Item 6: Always follow pointer - no click needed
             container.addEventListener('pointermove', (e) => {
-                if (!isGameRunning || !myRacket) return;
+                if (!isRacketControlEnabled || !myRacket) return;
                 e.preventDefault();
                 updateRacketFromMouse(e);
             });
@@ -1715,11 +1715,13 @@
 
             let dir;
             if (window.lastScoredTeam === 1) {
-                // Red scored -> They are '後攻' (receiving puck), so ball goes towards Red (left)
-                dir = -1;
-            } else if (window.lastScoredTeam === 2) {
-                // Blue scored -> They are '後攻', so ball goes towards Blue (right)
+                // Red scored -> They are '後攻' (receiving puck), so Blue is '先攻'.
+                // Ball goes towards Blue (right) => dir = 1
                 dir = 1;
+            } else if (window.lastScoredTeam === 2) {
+                // Blue scored -> They are '後攻'. Red is '先攻'.
+                // Ball goes towards Red (left) => dir = -1
+                dir = -1;
             } else {
                 dir = (Math.random() > 0.5 ? 1 : -1);
             }
