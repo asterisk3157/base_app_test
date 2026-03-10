@@ -422,7 +422,7 @@ def handle_start_game(data):
     conn.commit()
     conn.close()
     
-    emit('game_started', fetch_room_state(room_id), to=room_id)
+    emit('room_update', fetch_room_state(room_id), to=room_id)
 
 @socketio.on('player_ready')
 def handle_ready(data):

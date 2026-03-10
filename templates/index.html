@@ -1147,12 +1147,26 @@
         }
 
         function leaveRoom() {
-            if (!currentRoomId) return;
-            socket.emit('leave_room', { room_id: currentRoomId, username: currentUsername });
-            currentRoomId = null;
-            currentTeamId = null;
+            if (currentRoomId) {
+                socket.emit('leave_room', { room_id: currentRoomId, username: currentUsername });
+                currentRoomId = null;
+                currentTeamId = 0;
+                switchView('topView');
+
+                cleanupGameState();
+            }
+        }
+
+        // Helper to fully clear Three.js state
+        function cleanupGameState() {
+            threeSceneInitialized = false;
+            isGameRunning = false;
+            isRacketControlEnabled = false;
+            myRacket = null;
+            otherRackets = {}; // explicitly clear
+            const container = document.getElementById('gameCanvasContainer');
+            if (container) container.innerHTML = '';
             document.getElementById('headerRoomInfo').textContent = '';
-            switchView('topView');
         }
 
         function disbandRoom() {
@@ -1164,13 +1178,12 @@
         }
 
         // --- Socket Event Listeners ---
-        socket.on('room_disbanded', (data) => {
-            if (currentRoomId === data.room_id) {
-                alert("ルームが解散されました。");
-                currentRoomId = null;
-                currentTeamId = null;
-                document.getElementById('headerRoomInfo').textContent = '';
-                switchView('topView');
+        socket.on('room_disbanded', () => {
+            if (currentRoomId) {
+                if (currentUsername !== roomAdmin) {
+                    alert("管理者がルームを解散しました。");
+                }
+                leaveRoom();
             }
         });
 
@@ -1257,17 +1270,7 @@
                     document.getElementById('readyBtn').style.display = 'none';
                     showGameResult(room.team1_score, room.team2_score);
                 }
-
-                // Item 2: Load team chat on game start
-                loadPosts();
             }
-        });
-
-        socket.on('game_started', (data) => {
-            // Clear global chat locally
-            document.getElementById('posts').innerHTML = '';
-            socket.emit('join_room', { room_id: currentRoomId, username: currentUsername }); // Re-trigger room sync
-            // The room_update event (triggered by join_room) will handle visibility and Three.js init
         });
 
         let kickoffDisplayTeam = '';
@@ -1360,6 +1363,7 @@
         function startGame() { socket.emit('start_game', { room_id: currentRoomId }); }
         function markReady() {
             document.getElementById('readyBtn').textContent = '待機中...';
+            isRacketControlEnabled = true; // Item 1: Allow movement immediately
             socket.emit('player_ready', { room_id: currentRoomId, username: currentUsername });
         }
 
@@ -1468,13 +1472,7 @@
             // Notify server this player is back from result screen
             socket.emit('player_back_to_waiting', { room_id: currentRoomId, username: currentUsername });
 
-            // Reset game state
-            threeSceneInitialized = false;
-            isGameRunning = false;
-            isRacketControlEnabled = false;
-            const container = document.getElementById('gameCanvasContainer');
-            container.innerHTML = '';
-            document.getElementById('headerRoomInfo').textContent = '';
+            cleanupGameState(); // Fully reset
 
             // Reset back to waiting state
             document.getElementById('waitingStateContainer').style.display = 'flex';
