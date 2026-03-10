@@ -318,12 +318,12 @@ def handle_user_departure(username, room_id):
                 c.execute('UPDATE rooms SET team1_score = 0, team2_score = 3, status = "finished" WHERE id = ?', (room_id,))
                 c.execute('UPDATE users SET in_result = 1 WHERE room_id = ?', (room_id,))
                 conn.commit()
-                socketio.emit('goal_event', {'team_scored': 2, 'team1_score': 0, 'team2_score': 3, 'game_over': True, 'winner': 2}, to=room_id)
+                socketio.emit('goal_event', {'team_scored': 2, 'team1_score': 0, 'team2_score': 3, 'game_over': True, 'winner': 2, 'disconnect_win': True}, to=room_id)
             elif t2_count == 0 and t1_count > 0:
                 c.execute('UPDATE rooms SET team1_score = 3, team2_score = 0, status = "finished" WHERE id = ?', (room_id,))
                 c.execute('UPDATE users SET in_result = 1 WHERE room_id = ?', (room_id,))
                 conn.commit()
-                socketio.emit('goal_event', {'team_scored': 1, 'team1_score': 3, 'team2_score': 0, 'game_over': True, 'winner': 1}, to=room_id)
+                socketio.emit('goal_event', {'team_scored': 1, 'team1_score': 3, 'team2_score': 0, 'game_over': True, 'winner': 1, 'disconnect_win': True}, to=room_id)
                 
     check_and_auto_reset_room(room_id, c)
     conn.commit()

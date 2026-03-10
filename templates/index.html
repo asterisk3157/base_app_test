@@ -621,6 +621,25 @@
             padding: 4px;
         }
 
+        #readyStatusText {
+            display: none;
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(245, 158, 11, 0.9);
+            /* amber-500 */
+            color: white;
+            padding: 8px 24px;
+            border-radius: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            z-index: 10;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            pointer-events: none;
+            /* Do not block touch/mouse */
+        }
+
         /* --- Game Screen UI Elements --- */
         #gameCanvasContainer {
             width: 100%;
@@ -962,6 +981,8 @@
                             </div>
                         </div>
 
+                        <div id="readyStatusText">準備中...</div>
+
                         <div class="center-msg" id="centerMsg">
                             <button id="readyBtn" class="ready-btn" onclick="markReady()">準備OK</button>
                             <div id="countdownMsg" style="display: none; font-size: 5rem;">3</div>
@@ -1169,6 +1190,9 @@
             document.getElementById('headerRoomInfo').textContent = '';
             document.getElementById('countdownMsg').style.display = 'none';
             document.getElementById('readyBtn').style.display = 'none';
+            if (document.getElementById('readyStatusText')) {
+                document.getElementById('readyStatusText').style.display = 'none';
+            }
         }
 
         function disbandRoom() {
@@ -1279,6 +1303,7 @@
         let kickoffDisplayColor = '';
         socket.on('all_ready', (data) => {
             document.getElementById('readyBtn').style.display = 'none';
+            document.getElementById('readyStatusText').style.display = 'none';
             const msg = document.getElementById('countdownMsg');
             msg.style.display = 'block';
             isRacketControlEnabled = true; // Allow movement during countdown
@@ -1342,6 +1367,7 @@
             isGameRunning = false;
             isRacketControlEnabled = false; // Block movement
             window.lastScoredTeam = data.team_scored; // Track for next kickoff direction
+            window.disconnectWin = data.disconnect_win || false;
             goalDisplayActive = true; // Item 4: prevent room_update from showing ready btn
             const msg = document.getElementById('countdownMsg');
             msg.style.display = 'block';
@@ -1364,7 +1390,8 @@
         // --- Admin Commands ---
         function startGame() { socket.emit('start_game', { room_id: currentRoomId }); }
         function markReady() {
-            document.getElementById('readyBtn').textContent = '待機中...';
+            document.getElementById('readyBtn').style.display = 'none';
+            document.getElementById('readyStatusText').style.display = 'block';
             isRacketControlEnabled = true; // Item 1: Allow movement immediately
             socket.emit('player_ready', { room_id: currentRoomId, username: currentUsername });
         }
@@ -1386,7 +1413,7 @@
                         <li><strong>スマホ/タブレット</strong>: 指で画面をタッチしてラケットを操作</li>
                         <li>ラケットは<strong>自分のチーム側のみ</strong>移動可能</li>
                         <li>自分のラケットには<strong>金色のリング</strong>が付いています</li>
-                        <li><strong>カウントダウン中（3, 2, 1）</strong>からラケットを動かしてポジション取りが可能です！</li>
+                        <li><strong>「準備OK」を押した瞬間</strong>からラケットを動かしてポジション取りが可能です！</li>
                     </ul>
                     <h3>📡 ルール・進行</h3>
                     <ul>
@@ -1445,6 +1472,11 @@
             // Remove existing result overlay if any
             const existing = document.querySelector('.result-overlay');
             if (existing) return;
+
+            if (window.disconnectWin) {
+                alert("相手チームが退出した（0人になった）ため、強制勝利となりました。");
+                window.disconnectWin = false;
+            }
 
             const winnerTeam = t1 >= 3 ? 1 : 2;
             const isWin = currentTeamId === winnerTeam;
