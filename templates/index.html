@@ -2027,10 +2027,17 @@
             document.getElementById('inputWrapper').classList.remove('reply-active');
         }
 
+        // Function to determine which chat we should be in based on UI state
+        function getActiveChatTeamId() {
+            const isWaiting = document.getElementById('waitingStateContainer').style.display !== 'none';
+            return isWaiting ? 0 : (currentTeamId || 0);
+        }
+
         function loadPosts() {
             if (!currentRoomId) return; // Don't load posts if not in a room
 
-            const url = `/api/posts?room_id=${currentRoomId}&team_id=${currentTeamId || 0}`;
+            const activeTeam = getActiveChatTeamId();
+            const url = `/api/posts?room_id=${currentRoomId}&team_id=${activeTeam}`;
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
@@ -2207,7 +2214,7 @@
             formData.append('username', currentUsername);
             formData.append('reply_to_id', document.getElementById('replyToId').value);
             formData.append('room_id', currentRoomId);
-            formData.append('team_id', currentTeamId);
+            formData.append('team_id', getActiveChatTeamId());
 
             if (!isTableMode) {
                 document.getElementById('content').value = '';
