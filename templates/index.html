@@ -676,7 +676,7 @@
             }
         }
 
-        .label-ready {
+        .label-unready {
             animation: blinkReady 1.5s infinite;
             border: 1px solid transparent;
         }
@@ -1846,12 +1846,12 @@
                     racketLabels.forEach(labelObj => {
                         if (!labelObj.mesh) return;
 
-                        // Check ready status
+                        // Check ready status: blink if NOT ready
                         const player = playersState.find(ps => ps.username === labelObj.username);
-                        if (player && player.is_ready) {
-                            labelObj.element.classList.add('label-ready');
+                        if (player && !player.is_ready) {
+                            labelObj.element.classList.add('label-unready');
                         } else {
-                            labelObj.element.classList.remove('label-ready');
+                            labelObj.element.classList.remove('label-unready');
                         }
 
                         const pos = labelObj.mesh.position.clone();
