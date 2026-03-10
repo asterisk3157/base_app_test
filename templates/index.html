@@ -1170,13 +1170,13 @@
 
         function joinPublicRoom() {
             requireUsername();
-            fetch('/api/join_public')
+            fetch(`/api/join_public?username=${encodeURIComponent(currentUsername)}`)
                 .then(r => r.json())
                 .then(data => {
                     if (data.status === 'success') {
                         joinRoom(data.room_id);
                     } else {
-                        alert("現在参加可能なパブリックルームがありません。\nお待ち頂くか、ご自身でルームを作成してください。");
+                        alert("エラーが発生しました。もう一度お試しください。");
                     }
                 }).catch(() => alert("エラーが発生しました。"));
         }
@@ -1475,7 +1475,8 @@
                     <ul>
                         <li>点数を取ったチームが、次のキックオフで<strong>後攻（パックを受け取る側）</strong>になります。</li>
                         <li>通信切断などでチームメンバーが0人になった場合は、そのチームの棄権（敗北）となります。</li>
-                        <li>パブリックルームなら誰でも参加OK！参加者が揃ったら管理者が「ゲーム開始」を押します。</li>
+                        <li><strong>パブリックルーム</strong>は「パブリックに参加」ボタンで自動的にマッチングされます。ルームがない場合は自動で新規作成されます。</li>
+                        <li>参加者が揃ったら管理者が「ゲーム開始」を押します。</li>
                     </ul>
                     <h3>💬 チャット</h3>
                     <p>待機中は全員、ゲーム中はチーム内のみでチャットができます。<br>Markdown対応です！</p>

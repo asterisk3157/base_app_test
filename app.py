@@ -132,6 +132,7 @@ def check_room(room_id):
 
 @app.route('/api/join_public', methods=['GET'])
 def join_public():
+    username = request.args.get('username', 'Player')
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     # Find public rooms that are still waiting
@@ -148,12 +149,18 @@ def join_public():
         if count < 6 and count > most_users:
             most_users = count
             best_room = r_id
+    
+    if not best_room:
+        # Auto-create a public room
+        room_id = str(uuid.uuid4())[:8]
+        c.execute("INSERT INTO rooms (id, name, status, admin_username, is_public) VALUES (?, ?, 'waiting', ?, 1)",
+                  (room_id, 'パブリックルーム', username))
+        conn.commit()
+        best_room = room_id
             
     conn.close()
     
-    if best_room:
-        return jsonify({'room_id': best_room, 'status': 'success'})
-    return jsonify({'error': 'No available public rooms found'}), 404
+    return jsonify({'room_id': best_room, 'status': 'success'})
 
 @app.route('/api/reset_room/<room_id>', methods=['POST'])
 def reset_room(room_id):
