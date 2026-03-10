@@ -1167,6 +1167,8 @@
             const container = document.getElementById('gameCanvasContainer');
             if (container) container.innerHTML = '';
             document.getElementById('headerRoomInfo').textContent = '';
+            document.getElementById('countdownMsg').style.display = 'none';
+            document.getElementById('readyBtn').style.display = 'none';
         }
 
         function disbandRoom() {
@@ -1477,8 +1479,6 @@
             // Reset back to waiting state
             document.getElementById('waitingStateContainer').style.display = 'flex';
             document.getElementById('playingStateContainer').style.display = 'none';
-            document.getElementById('countdownMsg').style.display = 'none';
-            document.getElementById('readyBtn').style.display = 'none';
         }
         let scene, camera, renderer, table, puck;
         let myRacket, otherRackets = {}; // Map of usernames to meshes
