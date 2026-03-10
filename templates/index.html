@@ -656,6 +656,31 @@
             z-index: 6;
         }
 
+        @keyframes blinkReady {
+            0% {
+                color: #facc15;
+                border-color: #facc15;
+                box-shadow: 0 0 5px #facc15;
+            }
+
+            50% {
+                color: white;
+                border-color: transparent;
+                box-shadow: none;
+            }
+
+            100% {
+                color: #facc15;
+                border-color: #facc15;
+                box-shadow: 0 0 5px #facc15;
+            }
+        }
+
+        .label-ready {
+            animation: blinkReady 1.5s infinite;
+            border: 1px solid transparent;
+        }
+
         /* --- Game Screen UI Elements --- */
         #gameCanvasContainer {
             width: 100%;
@@ -672,7 +697,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 2;
+            z-index: 20;
             pointer-events: none;
             display: flex;
             flex-direction: column;
@@ -1656,7 +1681,7 @@
                     label.className = 'racket-label';
                     label.textContent = p.username;
                     labelsContainer.appendChild(label);
-                    racketLabels.push({ mesh: r, element: label });
+                    racketLabels.push({ mesh: r, element: label, username: p.username });
                 }
 
                 if (p.username === currentUsername) {
@@ -1813,6 +1838,15 @@
 
                     racketLabels.forEach(labelObj => {
                         if (!labelObj.mesh) return;
+
+                        // Check ready status
+                        const player = playersState.find(ps => ps.username === labelObj.username);
+                        if (player && player.is_ready) {
+                            labelObj.element.classList.add('label-ready');
+                        } else {
+                            labelObj.element.classList.remove('label-ready');
+                        }
+
                         const pos = labelObj.mesh.position.clone();
                         pos.y += 2; // offset above racket
                         pos.project(camera);
