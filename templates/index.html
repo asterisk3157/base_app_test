@@ -640,6 +640,22 @@
             /* Do not block touch/mouse */
         }
 
+        .racket-label {
+            position: absolute;
+            color: white;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.4);
+            padding: 2px 6px;
+            border-radius: 4px;
+            pointer-events: none;
+            user-select: none;
+            white-space: nowrap;
+            transform: translate(-50%, -100%);
+            z-index: 6;
+        }
+
         /* --- Game Screen UI Elements --- */
         #gameCanvasContainer {
             width: 100%;
@@ -960,9 +976,11 @@
                     </div>
                 </div>
 
-                <!-- Playing State Container -->
                 <div id="playingStateContainer" style="display: none; height: 100%; width: 100%;">
                     <div id="gameCanvasContainer"></div>
+                    <div id="racketLabelsContainer"
+                        style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:hidden; z-index:5;">
+                    </div>
                     <div id="gameOverlay">
                         <div class="score-board">
                             <!-- Team 1 Score (Red) -->
@@ -981,7 +999,7 @@
                             </div>
                         </div>
 
-                        <div id="readyStatusText">準備中...</div>
+                        <div id="readyStatusText">待機中...</div>
 
                         <div class="center-msg" id="centerMsg">
                             <button id="readyBtn" class="ready-btn" onclick="markReady()">準備OK</button>
@@ -1185,8 +1203,14 @@
             isRacketControlEnabled = false;
             myRacket = null;
             otherRackets = {}; // explicitly clear
+            racketLabels = [];
+
             const container = document.getElementById('gameCanvasContainer');
             if (container) container.innerHTML = '';
+
+            const labelsContainer = document.getElementById('racketLabelsContainer');
+            if (labelsContainer) labelsContainer.innerHTML = '';
+
             document.getElementById('headerRoomInfo').textContent = '';
             document.getElementById('countdownMsg').style.display = 'none';
             document.getElementById('readyBtn').style.display = 'none';
@@ -1288,8 +1312,9 @@
                 if (!goalDisplayActive) {
                     const isReady = me && me.is_ready;
                     document.getElementById('readyBtn').style.display = isReady ? 'none' : 'block';
-                    document.getElementById('readyBtn').textContent = isReady ? '待機中...' : '準備OK';
-                    if (isReady) document.getElementById('readyBtn').style.display = 'block';
+                    if (document.getElementById('readyStatusText')) {
+                        document.getElementById('readyStatusText').style.display = isReady ? 'block' : 'none';
+                    }
                 }
 
                 if (room.status === 'finished' && me && me.in_result) {
@@ -1514,6 +1539,7 @@
         }
         let scene, camera, renderer, table, puck;
         let myRacket, otherRackets = {}; // Map of usernames to meshes
+        let racketLabels = []; // Track DOM elements for player names
         let puckVelocity = { x: 0, z: 0 };
 
         const TABLE_WIDTH = 100;
@@ -1604,6 +1630,10 @@
             lGoalFloor.position.set(-TABLE_WIDTH / 2 + 1.5, 0.02, 0);
             scene.add(lGoalFloor);
 
+            const labelsContainer = document.getElementById('racketLabelsContainer');
+            if (labelsContainer) labelsContainer.innerHTML = '';
+            racketLabels = [];
+
             // Rackets
             playersState.forEach(p => {
                 const geo = new THREE.CylinderGeometry(RACKET_RADIUS, RACKET_RADIUS, 2, 32);
@@ -1619,6 +1649,15 @@
 
                 r.position.set(startX, 1, zOffset);
                 scene.add(r);
+
+                // Create name label
+                if (labelsContainer) {
+                    const label = document.createElement('div');
+                    label.className = 'racket-label';
+                    label.textContent = p.username;
+                    labelsContainer.appendChild(label);
+                    racketLabels.push({ mesh: r, element: label });
+                }
 
                 if (p.username === currentUsername) {
                     myRacket = r;
@@ -1764,6 +1803,32 @@
         function gameLoop() {
             requestAnimationFrame(gameLoop);
             renderer.render(scene, camera);
+
+            // Update racket labels
+            if (camera && racketLabels.length > 0) {
+                const container = document.getElementById('gameCanvasContainer');
+                if (container) {
+                    const w = container.clientWidth;
+                    const h = container.clientHeight;
+
+                    racketLabels.forEach(labelObj => {
+                        if (!labelObj.mesh) return;
+                        const pos = labelObj.mesh.position.clone();
+                        pos.y += 2; // offset above racket
+                        pos.project(camera);
+
+                        if (pos.z > 1) { // behind camera
+                            labelObj.element.style.display = 'none';
+                        } else {
+                            labelObj.element.style.display = 'block';
+                            const xPx = (pos.x * 0.5 + 0.5) * w;
+                            const yPx = (pos.y * -0.5 + 0.5) * h;
+                            labelObj.element.style.left = `${xPx}px`;
+                            labelObj.element.style.top = `${yPx}px`;
+                        }
+                    });
+                }
+            }
 
             if (!isGameRunning) return;
 
