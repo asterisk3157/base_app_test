@@ -1433,6 +1433,12 @@
                     msg.style.color = 'white';
                     document.getElementById('readyBtn').style.display = 'block';
                     document.getElementById('readyBtn').textContent = '準備OK';
+                    // Reset puck to center
+                    if (puck) {
+                        puck.position.set(0, 0.5, 0);
+                        puckVelocity.x = 0;
+                        puckVelocity.z = 0;
+                    }
                 }
             }, 2000);
         });
