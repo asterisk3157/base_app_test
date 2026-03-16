@@ -8,7 +8,9 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Cinzel:wght@400;700&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --primary-glow: #e6c875;
@@ -37,12 +39,15 @@
         body::before {
             content: "";
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-image: 
-                radial-gradient(1px 1px at 20px 30px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 40px 70px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(1.5px 1.5px at 150px 150px, #ffffff, rgba(0,0,0,0)),
-                radial-gradient(1px 1px at 90px 40px, rgba(255,255,255,0.8), rgba(0,0,0,0));
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image:
+                radial-gradient(1px 1px at 20px 30px, #ffffff, rgba(0, 0, 0, 0)),
+                radial-gradient(1px 1px at 40px 70px, #ffffff, rgba(0, 0, 0, 0)),
+                radial-gradient(1.5px 1.5px at 150px 150px, #ffffff, rgba(0, 0, 0, 0)),
+                radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 255, 0.8), rgba(0, 0, 0, 0));
             background-repeat: repeat;
             background-size: 200px 200px;
             opacity: 0.5;
@@ -51,9 +56,19 @@
         }
 
         @keyframes twinkle {
-            0% { opacity: 0.3; transform: translateY(0); }
-            50% { opacity: 0.6; }
-            100% { opacity: 0.3; transform: translateY(-10px); }
+            0% {
+                opacity: 0.3;
+                transform: translateY(0);
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+
+            100% {
+                opacity: 0.3;
+                transform: translateY(-10px);
+            }
         }
 
         .container {
@@ -67,7 +82,7 @@
             border: 1px solid var(--glass-border);
             border-radius: 20px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
-                        0 0 20px rgba(230, 200, 117, 0.1) inset;
+                0 0 20px rgba(230, 200, 117, 0.1) inset;
             position: relative;
         }
 
@@ -130,8 +145,51 @@
             font-style: italic;
         }
 
-        button {
-            align-self: flex-end;
+        /* File Upload Styling */
+        .controls-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .file-upload-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-upload-wrapper input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            height: 100%;
+            width: 100%;
+        }
+
+        .file-upload-btn {
+            background: rgba(230, 200, 117, 0.1);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-family: 'Kaisei Decol', serif;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload-wrapper:hover .file-upload-btn {
+            background: rgba(230, 200, 117, 0.2);
+            box-shadow: 0 0 10px rgba(230, 200, 117, 0.2);
+        }
+
+        button[type="submit"] {
             background: linear-gradient(135deg, #d4af37, #aa7c11);
             color: #1a1a1a;
             border: none;
@@ -146,7 +204,7 @@
             letter-spacing: 1px;
         }
 
-        button:hover {
+        button[type="submit"]:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
             background: linear-gradient(135deg, #eadd89, #d4af37);
@@ -176,11 +234,42 @@
             animation: fadeIn 0.8s ease forwards;
             backdrop-filter: blur(5px);
             transition: transform 0.3s ease, background 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
         .post:hover {
-            transform: scale(1.02);
+            transform: scale(1.01);
             background: rgba(255, 255, 255, 0.06);
+        }
+
+        .post-media {
+            max-width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--glass-border);
+            max-height: 300px;
+            object-fit: cover;
+            display: block;
+            margin-top: 10px;
+        }
+
+        .post-file-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 15px;
+            border-radius: 5px;
+            color: var(--primary-glow);
+            text-decoration: none;
+            font-size: 0.9rem;
+            border: 1px solid rgba(230, 200, 117, 0.2);
+            width: fit-content;
+        }
+
+        .post-file-link:hover {
+            background: rgba(230, 200, 117, 0.1);
         }
 
         @keyframes fadeIn {
@@ -188,10 +277,19 @@
                 opacity: 0;
                 transform: translateY(15px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+
+        /* Helper to hide file name text if empty */
+        #fileName {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-left: 10px;
+            vertical-align: middle;
         }
     </style>
 </head>
@@ -199,9 +297,21 @@
 <body>
     <div class="container">
         <h1>✨ 幻想のひとこと掲示板 ✨</h1>
-        <form id="postForm">
+        <form id="postForm" enctype="multipart/form-data">
             <textarea name="content" id="content" placeholder="星降る夜に、何を想う？" required></textarea>
-            <button type="submit">言の葉を紡ぐ</button>
+
+            <div class="controls-row">
+                <div class="file-upload-wrapper">
+                    <button type="button" class="file-upload-btn">
+                        <span>📎 魔法の欠片を添える</span>
+                    </button>
+                    <input type="file" name="file" id="fileInput"
+                        onchange="document.getElementById('fileName').textContent = this.files[0] ? this.files[0].name : ''">
+                    <span id="fileName"></span>
+                </div>
+
+                <button type="submit">言の葉を紡ぐ</button>
+            </div>
         </form>
         <hr>
         <div id="posts">
@@ -210,19 +320,57 @@
     </div>
 
     <script>
+        // Track the highest ID we have seen so far to prevent reloading the whole list
+        let lastHighestId = 0;
+
         function loadPosts() {
             fetch('/api/posts')
                 .then(response => response.json())
                 .then(data => {
                     const postsDiv = document.getElementById('posts');
-                    postsDiv.innerHTML = '';
-                    data.posts.forEach(post => {
+                    // Store the current highest ID before processing new data
+                    const currentHighestId = data.posts.length > 0 ? data.posts[0].id : 0;
+
+                    // Only process posts that are newer than our last known ID
+                    // Data is received in DESC order (newest first).
+                    const newPosts = data.posts.filter(post => post.id > lastHighestId);
+
+                    // We must append newer posts at the TOP of the container. 
+                    // Since newPosts has the newest item at index 0, we process it backwards to use prepend properly,
+                    // or just loop normally and insert before the first child.
+                    for (let i = newPosts.length - 1; i >= 0; i--) {
+                        const post = newPosts[i];
                         const div = document.createElement('div');
                         div.className = 'post';
+                        div.id = 'post-' + post.id;
+
+                        // Handle potential media
+                        let mediaHtml = '';
+                        if (post.file_path) {
+                            const ext = post.file_path.split('.').pop().toLowerCase();
+                            // If it's an image, display it
+                            if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
+                                mediaHtml = `<img src="${post.file_path}" class="post-media" alt="魔法の欠片">`;
+                            } else {
+                                // Default file download link
+                                mediaHtml = `<a href="${post.file_path}" class="post-file-link" download>📎 添付された古文書を解読する</a>`;
+                            }
+                        }
+
                         // Intentionally using innerHTML to make XSS easier for the lecture
-                        div.innerHTML = post.content;
-                        postsDiv.appendChild(div);
-                    });
+                        const contentHtml = `<div class="post-text">${post.content}</div>`;
+                        div.innerHTML = contentHtml + mediaHtml;
+
+                        // Insert at the top
+                        if (postsDiv.firstChild) {
+                            postsDiv.insertBefore(div, postsDiv.firstChild);
+                        } else {
+                            postsDiv.appendChild(div);
+                        }
+                    }
+
+                    // Update the tracker
+                    lastHighestId = Math.max(lastHighestId, currentHighestId);
                 });
         }
 
@@ -233,7 +381,11 @@
                 method: 'POST',
                 body: formData
             }).then(() => {
+                // Clear inputs
                 document.getElementById('content').value = '';
+                document.getElementById('fileInput').value = '';
+                document.getElementById('fileName').textContent = '';
+                // Immediately load the new post
                 loadPosts();
             });
         });
