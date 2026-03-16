@@ -652,15 +652,11 @@
         .tweet-replies {
             border-left: 2px solid var(--border);
             margin-left: 40px;
-            margin-bottom: 0;
         }
 
-        .tweet-replies .reply-card {
-            border-bottom: 1px solid var(--border);
-        }
-
-        .tweet-replies .reply-card:last-child {
-            border-bottom: 1px solid var(--border);
+        /* Nested replies get less indentation */
+        .tweet-replies .tweet-replies {
+            margin-left: 20px;
         }
 
         .reply-card {
@@ -2172,25 +2168,35 @@
                         }
                     });
 
+                    // Recursive function to render replies and their sub-replies
+                    function renderReplies(parentId, container, depth) {
+                        var replies = repliesMap[parentId];
+                        if (!replies) return;
+                        replies.sort(function(a, b) { return a.id - b.id; });
+                        var repliesContainer = document.createElement('div');
+                        repliesContainer.className = 'tweet-replies';
+                        if (depth > 1) repliesContainer.style.marginLeft = '20px';
+                        replies.forEach(function(reply) {
+                            repliesContainer.appendChild(buildReplyCard(reply));
+                            knownTweetIds.add(reply.id);
+                            // Recursively render sub-replies (max depth 5)
+                            if (depth < 5 && repliesMap[reply.id]) {
+                                renderReplies(reply.id, repliesContainer, depth + 1);
+                            }
+                        });
+                        container.appendChild(repliesContainer);
+                    }
+
                     // Render top-level tweets (API returns DESC — newest first)
                     topLevel.forEach(function(tweet) {
                         var card = buildTweetCard(tweet);
                         feed.appendChild(card);
                         knownTweetIds.add(tweet.id);
 
-                        // Attach replies if any
-                        var replies = repliesMap[tweet.id];
-                        if (replies) {
+                        // Attach replies recursively
+                        if (repliesMap[tweet.id]) {
                             card.classList.add('has-replies');
-                            var repliesContainer = document.createElement('div');
-                            repliesContainer.className = 'tweet-replies';
-                            // Show replies oldest-first
-                            replies.sort(function(a, b) { return a.id - b.id; });
-                            replies.forEach(function(reply) {
-                                repliesContainer.appendChild(buildReplyCard(reply));
-                                knownTweetIds.add(reply.id);
-                            });
-                            feed.appendChild(repliesContainer);
+                            renderReplies(tweet.id, feed, 1);
                         }
                     });
 
@@ -3378,17 +3384,24 @@
                     var card = buildTweetCard(tweet);
                     tweetsContainer.appendChild(card);
 
-                    // Attach replies if any
-                    var replies = repliesMap[tweet.id];
-                    if (replies) {
+                    // Attach replies recursively (reuse same pattern as timeline)
+                    if (repliesMap[tweet.id]) {
                         card.classList.add('has-replies');
-                        var repliesContainer = document.createElement('div');
-                        repliesContainer.className = 'tweet-replies';
-                        replies.sort(function(a, b) { return a.id - b.id; });
-                        replies.forEach(function(reply) {
-                            repliesContainer.appendChild(buildReplyCard(reply));
-                        });
-                        tweetsContainer.appendChild(repliesContainer);
+                        (function renderProfileReplies(parentId, container, depth) {
+                            var reps = repliesMap[parentId];
+                            if (!reps) return;
+                            reps.sort(function(a, b) { return a.id - b.id; });
+                            var rc = document.createElement('div');
+                            rc.className = 'tweet-replies';
+                            if (depth > 1) rc.style.marginLeft = '20px';
+                            reps.forEach(function(reply) {
+                                rc.appendChild(buildReplyCard(reply));
+                                if (depth < 5 && repliesMap[reply.id]) {
+                                    renderProfileReplies(reply.id, rc, depth + 1);
+                                }
+                            });
+                            container.appendChild(rc);
+                        })(tweet.id, tweetsContainer, 1);
                     }
                 });
             } else {
