@@ -145,6 +145,39 @@
             font-style: italic;
         }
 
+        .name-input-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        #name {
+            width: 100%;
+            background: rgba(10, 15, 25, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: var(--text-main);
+            font-family: 'Kaisei Decol', serif;
+            font-size: 1rem;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+
+        #name:focus {
+            outline: none;
+            border-color: var(--primary-glow);
+            box-shadow: 0 0 10px rgba(230, 200, 117, 0.2);
+            background: rgba(10, 15, 25, 0.6);
+        }
+
+        .tripcode-hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            opacity: 0.8;
+            margin-left: 5px;
+        }
+
         /* File Upload Styling */
         .controls-row {
             display: flex;
@@ -239,6 +272,19 @@
             gap: 10px;
         }
 
+        .post-name {
+            font-size: 0.9rem;
+            color: #d4af37;
+            /* Gold color for names */
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 2px;
+            text-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
+            border-bottom: 1px dashed rgba(212, 175, 55, 0.3);
+            padding-bottom: 3px;
+            width: fit-content;
+        }
+
         .post:hover {
             transform: scale(1.01);
             background: rgba(255, 255, 255, 0.06);
@@ -298,6 +344,10 @@
     <div class="container">
         <h1>✨ 幻想のひとこと掲示板 ✨</h1>
         <form id="postForm" enctype="multipart/form-data">
+            <div class="name-input-wrapper">
+                <input type="text" name="name" id="name" placeholder="詠み人（名前） / 秘密の合言葉は # の後ろに" maxlength="50">
+                <div class="tripcode-hint">※ 名前のあとに「#秘密の呪文」を付けると、あなただけの刻印(トリップ)になります 例: アリス#alice</div>
+            </div>
             <textarea name="content" id="content" placeholder="星降る夜に、何を想う？" required onpaste="return false;"
                 ondrop="return false;"></textarea>
 
@@ -371,7 +421,14 @@
                 }
             }
 
-            // Lv.2 Defense: Create a text node instead of using innerHTML to prevent XSS execution
+            // Lv.2 Defense: Create a text node instead of using innerHTML
+
+            // Add Name / Tripcode
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'post-name';
+            nameDiv.textContent = post.name || '名無しの魔法使い';
+            div.appendChild(nameDiv);
+
             const textDiv = document.createElement('div');
             textDiv.className = 'post-text';
             textDiv.textContent = post.content; // Safely escape all HTML tags
@@ -443,6 +500,7 @@
                     } else {
                         // Success! Clear inputs
                         document.getElementById('content').value = '';
+                        document.getElementById('name').value = '';
                         document.getElementById('fileInput').value = '';
                         document.getElementById('fileName').textContent = '';
 

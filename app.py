@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, send_from_directory
 import sqlite3
 import os
+import hashlib
+import base64
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
@@ -24,17 +26,20 @@ def allowed_file(filename):
 def init_db():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
-    # Try creating new schema with file_path
+    # Try creating new schema with file_path and name
     c.execute('''CREATE TABLE IF NOT EXISTS posts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT, 
                     content TEXT,
-                    file_path TEXT)''')
+                    file_path TEXT,
+                    name TEXT)''')
     
-    # Simple migration: check if file_path exists, if not, recreate or alter
+    # Simple migration: check if file_path or name exists, if not, recreate or alter
     c.execute("PRAGMA table_info(posts)")
     columns = [col[1] for col in c.fetchall()]
     if 'file_path' not in columns:
         c.execute("ALTER TABLE posts ADD COLUMN file_path TEXT")
+    if 'name' not in columns:
+        c.execute("ALTER TABLE posts ADD COLUMN name TEXT")
         
     conn.commit()
     conn.close()
@@ -48,9 +53,28 @@ def get_posts():
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute('SELECT * FROM posts ORDER BY id DESC')
-    posts = [{'id': row[0], 'content': row[1], 'file_path': row[2]} for row in c.fetchall()]
+    posts = [{'id': row[0], 'content': row[1], 'file_path': row[2], 'name': row[3]} for row in c.fetchall()]
     conn.close()
     return {'posts': posts}
+
+def generate_tripcode(name_input):
+    if not name_input:
+        return "名無しの魔法使い"
+    
+    if '#' in name_input:
+        parts = name_input.split('#', 1)
+        name = parts[0] if parts[0] else "名無しの魔法使い"
+        password = parts[1]
+        
+        if password:
+            # Generate a secure hash
+            hasher = hashlib.sha256()
+            hasher.update(password.encode('utf-8'))
+            # Get a short, URL-safe base64 string
+            trip_hash = base64.urlsafe_b64encode(hasher.digest()).decode('utf-8')[:10]
+            return f"{name} ◆{trip_hash}"
+            
+    return name_input
 
 def contains_dark_magic(text):
     if not text:
@@ -63,7 +87,11 @@ def contains_dark_magic(text):
 @app.route('/post', methods=['POST'])
 def post():
     content = request.form.get('content')
+    raw_name = request.form.get('name', '').strip()
     file = request.files.get('file')
+    
+    # Process tripcode
+    processed_name = generate_tripcode(raw_name)
     
     # Lv.3 Defense: Backend Magical Barrier (WAF)
     if contains_dark_magic(content):
@@ -90,7 +118,7 @@ def post():
         # but students will likely ask AI to "just make it work" or "fix error",
         # which might introduce SQLi if not careful. Or we can INTENTIONALLY make this vulnerable later.
         # For base app, we keep it simple but functional.
-        c.execute('INSERT INTO posts (content, file_path) VALUES (?, ?)', (content, file_path))
+        c.execute('INSERT INTO posts (content, file_path, name) VALUES (?, ?, ?)', (content, file_path, processed_name))
         conn.commit()
         conn.close()
     return jsonify({'success': True}), 200
