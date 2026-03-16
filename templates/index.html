@@ -322,50 +322,61 @@
     <script>
         // Track the highest ID we have seen so far to prevent reloading the whole list
         let lastHighestId = 0;
+        let isInitialLoad = true;
+
+        function renderPost(post, container, prepend = false) {
+            const div = document.createElement('div');
+            div.className = 'post';
+            div.id = 'post-' + post.id;
+
+            // Handle potential media
+            let mediaHtml = '';
+            if (post.file_path) {
+                const ext = post.file_path.split('.').pop().toLowerCase();
+                // If it's an image, display it
+                if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
+                    mediaHtml = `<img src="${post.file_path}" class="post-media" alt="魔法の欠片">`;
+                } else {
+                    // Default file download link
+                    mediaHtml = `<a href="${post.file_path}" class="post-file-link" download>📎 添付された古文書を解読する</a>`;
+                }
+            }
+
+            // Intentionally using innerHTML to make XSS easier for the lecture
+            const contentHtml = `<div class="post-text">${post.content}</div>`;
+            div.innerHTML = contentHtml + mediaHtml;
+
+            if (prepend && container.firstChild) {
+                container.insertBefore(div, container.firstChild);
+            } else {
+                container.appendChild(div);
+            }
+        }
 
         function loadPosts() {
             fetch('/api/posts')
                 .then(response => response.json())
                 .then(data => {
                     const postsDiv = document.getElementById('posts');
-                    // Store the current highest ID before processing new data
+                    // data.posts is ordered DESC (highest ID first)
                     const currentHighestId = data.posts.length > 0 ? data.posts[0].id : 0;
 
-                    // Only process posts that are newer than our last known ID
-                    // Data is received in DESC order (newest first).
-                    const newPosts = data.posts.filter(post => post.id > lastHighestId);
+                    if (isInitialLoad) {
+                        // First load: render everything
+                        postsDiv.innerHTML = ''; // Clear exactly once
+                        data.posts.forEach(post => {
+                            // Append normally (they are already in DESC order from backend)
+                            renderPost(post, postsDiv, false);
+                        });
+                        isInitialLoad = false;
+                    } else {
+                        // Polling: Only process posts that are newer than our last known ID
+                        const newPosts = data.posts.filter(post => post.id > lastHighestId);
 
-                    // We must append newer posts at the TOP of the container. 
-                    // Since newPosts has the newest item at index 0, we process it backwards to use prepend properly,
-                    // or just loop normally and insert before the first child.
-                    for (let i = newPosts.length - 1; i >= 0; i--) {
-                        const post = newPosts[i];
-                        const div = document.createElement('div');
-                        div.className = 'post';
-                        div.id = 'post-' + post.id;
-
-                        // Handle potential media
-                        let mediaHtml = '';
-                        if (post.file_path) {
-                            const ext = post.file_path.split('.').pop().toLowerCase();
-                            // If it's an image, display it
-                            if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
-                                mediaHtml = `<img src="${post.file_path}" class="post-media" alt="魔法の欠片">`;
-                            } else {
-                                // Default file download link
-                                mediaHtml = `<a href="${post.file_path}" class="post-file-link" download>📎 添付された古文書を解読する</a>`;
-                            }
-                        }
-
-                        // Intentionally using innerHTML to make XSS easier for the lecture
-                        const contentHtml = `<div class="post-text">${post.content}</div>`;
-                        div.innerHTML = contentHtml + mediaHtml;
-
-                        // Insert at the top
-                        if (postsDiv.firstChild) {
-                            postsDiv.insertBefore(div, postsDiv.firstChild);
-                        } else {
-                            postsDiv.appendChild(div);
+                        // We must append newer posts at the TOP of the container. 
+                        // Since newPosts has the newest item at index 0, we process it backwards to prepend properly.
+                        for (let i = newPosts.length - 1; i >= 0; i--) {
+                            renderPost(newPosts[i], postsDiv, true);
                         }
                     }
 
@@ -376,6 +387,13 @@
 
         document.getElementById('postForm').addEventListener('submit', function (e) {
             e.preventDefault();
+
+            // UI Feedback
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerText;
+            submitBtn.innerText = '紡ぎ中... ✨';
+            submitBtn.disabled = true;
+
             const formData = new FormData(this);
             fetch('/post', {
                 method: 'POST',
@@ -385,8 +403,16 @@
                 document.getElementById('content').value = '';
                 document.getElementById('fileInput').value = '';
                 document.getElementById('fileName').textContent = '';
+
                 // Immediately load the new post
                 loadPosts();
+
+                // Restore button state
+                submitBtn.innerText = originalText;
+                submitBtn.disabled = false;
+            }).catch(() => {
+                submitBtn.innerText = originalText;
+                submitBtn.disabled = false;
             });
         });
 
