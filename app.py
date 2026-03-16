@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify, send_from_directory
 import sqlite3
 import os
 from werkzeug.utils import secure_filename
@@ -12,8 +12,14 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Limit upload size to 16MB
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
 
+# Allowed extensions
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp', 'pdf', 'doc', 'docx'}
+
 # Ensure upload dir exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
@@ -46,6 +52,11 @@ def get_posts():
     conn.close()
     return {'posts': posts}
 
+# Route to serve uploaded files securely
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
 @app.route('/post', methods=['POST'])
 def post():
     content = request.form.get('content')
@@ -53,13 +64,17 @@ def post():
     
     file_path = None
     if file and file.filename != '':
+        if not allowed_file(file.filename):
+            # Return an error JSON if the file type is not supported
+            return jsonify({'success': False, 'error': 'この魔導書（ファイル形式）は解読できません。対応: png, jpg, pdf, doc 等'}), 400
+            
         # Secure the filename before saving
         filename = secure_filename(file.filename)
         # Create a unique path to avoid overwriting
         save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(save_path)
-        # Store relative path for frontend access
-        file_path = f"/static/uploads/{filename}"
+        # Store the proper route path to be served by Flask
+        file_path = f"/uploads/{filename}"
 
     if content or file_path:
         conn = sqlite3.connect(DB_NAME)
@@ -71,7 +86,7 @@ def post():
         c.execute('INSERT INTO posts (content, file_path) VALUES (?, ?)', (content, file_path))
         conn.commit()
         conn.close()
-    return redirect(url_for('index'))
+    return jsonify({'success': True}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

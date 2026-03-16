@@ -336,9 +336,15 @@
                 // If it's an image, display it
                 if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
                     mediaHtml = `<img src="${post.file_path}" class="post-media" alt="魔法の欠片">`;
+                } else if (ext === 'pdf') {
+                    // PDF => Open in new tab icon
+                    mediaHtml = `<a href="${post.file_path}" class="post-file-link" target="_blank" rel="noopener noreferrer">📄 古めかしい羊皮紙（PDF）を開く</a>`;
+                } else if (['doc', 'docx'].includes(ext)) {
+                    // Word => Download icon
+                    mediaHtml = `<a href="${post.file_path}" class="post-file-link" download>📝 使いの書状を解読する（ダウンロード）</a>`;
                 } else {
-                    // Default file download link
-                    mediaHtml = `<a href="${post.file_path}" class="post-file-link" download>📎 添付された古文書を解読する</a>`;
+                    // Default fallback
+                    mediaHtml = `<a href="${post.file_path}" class="post-file-link" download>📎 魔法の遺物を持ち帰る</a>`;
                 }
             }
 
@@ -398,22 +404,31 @@
             fetch('/post', {
                 method: 'POST',
                 body: formData
-            }).then(() => {
-                // Clear inputs
-                document.getElementById('content').value = '';
-                document.getElementById('fileInput').value = '';
-                document.getElementById('fileName').textContent = '';
+            })
+                .then(response => response.json().then(data => ({ status: response.status, body: data })))
+                .then(({ status, body }) => {
+                    if (status >= 400 && body.error) {
+                        // Show error alert if file type or other backend logic invalidates the request
+                        alert(body.error);
+                    } else {
+                        // Success! Clear inputs
+                        document.getElementById('content').value = '';
+                        document.getElementById('fileInput').value = '';
+                        document.getElementById('fileName').textContent = '';
 
-                // Immediately load the new post
-                loadPosts();
-
-                // Restore button state
-                submitBtn.innerText = originalText;
-                submitBtn.disabled = false;
-            }).catch(() => {
-                submitBtn.innerText = originalText;
-                submitBtn.disabled = false;
-            });
+                        // Immediately load the new post
+                        loadPosts();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error submitting post:', error);
+                    alert("送信中に魔法の乱れが生じました。もう一度お試しください。");
+                })
+                .finally(() => {
+                    // Restore button state
+                    submitBtn.innerText = originalText;
+                    submitBtn.disabled = false;
+                });
         });
 
         // Load posts initially and every 2 seconds
