@@ -1583,6 +1583,11 @@
         var currentView = 'timeline';
 
         // ------------------------------------------------------------------
+        // Current timeline tab — 'all' or 'following'
+        // ------------------------------------------------------------------
+        var currentTab = 'all';
+
+        // ------------------------------------------------------------------
         // Avatar color class — deterministic from user id
         // ------------------------------------------------------------------
         function avatarClass(userId) {
@@ -2144,7 +2149,11 @@
         var lastTweetsHash = '';
 
         function loadTweets() {
-            fetch('/api/tweets')
+            var tweetsUrl = '/api/tweets';
+            if (currentTab === 'following') {
+                tweetsUrl += '?filter=following';
+            }
+            fetch(tweetsUrl)
                 .then(function(res) { return res.json(); })
                 .then(function(data) {
                     // Skip re-render if nothing changed (prevents flicker)
@@ -2198,7 +2207,11 @@
                     });
 
                     if (topLevel.length === 0 && Object.keys(repliesMap).length === 0) {
-                        feed.innerHTML = '<div class="feed-placeholder"><div style="font-size:1.8rem;font-weight:800;margin-bottom:8px;color:var(--text-primary)">ようこそ</div><div>最初のツイートを投稿してみましょう</div></div>';
+                        if (currentTab === 'following') {
+                            feed.innerHTML = '<div class="feed-placeholder"><div style="font-size:1.2rem;font-weight:700;margin-bottom:8px;color:var(--text-primary)">フォロー中のユーザーの投稿がありません</div><div>ユーザーをフォローするとここに表示されます</div></div>';
+                        } else {
+                            feed.innerHTML = '<div class="feed-placeholder"><div style="font-size:1.8rem;font-weight:800;margin-bottom:8px;color:var(--text-primary)">ようこそ</div><div>最初のツイートを投稿してみましょう</div></div>';
+                        }
                     }
                 })
                 .catch(function(err) {
@@ -2713,13 +2726,21 @@
         }
 
         // ------------------------------------------------------------------
-        // Timeline tab switching (visual only — no filtering yet)
+        // Timeline tab switching — updates currentTab and reloads feed
         // ------------------------------------------------------------------
         function switchTab(el) {
-            document.querySelectorAll('.timeline-tab').forEach(function(tab) {
-                tab.classList.remove('active');
-            });
+            document.querySelectorAll('.timeline-tab').forEach(function(t) { t.classList.remove('active'); });
             el.classList.add('active');
+
+            if (el.textContent.trim() === 'フォロー中') {
+                currentTab = 'following';
+            } else {
+                currentTab = 'all';
+            }
+
+            // Force reload with new filter
+            lastTweetsHash = '';
+            loadTweets();
         }
 
         // ------------------------------------------------------------------
@@ -3014,6 +3035,14 @@
             // Show tabs, compose box and feed
             var tabs = document.getElementById('timeline-tabs');
             if (tabs) tabs.style.display = 'flex';
+            // Re-highlight current tab
+            document.querySelectorAll('.timeline-tab').forEach(function(t) {
+                t.classList.remove('active');
+                if ((currentTab === 'all' && t.textContent.trim() === 'おすすめ') ||
+                    (currentTab === 'following' && t.textContent.trim() === 'フォロー中')) {
+                    t.classList.add('active');
+                }
+            });
             var composeBox = timeline.querySelector('.compose-box');
             var feed = document.getElementById('tweet-feed');
             if (composeBox) composeBox.style.display = 'flex';

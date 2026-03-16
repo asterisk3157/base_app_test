@@ -956,42 +956,84 @@ def index():
 
 
 # GET /api/tweets — list all tweets with user info and like counts
+# Accepts optional ?filter=following to show only tweets from followed users + self
 @app.route('/api/tweets')
 def get_tweets():
+    filter_mode = request.args.get('filter', 'all')  # 'all' or 'following'
+
     conn = get_db()
     c = conn.cursor()
-    c.execute('''
-        SELECT
-            t.id,
-            t.content,
-            t.created_at,
-            t.reply_to_id,
-            t.quote_of_id,
-            t.impressions,
-            u.id   AS user_id,
-            u.display_name,
-            u.handle,
-            u.avatar_url,
-            u.is_bot,
-            COUNT(DISTINCT l.id) AS like_count,
-            (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) AS repost_count
-        FROM tweets t
-        JOIN  users u ON u.id = t.user_id
-        LEFT JOIN likes l ON l.tweet_id = t.id
-        GROUP BY t.id
-        ORDER BY t.created_at DESC
-    ''')
+
+    current_user_id = get_current_user_id()
+
+    if filter_mode == 'following' and current_user_id is not None:
+        # Get IDs of users the current user follows
+        c.execute('SELECT following_id FROM follows WHERE follower_id = ?', (current_user_id,))
+        following_ids = {r['following_id'] for r in c.fetchall()}
+        following_ids.add(current_user_id)  # include own tweets
+
+        if not following_ids:
+            conn.close()
+            return jsonify({'tweets': []})
+
+        # following_ids contains only integer PKs from the DB — safe to interpolate
+        placeholders = ','.join('?' * len(following_ids))
+        c.execute(f'''
+            SELECT
+                t.id,
+                t.content,
+                t.created_at,
+                t.reply_to_id,
+                t.quote_of_id,
+                t.impressions,
+                u.id   AS user_id,
+                u.display_name,
+                u.handle,
+                u.avatar_url,
+                u.is_bot,
+                COUNT(DISTINCT l.id) AS like_count,
+                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) AS repost_count
+            FROM tweets t
+            JOIN  users u ON u.id = t.user_id
+            LEFT JOIN likes l ON l.tweet_id = t.id
+            WHERE t.user_id IN ({placeholders})
+            GROUP BY t.id
+            ORDER BY t.created_at DESC
+        ''', list(following_ids))
+    else:
+        # Default: all tweets
+        c.execute('''
+            SELECT
+                t.id,
+                t.content,
+                t.created_at,
+                t.reply_to_id,
+                t.quote_of_id,
+                t.impressions,
+                u.id   AS user_id,
+                u.display_name,
+                u.handle,
+                u.avatar_url,
+                u.is_bot,
+                COUNT(DISTINCT l.id) AS like_count,
+                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) AS repost_count
+            FROM tweets t
+            JOIN  users u ON u.id = t.user_id
+            LEFT JOIN likes l ON l.tweet_id = t.id
+            GROUP BY t.id
+            ORDER BY t.created_at DESC
+        ''')
+
     rows = c.fetchall()
 
     # Increment impressions for all visible tweets
     if rows:
         tweet_ids = [row['id'] for row in rows]
-        placeholders = ','.join('?' * len(tweet_ids))
-        c.execute(f'UPDATE tweets SET impressions = impressions + 1 WHERE id IN ({placeholders})', tweet_ids)
+        imp_placeholders = ','.join('?' * len(tweet_ids))
+        c.execute(f'UPDATE tweets SET impressions = impressions + 1 WHERE id IN ({imp_placeholders})', tweet_ids)
         conn.commit()
 
     # Fetch liked and reposted tweet IDs for the current cookie user (empty sets if not logged in)
-    current_user_id = get_current_user_id()
     liked_ids = set()
     reposted_ids = set()
     if current_user_id is not None:
