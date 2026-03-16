@@ -70,15 +70,14 @@
 
         .feed-container {
             flex: 1;
-            overflow-y: auto;
+            overflow-y: scroll;
             overflow-x: hidden;
             display: flex;
             flex-direction: column;
-            justify-content: flex-end;
-            gap: 8px;
+            gap: 2px;
             margin-top: 50px;
             padding-right: 5px;
-            /* Hide scrollbar for cleaner YouTube Live look */
+            /* Thin scrollbar for clean look */
             scrollbar-width: thin;
             scrollbar-color: rgba(230, 200, 117, 0.2) transparent;
         }
@@ -96,29 +95,25 @@
             border-radius: 10px;
         }
 
-        /* Each comment bubble */
+        /* Each comment line - YouTube Live flat style */
         .comment {
-            background: rgba(0, 0, 0, 0.45);
-            border-radius: 12px;
-            padding: 8px 12px;
-            animation: commentSlideIn 0.4s ease-out forwards;
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 3px 0;
+            animation: commentSlideIn 0.3s ease-out forwards;
             word-break: break-word;
+            line-height: 1.5;
+            font-size: 0.88rem;
         }
 
         .comment-name {
-            font-size: 0.75rem;
+            font-size: 0.82rem;
             color: var(--primary-glow);
             font-weight: bold;
-            margin-bottom: 2px;
+            margin-right: 6px;
             text-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
         }
 
         .comment-text {
-            font-size: 0.88rem;
             color: var(--text-main);
-            line-height: 1.4;
         }
 
         .comment-media {
@@ -537,17 +532,17 @@
             div.className = 'comment';
             div.id = 'post-' + post.id;
 
-            // Name / Tripcode
-            const nameDiv = document.createElement('div');
-            nameDiv.className = 'comment-name';
-            nameDiv.textContent = post.name || '名無しの魔法使い';
-            div.appendChild(nameDiv);
+            // Name inline with text (YouTube Live style)
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'comment-name';
+            nameSpan.textContent = post.name || '名無しの魔法使い';
+            div.appendChild(nameSpan);
 
-            // Content (safe from XSS)
-            const textDiv = document.createElement('div');
-            textDiv.className = 'comment-text';
-            textDiv.textContent = post.content;
-            div.appendChild(textDiv);
+            // Content inline (safe from XSS)
+            const textSpan = document.createElement('span');
+            textSpan.className = 'comment-text';
+            textSpan.textContent = post.content;
+            div.appendChild(textSpan);
 
             // Handle media
             if (post.file_path) {
