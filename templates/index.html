@@ -488,6 +488,14 @@
             submitBtn.innerText = '紡ぎ中... ✨';
             submitBtn.disabled = true;
 
+            const nameInput = document.getElementById('name');
+            // Save the name to localStorage for future posts
+            if (nameInput.value) {
+                localStorage.setItem('fantasy_board_name', nameInput.value);
+            } else {
+                localStorage.removeItem('fantasy_board_name'); // Clear if they chose to post anonymously
+            }
+
             const formData = new FormData(this);
             fetch('/post', {
                 method: 'POST',
@@ -499,9 +507,8 @@
                         // Show error alert if file type or other backend logic invalidates the request
                         alert(body.error);
                     } else {
-                        // Success! Clear inputs
+                        // Success! Clear inputs ONLY for content and file
                         document.getElementById('content').value = '';
-                        document.getElementById('name').value = '';
                         document.getElementById('fileInput').value = '';
                         document.getElementById('fileName').textContent = '';
 
@@ -519,6 +526,12 @@
                     submitBtn.disabled = false;
                 });
         });
+
+        // Restore name from localStorage if available
+        const savedName = localStorage.getItem('fantasy_board_name');
+        if (savedName) {
+            document.getElementById('name').value = savedName;
+        }
 
         // Load posts initially and every 2 seconds
         loadPosts();
