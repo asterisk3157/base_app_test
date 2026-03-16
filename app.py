@@ -52,11 +52,6 @@ def get_posts():
     conn.close()
     return {'posts': posts}
 
-# Route to serve uploaded files securely
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-
 @app.route('/post', methods=['POST'])
 def post():
     content = request.form.get('content')
@@ -73,8 +68,8 @@ def post():
         # Create a unique path to avoid overwriting
         save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(save_path)
-        # Store the proper route path to be served by Flask
-        file_path = f"/uploads/{filename}"
+        # Store relative path for frontend access (served natively by Flask)
+        file_path = f"/static/uploads/{filename}"
 
     if content or file_path:
         conn = sqlite3.connect(DB_NAME)

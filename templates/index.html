@@ -305,8 +305,8 @@
                     <button type="button" class="file-upload-btn">
                         <span>📎 魔法の欠片を添える</span>
                     </button>
-                    <input type="file" name="file" id="fileInput"
-                        onchange="document.getElementById('fileName').textContent = this.files[0] ? this.files[0].name : ''">
+                    <!-- Strict accept attribute to hint the OS file picker -->
+                    <input type="file" name="file" id="fileInput" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif,.webp">
                     <span id="fileName"></span>
                 </div>
 
@@ -320,6 +320,28 @@
     </div>
 
     <script>
+        // File input explicit client-side validation
+        document.getElementById('fileInput').addEventListener('change', function () {
+            const fileNameDisplay = document.getElementById('fileName');
+            const file = this.files[0];
+
+            if (file) {
+                const allowedExtensions = ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'gif', 'webp'];
+                const fileExt = file.name.split('.').pop().toLowerCase();
+
+                if (!allowedExtensions.includes(fileExt)) {
+                    // Alert user immediately!
+                    alert('この魔導書（ファイル形式）は解読できません。\n対応フォーマット: ' + allowedExtensions.join(', '));
+                    this.value = ''; // Clear the invalid file
+                    fileNameDisplay.textContent = ''; // Clear the text
+                } else {
+                    // Valid file, display name
+                    fileNameDisplay.textContent = file.name;
+                }
+            } else {
+                fileNameDisplay.textContent = '';
+            }
+        });
         // Track the highest ID we have seen so far to prevent reloading the whole list
         let lastHighestId = 0;
         let isInitialLoad = true;
