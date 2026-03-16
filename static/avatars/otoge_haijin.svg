@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Background - soft pink gradient -->
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#ffe8f0"/>
+      <stop offset="100%" style="stop-color:#ffd0e0"/>
+    </radialGradient>
+    <radialGradient id="blush" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#ffb0c0;stop-opacity:0.5"/>
+      <stop offset="100%" style="stop-color:#ffb0c0;stop-opacity:0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Circle background -->
+  <circle cx="100" cy="100" r="100" fill="url(#bg)"/>
+
+  <!-- Body / Dress -->
+  <ellipse cx="100" cy="185" rx="55" ry="35" fill="#fff" stroke="#e8c0d0" stroke-width="1"/>
+  <rect x="55" y="155" width="90" height="30" rx="5" fill="#fff"/>
+  <!-- Bow on dress -->
+  <polygon points="95,155 85,148 85,162" fill="#e0395b"/>
+  <polygon points="105,155 115,148 115,162" fill="#e0395b"/>
+  <circle cx="100" cy="155" r="4" fill="#e0395b"/>
+  <!-- Gold chain detail -->
+  <path d="M75 158 Q100 165 125 158" fill="none" stroke="#d4a843" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+  <!-- Hair - back layer -->
+  <ellipse cx="100" cy="95" rx="72" ry="65" fill="#fcc4d4"/>
+  <!-- Long hair sides -->
+  <path d="M35 95 Q30 140 45 185 Q50 190 55 180 Q45 140 50 100Z" fill="#fcc4d4"/>
+  <path d="M165 95 Q170 140 155 185 Q150 190 145 180 Q155 140 150 100Z" fill="#fcc4d4"/>
+  <!-- Hair curls at bottom -->
+  <circle cx="42" cy="178" r="8" fill="#fcc4d4"/>
+  <circle cx="158" cy="178" r="8" fill="#fcc4d4"/>
+  <circle cx="48" cy="185" r="6" fill="#fbb"/>
+  <circle cx="152" cy="185" r="6" fill="#fbb"/>
+
+  <!-- Face -->
+  <ellipse cx="100" cy="100" rx="45" ry="42" fill="#fef0e8"/>
+
+  <!-- Eyes -->
+  <!-- Left eye -->
+  <ellipse cx="80" cy="102" rx="12" ry="14" fill="#fff"/>
+  <ellipse cx="80" cy="104" rx="10" ry="12" fill="#7070b8"/>
+  <ellipse cx="80" cy="106" rx="8" ry="9" fill="#5050a0"/>
+  <circle cx="77" cy="98" r="3.5" fill="#fff"/>
+  <circle cx="84" cy="102" r="2" fill="#fff" opacity="0.7"/>
+  <ellipse cx="80" cy="112" rx="6" ry="2" fill="#303070"/>
+
+  <!-- Right eye -->
+  <ellipse cx="120" cy="102" rx="12" ry="14" fill="#fff"/>
+  <ellipse cx="120" cy="104" rx="10" ry="12" fill="#7070b8"/>
+  <ellipse cx="120" cy="106" rx="8" ry="9" fill="#5050a0"/>
+  <circle cx="117" cy="98" r="3.5" fill="#fff"/>
+  <circle cx="124" cy="102" r="2" fill="#fff" opacity="0.7"/>
+  <ellipse cx="120" cy="112" rx="6" ry="2" fill="#303070"/>
+
+  <!-- Eyelashes -->
+  <path d="M68 95 Q75 90 80 92" fill="none" stroke="#404" stroke-width="2" stroke-linecap="round"/>
+  <path d="M132 95 Q125 90 120 92" fill="none" stroke="#404" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Blush -->
+  <ellipse cx="70" cy="115" rx="10" ry="6" fill="url(#blush)"/>
+  <ellipse cx="130" cy="115" rx="10" ry="6" fill="url(#blush)"/>
+
+  <!-- Mouth - small smile -->
+  <path d="M94 120 Q100 125 106 120" fill="none" stroke="#d08080" stroke-width="1.5" stroke-linecap="round"/>
+
+  <!-- Hair - front bangs -->
+  <path d="M55 85 Q60 60 75 68 Q80 55 100 58 Q120 55 125 68 Q140 60 145 85 Q140 75 130 78 Q120 65 100 67 Q80 65 70 78 Q60 75 55 85Z" fill="#fcc4d4"/>
+
+  <!-- Hair highlight streaks -->
+  <path d="M70 70 Q75 78 72 85" fill="none" stroke="#fdd8e4" stroke-width="2" opacity="0.6"/>
+  <path d="M100 60 Q102 70 100 80" fill="none" stroke="#fdd8e4" stroke-width="2" opacity="0.6"/>
+  <path d="M130 70 Q125 78 128 85" fill="none" stroke="#fdd8e4" stroke-width="2" opacity="0.6"/>
+
+  <!-- Headband -->
+  <path d="M48 82 Q100 65 152 82" fill="none" stroke="#e84070" stroke-width="6" stroke-linecap="round"/>
+  <path d="M48 82 Q100 68 152 82" fill="none" stroke="#f06090" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Hair ribbons -->
+  <!-- Left ribbon -->
+  <polygon points="58,85 48,78 50,92" fill="#6060b0"/>
+  <polygon points="58,85 52,95 62,95" fill="#5050a0"/>
+  <!-- Right ribbon -->
+  <polygon points="142,85 152,78 150,92" fill="#6060b0"/>
+  <polygon points="142,85 148,95 138,95" fill="#5050a0"/>
+
+  <!-- Star accessories -->
+  <polygon points="90,148 91,151 94,151 92,153 93,156 90,154 87,156 88,153 86,151 89,151" fill="#d4a843"/>
+  <polygon points="110,148 111,151 114,151 112,153 113,156 110,154 107,156 108,153 106,151 109,151" fill="#d4a843"/>
+
+  <!-- Rose -->
+  <circle cx="130" cy="165" r="8" fill="#f08090"/>
+  <circle cx="130" cy="165" r="5" fill="#e06070"/>
+  <circle cx="130" cy="165" r="2.5" fill="#d05060"/>
+  <!-- Rose leaves -->
+  <ellipse cx="122" cy="168" rx="5" ry="3" fill="#80b080" transform="rotate(-20,122,168)"/>
+  <ellipse cx="138" cy="168" rx="5" ry="3" fill="#80b080" transform="rotate(20,138,168)"/>
+  <!-- Ribbon on rose -->
+  <path d="M125 172 Q120 178 118 175" fill="none" stroke="#e06070" stroke-width="1.5"/>
+  <path d="M135 172 Q140 178 142 175" fill="none" stroke="#e06070" stroke-width="1.5"/>
+</svg>

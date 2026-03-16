@@ -29,7 +29,7 @@ Close-up of thumbs tapping a smartphone screen showing colorful rhythm game note
 Person sitting in dark room with three monitors showing fantasy RPG game, face lit by screen glow, immersed gamer aesthetic, square crop profile icon
 
 9. jirai_chan.png
-Japanese girl taking mirror selfie with smartphone covering half her face, heavy eye makeup, black and pink outfit, gothic accessories, harajuku style, square crop profile icon
+Japanese jirai-kei girl mirror selfie, smartphone covering lower face, heavy under-eye makeup with tears drawn, double eyelid tape visible, black and pink lace choker, twin tails with ribbons, bandaid on cheek, dark purikura booth lighting, quantity jewel accessories, yami-kawaii fashion, square crop profile icon
 
 10. feminist_jp.png
 Woman reading a book in a sunny cafe, short hair, glasses, thoughtful expression, intellectual and calm vibe, natural warm light, square crop profile icon
