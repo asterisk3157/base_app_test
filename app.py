@@ -867,6 +867,8 @@ def init_db():
         c.execute("ALTER TABLE tweets ADD COLUMN impressions INTEGER NOT NULL DEFAULT 0")
     if 'quote_of_id' not in existing_cols:
         c.execute("ALTER TABLE tweets ADD COLUMN quote_of_id INTEGER REFERENCES tweets(id)")
+    if 'image_url' not in existing_cols:
+        c.execute("ALTER TABLE tweets ADD COLUMN image_url TEXT DEFAULT ''")
 
     # likes table
     c.execute('''
@@ -917,6 +919,25 @@ def init_db():
                 UNIQUE(follower_id, following_id)
             )
         ''')
+
+    # bookmarks table (migration guard for existing DBs)
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='bookmarks'")
+    if not c.fetchone():
+        c.execute('''CREATE TABLE bookmarks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            tweet_id INTEGER NOT NULL REFERENCES tweets(id),
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, tweet_id)
+        )''')
+
+    # Migration: add created_at column to users if missing (for existing DBs)
+    # Note: SQLite ALTER TABLE does not allow CURRENT_TIMESTAMP as default; use NULL then backfill.
+    c.execute("PRAGMA table_info(users)")
+    columns = [col[1] for col in c.fetchall()]
+    if 'created_at' not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN created_at TIMESTAMP")
+        c.execute("UPDATE users SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL")
 
     # Seed users only if the table is empty
     c.execute('SELECT COUNT(*) FROM users')
@@ -1308,7 +1329,7 @@ def seed_bot_interactions(conn, c):
 # ---------------------------------------------------------------------------
 # Helper — build a tweet dict from a sqlite3.Row
 # ---------------------------------------------------------------------------
-def _tweet_row_to_dict(row, liked: bool, reposted: bool = False) -> dict:
+def _tweet_row_to_dict(row, liked: bool, reposted: bool = False, bookmarked: bool = False) -> dict:
     return {
         'id': row['id'],
         'content': row['content'],
@@ -1316,6 +1337,7 @@ def _tweet_row_to_dict(row, liked: bool, reposted: bool = False) -> dict:
         'reply_to_id': row['reply_to_id'],
         'quote_of_id': row['quote_of_id'],
         'impressions': row['impressions'],
+        'image_url': row['image_url'] if 'image_url' in row.keys() else '',
         'user': {
             'id':           row['user_id'],
             'display_name': row['display_name'],
@@ -1327,6 +1349,7 @@ def _tweet_row_to_dict(row, liked: bool, reposted: bool = False) -> dict:
         'liked': liked,
         'reposts': row['repost_count'],
         'reposted': reposted,
+        'bookmarked': bookmarked,
     }
 
 
@@ -1384,6 +1407,7 @@ def get_tweets():
                 t.reply_to_id,
                 t.quote_of_id,
                 t.impressions,
+                t.image_url,
                 u.id   AS user_id,
                 u.display_name,
                 u.handle,
@@ -1408,6 +1432,7 @@ def get_tweets():
                 t.reply_to_id,
                 t.quote_of_id,
                 t.impressions,
+                t.image_url,
                 u.id   AS user_id,
                 u.display_name,
                 u.handle,
@@ -1431,36 +1456,55 @@ def get_tweets():
         c.execute(f'UPDATE tweets SET impressions = impressions + 1 WHERE id IN ({imp_placeholders})', tweet_ids)
         conn.commit()
 
-    # Fetch liked and reposted tweet IDs for the current cookie user (empty sets if not logged in)
+    # Fetch liked, reposted, and bookmarked tweet IDs for the current cookie user (empty sets if not logged in)
     liked_ids = set()
     reposted_ids = set()
+    bookmarked_ids = set()
     if current_user_id is not None:
         c.execute('SELECT tweet_id FROM likes WHERE user_id = ?', (current_user_id,))
         liked_ids = {r['tweet_id'] for r in c.fetchall()}
         c.execute('SELECT tweet_id FROM reposts WHERE user_id = ?', (current_user_id,))
         reposted_ids = {r['tweet_id'] for r in c.fetchall()}
+        c.execute('SELECT tweet_id FROM bookmarks WHERE user_id = ?', (current_user_id,))
+        bookmarked_ids = {r['tweet_id'] for r in c.fetchall()}
 
     conn.close()
 
-    tweets = [_tweet_row_to_dict(row, row['id'] in liked_ids, row['id'] in reposted_ids) for row in rows]
+    tweets = [_tweet_row_to_dict(row, row['id'] in liked_ids, row['id'] in reposted_ids, row['id'] in bookmarked_ids) for row in rows]
     return jsonify({'tweets': tweets})
 
 
 # POST /api/tweets — create a new tweet
+# Supports both JSON and multipart/form-data (for image uploads)
 @app.route('/api/tweets', methods=['POST'])
 def create_tweet():
-    data = request.get_json(force=True, silent=True) or {}
-    content = (data.get('content') or '').strip()
-    reply_to_id = data.get('reply_to_id')
-    quote_of_id = data.get('quote_of_id')
-
-    # Require cookie-based authentication
     user_id = get_current_user_id()
     if user_id is None:
         return jsonify({'error': 'authentication required'}), 401
 
-    if not content:
-        return jsonify({'error': 'content is required'}), 400
+    # Support both JSON and multipart form data
+    if request.content_type and 'multipart' in request.content_type:
+        content = (request.form.get('content') or '').strip()
+        reply_to_id = request.form.get('reply_to_id')
+        quote_of_id = request.form.get('quote_of_id')
+        image_file = request.files.get('image')
+    else:
+        data = request.get_json(force=True, silent=True) or {}
+        content = (data.get('content') or '').strip()
+        reply_to_id = data.get('reply_to_id')
+        quote_of_id = data.get('quote_of_id')
+        image_file = None
+
+    if not content and not image_file:
+        return jsonify({'error': 'content or image required'}), 400
+
+    image_url = ''
+    if image_file and allowed_file(image_file.filename):
+        ext = image_file.filename.rsplit('.', 1)[1].lower()
+        filename = f'tweet_{user_id}_{uuid.uuid4().hex[:8]}.{ext}'
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        image_file.save(filepath)
+        image_url = f'/static/uploads/{filename}'
 
     conn = get_db()
     c = conn.cursor()
@@ -1472,8 +1516,8 @@ def create_tweet():
         return jsonify({'error': 'user not found'}), 404
 
     c.execute(
-        'INSERT INTO tweets (user_id, content, reply_to_id, quote_of_id) VALUES (?, ?, ?, ?)',
-        (user_id, content, reply_to_id, quote_of_id)
+        'INSERT INTO tweets (user_id, content, reply_to_id, quote_of_id, image_url) VALUES (?, ?, ?, ?, ?)',
+        (user_id, content, reply_to_id, quote_of_id, image_url)
     )
     tweet_id = c.lastrowid
     conn.commit()
@@ -1486,6 +1530,7 @@ def create_tweet():
             t.created_at,
             t.reply_to_id,
             t.quote_of_id,
+            t.image_url,
             u.id   AS user_id,
             u.display_name,
             u.handle,
@@ -1517,7 +1562,7 @@ def get_single_tweet(tweet_id):
     conn = get_db()
     c = conn.cursor()
     c.execute('''
-        SELECT t.id, t.content, t.created_at, t.reply_to_id, t.quote_of_id,
+        SELECT t.id, t.content, t.created_at, t.reply_to_id, t.quote_of_id, t.image_url,
                u.id AS user_id, u.display_name, u.handle, u.avatar_url, u.is_bot,
                COUNT(DISTINCT l.id) AS like_count,
                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count,
@@ -1651,7 +1696,7 @@ def register():
     new_id = c.lastrowid
     conn.commit()
 
-    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot FROM users WHERE id = ?', (new_id,))
+    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at FROM users WHERE id = ?', (new_id,))
     user = dict(c.fetchone())
     conn.close()
 
@@ -1669,7 +1714,7 @@ def get_me():
 
     conn = get_db()
     c = conn.cursor()
-    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot FROM users WHERE id = ?', (user_id,))
+    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at FROM users WHERE id = ?', (user_id,))
     row = c.fetchone()
     conn.close()
 
@@ -1711,7 +1756,7 @@ def update_me():
     )
     conn.commit()
 
-    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot FROM users WHERE id = ?', (user_id,))
+    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at FROM users WHERE id = ?', (user_id,))
     user = dict(c.fetchone())
     conn.close()
 
@@ -1730,7 +1775,7 @@ def get_users():
         c.execute('SELECT following_id FROM follows WHERE follower_id = ?', (current_user_id,))
         following_ids = {r['following_id'] for r in c.fetchall()}
 
-    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot FROM users')
+    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at FROM users')
     users = []
     for row in c.fetchall():
         u = dict(row)
@@ -1784,7 +1829,7 @@ def get_user_profile(handle):
     conn = get_db()
     c = conn.cursor()
 
-    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot FROM users WHERE handle = ?', (handle,))
+    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at FROM users WHERE handle = ?', (handle,))
     user = c.fetchone()
     if not user:
         conn.close()
@@ -1822,7 +1867,7 @@ def get_user_profile(handle):
     # Get this user's tweets (including replies), with like/repost counts
     c.execute('''
         SELECT
-            t.id, t.content, t.created_at, t.reply_to_id, t.quote_of_id, t.impressions,
+            t.id, t.content, t.created_at, t.reply_to_id, t.quote_of_id, t.impressions, t.image_url,
             u.id AS user_id, u.display_name, u.handle, u.avatar_url, u.is_bot,
             COUNT(DISTINCT l.id) AS like_count,
             (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count
@@ -1844,17 +1889,20 @@ def get_user_profile(handle):
 
     liked_ids = set()
     reposted_ids = set()
+    bookmarked_ids = set()
     if current_user_id is not None:
         c.execute('SELECT tweet_id FROM likes WHERE user_id = ?', (current_user_id,))
         liked_ids = {r['tweet_id'] for r in c.fetchall()}
         c.execute('SELECT tweet_id FROM reposts WHERE user_id = ?', (current_user_id,))
         reposted_ids = {r['tweet_id'] for r in c.fetchall()}
+        c.execute('SELECT tweet_id FROM bookmarks WHERE user_id = ?', (current_user_id,))
+        bookmarked_ids = {r['tweet_id'] for r in c.fetchall()}
 
-    tweets = [_tweet_row_to_dict(row, row['id'] in liked_ids, row['id'] in reposted_ids) for row in rows]
+    tweets = [_tweet_row_to_dict(row, row['id'] in liked_ids, row['id'] in reposted_ids, row['id'] in bookmarked_ids) for row in rows]
 
     # Fetch tweets this user reposted
     c.execute('''
-        SELECT t.id, t.content, t.created_at, t.reply_to_id, t.quote_of_id,
+        SELECT t.id, t.content, t.created_at, t.reply_to_id, t.quote_of_id, t.image_url,
                u.id AS user_id, u.display_name, u.handle, u.avatar_url, u.is_bot,
                COUNT(DISTINCT l.id) AS like_count,
                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count,
@@ -1868,7 +1916,7 @@ def get_user_profile(handle):
         ORDER BY rp.id DESC
     ''', (user_id,))
     repost_rows = c.fetchall()
-    reposted_tweets = [_tweet_row_to_dict(row, row['id'] in liked_ids, True) for row in repost_rows]
+    reposted_tweets = [_tweet_row_to_dict(row, row['id'] in liked_ids, True, row['id'] in bookmarked_ids) for row in repost_rows]
 
     # Mark reposted tweets with a 'reposted_by' field
     for rt in reposted_tweets:
@@ -1886,7 +1934,7 @@ def generate_bot_tweet():
     c = conn.cursor()
 
     # Pick a random bot user
-    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot FROM users WHERE is_bot = 1')
+    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at FROM users WHERE is_bot = 1')
     bots = c.fetchall()
     if not bots:
         conn.close()
@@ -1957,6 +2005,7 @@ def generate_bot_tweet():
             t.created_at,
             t.reply_to_id,
             t.quote_of_id,
+            '' AS image_url,
             u.id   AS user_id,
             u.display_name,
             u.handle,
@@ -2043,6 +2092,102 @@ def toggle_repost(tweet_id):
     conn.close()
 
     return jsonify({'reposted': reposted, 'reposts': repost_count})
+
+
+# POST /api/tweets/<id>/bookmark — toggle bookmark for the current cookie user
+@app.route('/api/tweets/<int:tweet_id>/bookmark', methods=['POST'])
+def toggle_bookmark(tweet_id):
+    user_id = get_current_user_id()
+    if user_id is None:
+        return jsonify({'error': 'authentication required'}), 401
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('SELECT id FROM bookmarks WHERE user_id = ? AND tweet_id = ?', (user_id, tweet_id))
+    if c.fetchone():
+        c.execute('DELETE FROM bookmarks WHERE user_id = ? AND tweet_id = ?', (user_id, tweet_id))
+        bookmarked = False
+    else:
+        c.execute('INSERT INTO bookmarks (user_id, tweet_id) VALUES (?, ?)', (user_id, tweet_id))
+        bookmarked = True
+    conn.commit()
+    conn.close()
+    return jsonify({'bookmarked': bookmarked})
+
+
+# GET /api/bookmarks — get bookmarked tweets for the current user
+@app.route('/api/bookmarks')
+def get_bookmarks():
+    user_id = get_current_user_id()
+    if user_id is None:
+        return jsonify({'tweets': []})
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('''
+        SELECT t.id, t.content, t.created_at, t.reply_to_id, t.quote_of_id, t.image_url,
+               u.id AS user_id, u.display_name, u.handle, u.avatar_url, u.is_bot,
+               COUNT(DISTINCT l.id) AS like_count,
+               (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count,
+               t.impressions
+        FROM bookmarks b
+        JOIN tweets t ON t.id = b.tweet_id
+        JOIN users u ON u.id = t.user_id
+        LEFT JOIN likes l ON l.tweet_id = t.id
+        WHERE b.user_id = ?
+        GROUP BY t.id
+        ORDER BY b.created_at DESC
+    ''', (user_id,))
+    rows = c.fetchall()
+    liked_ids = set()
+    reposted_ids = set()
+    c.execute('SELECT tweet_id FROM likes WHERE user_id = ?', (user_id,))
+    liked_ids = {r['tweet_id'] for r in c.fetchall()}
+    c.execute('SELECT tweet_id FROM reposts WHERE user_id = ?', (user_id,))
+    reposted_ids = {r['tweet_id'] for r in c.fetchall()}
+    conn.close()
+    # All rows here are bookmarked by definition
+    tweets = [_tweet_row_to_dict(row, row['id'] in liked_ids, row['id'] in reposted_ids, True) for row in rows]
+    return jsonify({'tweets': tweets})
+
+
+# GET /api/tweets/search — search tweets by content (supports hashtag queries)
+@app.route('/api/tweets/search')
+def search_tweets():
+    q = request.args.get('q', '').strip()
+    if not q:
+        return jsonify({'tweets': []})
+
+    conn = get_db()
+    c = conn.cursor()
+    search_term = f'%{q}%'
+    c.execute('''
+        SELECT t.id, t.content, t.created_at, t.reply_to_id, t.quote_of_id, t.image_url,
+               u.id AS user_id, u.display_name, u.handle, u.avatar_url, u.is_bot,
+               COUNT(DISTINCT l.id) AS like_count,
+               (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count,
+               t.impressions
+        FROM tweets t
+        JOIN users u ON u.id = t.user_id
+        LEFT JOIN likes l ON l.tweet_id = t.id
+        WHERE t.content LIKE ?
+        GROUP BY t.id
+        ORDER BY t.created_at DESC
+        LIMIT 50
+    ''', (search_term,))
+    rows = c.fetchall()
+    current_user_id = get_current_user_id()
+    liked_ids = set()
+    reposted_ids = set()
+    bookmarked_ids = set()
+    if current_user_id:
+        c.execute('SELECT tweet_id FROM likes WHERE user_id = ?', (current_user_id,))
+        liked_ids = {r['tweet_id'] for r in c.fetchall()}
+        c.execute('SELECT tweet_id FROM reposts WHERE user_id = ?', (current_user_id,))
+        reposted_ids = {r['tweet_id'] for r in c.fetchall()}
+        c.execute('SELECT tweet_id FROM bookmarks WHERE user_id = ?', (current_user_id,))
+        bookmarked_ids = {r['tweet_id'] for r in c.fetchall()}
+    conn.close()
+    tweets = [_tweet_row_to_dict(row, row['id'] in liked_ids, row['id'] in reposted_ids, row['id'] in bookmarked_ids) for row in rows]
+    return jsonify({'tweets': tweets})
 
 
 # POST /api/users/<id>/follow — toggle follow/unfollow for the current cookie user
@@ -2219,7 +2364,7 @@ def upload_avatar():
     c = conn.cursor()
     c.execute('UPDATE users SET avatar_url = ? WHERE id = ?', (avatar_url, user_id))
     conn.commit()
-    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot FROM users WHERE id = ?', (user_id,))
+    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at FROM users WHERE id = ?', (user_id,))
     user = dict(c.fetchone())
     conn.close()
 

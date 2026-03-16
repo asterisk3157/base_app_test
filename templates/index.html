@@ -56,6 +56,7 @@
             background: var(--bg-main);
             color: var(--text-primary);
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
         a { color: inherit; text-decoration: none; }
@@ -82,8 +83,10 @@
             grid-template-columns: 250px 1fr 300px;
             grid-template-areas: "left center right";
             max-width: 1280px;
+            width: 100%;
             margin: 0 auto;
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
         /* ---------------------------------------------------------- */
@@ -233,10 +236,16 @@
         .compose-footer {
             display: flex;
             align-items: center;
-            justify-content: flex-end;
             gap: 12px;
             padding-top: 8px;
             border-top: 1px solid var(--border);
+        }
+
+        .compose-footer .compose-tools {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .char-counter {
@@ -426,7 +435,7 @@
         .tweet-actions {
             display: flex;
             justify-content: space-between;
-            max-width: 425px;
+            max-width: 100%;
             margin-top: 4px;
         }
 
@@ -1331,6 +1340,28 @@
         }
 
         /* ---------------------------------------------------------- */
+        /* Bookmark button                                            */
+        /* ---------------------------------------------------------- */
+        .bookmark-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: none;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            transition: color 0.2s, background 0.2s;
+        }
+        .bookmark-btn:hover { color: var(--accent); background: rgba(29,155,240,0.1); }
+        .bookmark-btn.bookmarked { color: var(--accent); }
+
+        /* ---------------------------------------------------------- */
+        /* Bookmarks view                                             */
+        /* ---------------------------------------------------------- */
+        .bookmarks-view { min-height: 50vh; }
+
+        /* ---------------------------------------------------------- */
         /* Tweet detail view                                           */
         /* ---------------------------------------------------------- */
         .tweet-detail-view { min-height: 50vh; }
@@ -1421,6 +1452,13 @@
                 <span class="notif-badge" id="notif-badge" style="display:none"></span>
             </button>
 
+            <button class="nav-item" id="bookmark-nav" aria-label="ブックマーク" onclick="showBookmarks()">
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span>ブックマーク</span>
+            </button>
+
             <button class="nav-item" aria-label="プロフィール" onclick="if(currentUser) showProfile(currentUser.handle); else showRegistrationModal();">
                 <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
@@ -1467,8 +1505,18 @@
                         rows="3"
                         aria-label="ツイートの内容"
                     ></textarea>
+                    <div id="compose-image-preview" style="display:none;position:relative;margin-top:8px">
+                        <img id="compose-image-thumb" style="max-height:200px;border-radius:12px;width:100%;object-fit:cover" alt="">
+                        <button onclick="clearComposeImage()" style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.7);color:#fff;border-radius:50%;width:28px;height:28px;font-size:1rem;cursor:pointer;border:none" aria-label="画像を削除">&#x2715;</button>
+                    </div>
                     <div class="compose-footer">
-                        <span class="char-counter" id="char-counter" aria-live="polite">280</span>
+                        <div class="compose-tools">
+                            <label style="cursor:pointer;color:var(--accent);padding:4px 8px;border-radius:9999px;transition:background 0.2s;display:flex;align-items:center" onmouseover="this.style.background='rgba(29,155,240,0.1)'" onmouseout="this.style.background='transparent'" aria-label="画像を添付">
+                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                                <input type="file" id="compose-image-input" accept="image/*" style="display:none" onchange="previewComposeImage(this)">
+                            </label>
+                        </div>
+                        <span class="char-counter" id="char-counter" aria-live="polite"></span>
                         <button
                             class="compose-submit"
                             id="compose-submit"
@@ -1940,6 +1988,8 @@
             contentEl.className = 'tweet-content';
             // Intentionally using innerHTML to make XSS easier for the lecture
             contentEl.innerHTML = tweet.content;
+            // After setting innerHTML, wrap hashtags in clickable links
+            contentEl.innerHTML = contentEl.innerHTML.replace(/#([^\s<]+)/g, '<a href="javascript:void(0)" onclick="searchHashtag(\'$1\')" style="color:var(--accent);text-decoration:none">#$1</a>');
             contentEl.style.cursor = 'pointer';
             contentEl.onclick = function(e) {
                 // Don't trigger if clicking a link inside
@@ -2072,8 +2122,59 @@
             impressionBtn.appendChild(impCount);
             actionsEl.appendChild(impressionBtn);
 
+            // Bookmark button (flag icon)
+            var bookmarkBtn = document.createElement('button');
+            bookmarkBtn.className = 'bookmark-btn' + (tweet.bookmarked ? ' bookmarked' : '');
+            bookmarkBtn.setAttribute('aria-label', 'ブックマーク');
+            var bookmarkSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            bookmarkSvg.setAttribute('viewBox', '0 0 24 24');
+            bookmarkSvg.setAttribute('width', '18');
+            bookmarkSvg.setAttribute('height', '18');
+            bookmarkSvg.setAttribute('aria-hidden', 'true');
+            bookmarkSvg.style.fill = tweet.bookmarked ? 'var(--accent)' : 'none';
+            bookmarkSvg.style.stroke = tweet.bookmarked ? 'var(--accent)' : 'currentColor';
+            bookmarkSvg.style.strokeWidth = '2';
+            var bookmarkPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            bookmarkPath.setAttribute('d', 'M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z');
+            bookmarkSvg.appendChild(bookmarkPath);
+            bookmarkBtn.appendChild(bookmarkSvg);
+            (function(btn, svg, tweetData) {
+                btn.onclick = function(e) {
+                    e.stopPropagation();
+                    fetch('/api/tweets/' + tweetData.id + '/bookmark', { method: 'POST' })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            if (data.bookmarked) {
+                                btn.classList.add('bookmarked');
+                                svg.style.fill = 'var(--accent)';
+                                svg.style.stroke = 'var(--accent)';
+                            } else {
+                                btn.classList.remove('bookmarked');
+                                svg.style.fill = 'none';
+                                svg.style.stroke = 'currentColor';
+                            }
+                        });
+                };
+            })(bookmarkBtn, bookmarkSvg, tweet);
+            actionsEl.appendChild(bookmarkBtn);
+
             bodyEl.appendChild(metaEl);
             bodyEl.appendChild(contentEl);
+
+            // Tweet image display
+            if (tweet.image_url) {
+                var imgContainer = document.createElement('div');
+                imgContainer.style.cssText = 'margin-top:8px;border-radius:16px;overflow:hidden;border:1px solid var(--border)';
+                var tweetImg = document.createElement('img');
+                tweetImg.src = tweet.image_url;
+                tweetImg.style.cssText = 'width:100%;max-height:400px;object-fit:cover;display:block;cursor:pointer';
+                tweetImg.alt = '';
+                (function(url) {
+                    tweetImg.onclick = function(e) { e.stopPropagation(); showImageModal(url); };
+                })(tweet.image_url);
+                imgContainer.appendChild(tweetImg);
+                bodyEl.appendChild(imgContainer);
+            }
 
             // Quoted tweet embed — fetch and show if this is a quote retweet
             if (tweet.quote_of_id) {
@@ -2158,6 +2259,8 @@
             const contentEl = document.createElement('div');
             contentEl.className = 'tweet-content';
             contentEl.innerHTML = tweet.content;
+            // Wrap hashtags in clickable links
+            contentEl.innerHTML = contentEl.innerHTML.replace(/#([^\s<]+)/g, '<a href="javascript:void(0)" onclick="searchHashtag(\'$1\')" style="color:var(--accent);text-decoration:none">#$1</a>');
 
             // Action bar — full set: reply, repost, like
             const actionsEl = document.createElement('div');
@@ -2246,6 +2349,22 @@
 
             bodyEl.appendChild(metaEl);
             bodyEl.appendChild(contentEl);
+
+            // Reply card image display
+            if (tweet.image_url) {
+                var replyImgContainer = document.createElement('div');
+                replyImgContainer.style.cssText = 'margin-top:8px;border-radius:12px;overflow:hidden;border:1px solid var(--border)';
+                var replyImg = document.createElement('img');
+                replyImg.src = tweet.image_url;
+                replyImg.style.cssText = 'width:100%;max-height:280px;object-fit:cover;display:block;cursor:pointer';
+                replyImg.alt = '';
+                (function(url) {
+                    replyImg.onclick = function(e) { e.stopPropagation(); showImageModal(url); };
+                })(tweet.image_url);
+                replyImgContainer.appendChild(replyImg);
+                bodyEl.appendChild(replyImgContainer);
+            }
+
             bodyEl.appendChild(actionsEl);
 
             card.appendChild(avatarEl);
@@ -2345,18 +2464,28 @@
         // Post a new tweet
         // ------------------------------------------------------------------
         function postTweet() {
-            const textarea = document.getElementById('compose-input');
-            const content  = textarea.value.trim();
-            if (!content) return;
+            var textarea = document.getElementById('compose-input');
+            var content = textarea.value.trim();
+            if (!content && !composeImageFile) return;
 
-            const submitBtn = document.getElementById('compose-submit');
+            var submitBtn = document.getElementById('compose-submit');
             submitBtn.disabled = true;
 
-            fetch('/api/tweets', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: content })
-            })
+            var fetchOptions;
+            if (composeImageFile) {
+                var formData = new FormData();
+                formData.append('content', content);
+                formData.append('image', composeImageFile);
+                fetchOptions = { method: 'POST', body: formData };
+            } else {
+                fetchOptions = {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: content })
+                };
+            }
+
+            fetch('/api/tweets', fetchOptions)
             .then(function(res) {
                 if (res.status === 401) {
                     showRegistrationModal();
@@ -2367,6 +2496,7 @@
             .then(function(data) {
                 if (!data) return;
                 textarea.value = '';
+                clearComposeImage();
                 updateCharCounter();
                 loadTweets();
             })
@@ -2583,14 +2713,10 @@
             if (feed) feed.style.display = 'none';
 
             // Remove existing views
-            var existing = timeline.querySelector('.profile-view');
-            if (existing) existing.remove();
-            var existingNotif = timeline.querySelector('.notif-view');
-            if (existingNotif) existingNotif.remove();
-            var existingSearch = timeline.querySelector('.search-view');
-            if (existingSearch) existingSearch.remove();
-            var existingDetail = timeline.querySelector('.tweet-detail-view');
-            if (existingDetail) existingDetail.remove();
+            ['profile-view', 'notif-view', 'search-view', 'tweet-detail-view', 'bookmarks-view'].forEach(function(cls) {
+                var el = timeline.querySelector('.' + cls);
+                if (el) el.remove();
+            });
 
             // Update header
             var header = timeline.querySelector('.timeline-header h1');
@@ -2818,29 +2944,62 @@
         }
 
         // ------------------------------------------------------------------
-        // Character counter for compose box
+        // Image upload for compose box
         // ------------------------------------------------------------------
-        function updateCharCounter() {
-            const textarea  = document.getElementById('compose-input');
-            const counter   = document.getElementById('char-counter');
-            const submitBtn = document.getElementById('compose-submit');
-            const remaining = 280 - textarea.value.length;
+        var composeImageFile = null;
 
-            counter.textContent = remaining;
-            counter.className   = 'char-counter';
-
-            if (remaining <= 0) {
-                counter.classList.add('limit');
-                submitBtn.disabled = true;
-            } else if (remaining <= 20) {
-                counter.classList.add('warn');
-                submitBtn.disabled = false;
-            } else {
-                submitBtn.disabled = false;
+        function previewComposeImage(input) {
+            if (input.files && input.files[0]) {
+                composeImageFile = input.files[0];
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('compose-image-thumb').src = e.target.result;
+                    document.getElementById('compose-image-preview').style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+                // Update submit button state since an image is now attached
+                updateCharCounter();
             }
         }
 
+        function clearComposeImage() {
+            composeImageFile = null;
+            document.getElementById('compose-image-input').value = '';
+            document.getElementById('compose-image-preview').style.display = 'none';
+            updateCharCounter();
+        }
+
+        // ------------------------------------------------------------------
+        // Character counter — SVG progress ring
+        // ------------------------------------------------------------------
+        function updateCharCounter() {
+            var textarea = document.getElementById('compose-input');
+            var counter = document.getElementById('char-counter');
+            var submitBtn = document.getElementById('compose-submit');
+            var remaining = 280 - textarea.value.length;
+            var progress = textarea.value.length / 280;
+
+            // SVG circle progress ring
+            var radius = 10;
+            var circumference = 2 * Math.PI * radius;
+            var offset = circumference * (1 - Math.min(progress, 1));
+
+            var color = remaining <= 0 ? 'var(--like-color)' : remaining <= 20 ? '#fbbf24' : 'var(--accent)';
+
+            counter.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">'
+                + '<circle cx="12" cy="12" r="' + radius + '" fill="none" stroke="var(--border)" stroke-width="2"/>'
+                + '<circle cx="12" cy="12" r="' + radius + '" fill="none" stroke="' + color + '" stroke-width="2" '
+                + 'stroke-dasharray="' + circumference + '" stroke-dashoffset="' + offset + '" '
+                + 'transform="rotate(-90 12 12)" stroke-linecap="round"/>'
+                + (remaining <= 20 ? '<text x="12" y="16" text-anchor="middle" font-size="8" fill="' + color + '">' + remaining + '</text>' : '')
+                + '</svg>';
+
+            submitBtn.disabled = remaining < 0 || (textarea.value.trim().length === 0 && !composeImageFile);
+        }
+
         document.getElementById('compose-input').addEventListener('input', updateCharCounter);
+        // Initialize the ring on page load
+        updateCharCounter();
 
         // Allow Ctrl+Enter / Cmd+Enter to submit
         document.getElementById('compose-input').addEventListener('keydown', function(e) {
@@ -3014,7 +3173,7 @@
             if (tabs) tabs.style.display = 'none';
 
             // Remove other views
-            ['profile-view', 'notif-view', 'search-view', 'tweet-detail-view'].forEach(function(cls) {
+            ['profile-view', 'notif-view', 'search-view', 'tweet-detail-view', 'bookmarks-view'].forEach(function(cls) {
                 var el = timeline.querySelector('.' + cls);
                 if (el) el.remove();
             });
@@ -3211,10 +3370,74 @@
                 });
         }
 
+        // ------------------------------------------------------------------
+        // Bookmarks view
+        // ------------------------------------------------------------------
+        function showBookmarks(fromPopstate) {
+            currentView = 'bookmarks';
+            window.scrollTo(0, 0);
+            if (!fromPopstate) pushView('bookmarks');
+
+            var timeline = document.getElementById('top');
+            var composeBox = timeline.querySelector('.compose-box');
+            var feed = document.getElementById('tweet-feed');
+            var tabs = document.getElementById('timeline-tabs');
+            if (composeBox) composeBox.style.display = 'none';
+            if (feed) feed.style.display = 'none';
+            if (tabs) tabs.style.display = 'none';
+            ['profile-view', 'notif-view', 'search-view', 'tweet-detail-view', 'bookmarks-view'].forEach(function(cls) {
+                var el = timeline.querySelector('.' + cls);
+                if (el) el.remove();
+            });
+
+            var header = timeline.querySelector('.timeline-header h1');
+            if (header) header.textContent = 'ブックマーク';
+
+            document.querySelectorAll('.nav-item').forEach(function(b) { b.classList.remove('active'); });
+            var bookmarkNav = document.getElementById('bookmark-nav');
+            if (bookmarkNav) bookmarkNav.classList.add('active');
+
+            var view = document.createElement('div');
+            view.className = 'bookmarks-view';
+            view.innerHTML = '<div style="padding:40px 20px;text-align:center;color:var(--text-secondary)">読み込み中…</div>';
+            timeline.appendChild(view);
+
+            fetch('/api/bookmarks')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    view.innerHTML = '';
+                    if (!data.tweets || data.tweets.length === 0) {
+                        view.innerHTML = '<div class="feed-placeholder"><div style="font-size:1.2rem;font-weight:700;margin-bottom:8px;color:var(--text-primary)">ブックマークはまだありません</div><div>ツイートをブックマークすると、ここに表示されます</div></div>';
+                        return;
+                    }
+                    data.tweets.forEach(function(tweet) {
+                        view.appendChild(buildTweetCard(tweet));
+                    });
+                })
+                .catch(function(err) {
+                    console.error('Failed to load bookmarks:', err);
+                    view.innerHTML = '<div class="feed-placeholder">読み込みに失敗しました</div>';
+                });
+        }
+
+        // ------------------------------------------------------------------
+        // Hashtag click — open search view with hashtag pre-filled
+        // ------------------------------------------------------------------
+        function searchHashtag(tag) {
+            showSearch();
+            setTimeout(function() {
+                var input = document.getElementById('search-input');
+                if (input) {
+                    input.value = '#' + tag;
+                    input.dispatchEvent(new Event('input'));
+                }
+            }, 100);
+        }
+
         function showTimeline(fromPopstate) {
             var timeline = document.getElementById('top');
 
-            // Remove profile, notification, search, and tweet-detail views
+            // Remove profile, notification, search, tweet-detail, and bookmarks views
             var profileView = timeline.querySelector('.profile-view');
             if (profileView) profileView.remove();
             var notifView = timeline.querySelector('.notif-view');
@@ -3223,6 +3446,8 @@
             if (searchView) searchView.remove();
             var detailView = timeline.querySelector('.tweet-detail-view');
             if (detailView) detailView.remove();
+            var bookmarksView = timeline.querySelector('.bookmarks-view');
+            if (bookmarksView) bookmarksView.remove();
 
             // Show tabs, compose box and feed
             var tabs = document.getElementById('timeline-tabs');
@@ -3257,7 +3482,7 @@
         }
 
         // ------------------------------------------------------------------
-        // Search view — user search (Twitter-style)
+        // Search view — user and tweet search with tabs
         // ------------------------------------------------------------------
         function showSearch(fromPopstate) {
             currentView = 'search';
@@ -3273,14 +3498,10 @@
             if (feed) feed.style.display = 'none';
 
             // Remove other views
-            var pv = timeline.querySelector('.profile-view');
-            if (pv) pv.remove();
-            var nv = timeline.querySelector('.notif-view');
-            if (nv) nv.remove();
-            var sv = timeline.querySelector('.search-view');
-            if (sv) sv.remove();
-            var dv = timeline.querySelector('.tweet-detail-view');
-            if (dv) dv.remove();
+            ['profile-view', 'notif-view', 'search-view', 'tweet-detail-view', 'bookmarks-view'].forEach(function(cls) {
+                var el = timeline.querySelector('.' + cls);
+                if (el) el.remove();
+            });
 
             var header = timeline.querySelector('.timeline-header h1');
             if (header) header.textContent = '探索';
@@ -3296,15 +3517,26 @@
             // Search input
             var searchBar = document.createElement('div');
             searchBar.className = 'search-bar';
-
             var searchInput = document.createElement('input');
             searchInput.type = 'text';
             searchInput.className = 'search-input';
-            searchInput.placeholder = 'ユーザーを検索';
+            searchInput.placeholder = 'ユーザーまたはツイートを検索';
             searchInput.id = 'search-input';
-
             searchBar.appendChild(searchInput);
             view.appendChild(searchBar);
+
+            // Search mode tabs: ユーザー / ツイート
+            var searchTabs = document.createElement('div');
+            searchTabs.className = 'timeline-tabs';
+            var userTab = document.createElement('button');
+            userTab.className = 'timeline-tab active';
+            userTab.textContent = 'ユーザー';
+            var tweetTab = document.createElement('button');
+            tweetTab.className = 'timeline-tab';
+            tweetTab.textContent = 'ツイート';
+            searchTabs.appendChild(userTab);
+            searchTabs.appendChild(tweetTab);
+            view.appendChild(searchTabs);
 
             var results = document.createElement('div');
             results.id = 'search-results';
@@ -3313,16 +3545,27 @@
             timeline.appendChild(view);
             searchInput.focus();
 
-            // Debounced search
-            var debounceTimer;
-            searchInput.addEventListener('input', function() {
-                clearTimeout(debounceTimer);
+            var searchMode = 'users'; // 'users' or 'tweets'
+
+            userTab.onclick = function() {
+                userTab.classList.add('active');
+                tweetTab.classList.remove('active');
+                searchMode = 'users';
                 var q = searchInput.value.trim();
-                if (!q) {
-                    results.innerHTML = '';
-                    return;
-                }
-                debounceTimer = setTimeout(function() {
+                if (q) runSearch(q);
+                else results.innerHTML = '';
+            };
+            tweetTab.onclick = function() {
+                tweetTab.classList.add('active');
+                userTab.classList.remove('active');
+                searchMode = 'tweets';
+                var q = searchInput.value.trim();
+                if (q) runSearch(q);
+                else results.innerHTML = '';
+            };
+
+            function runSearch(q) {
+                if (searchMode === 'users') {
                     fetch('/api/users/search?q=' + encodeURIComponent(q))
                         .then(function(r) { return r.json(); })
                         .then(function(data) {
@@ -3335,9 +3578,7 @@
                                 var item = document.createElement('div');
                                 item.className = 'search-result-item';
                                 item.onclick = function() { showProfile(u.handle); };
-
                                 var av = buildAvatar(u, 42);
-
                                 var info = document.createElement('div');
                                 info.className = 'search-result-info';
                                 var name = document.createElement('div');
@@ -3354,16 +3595,40 @@
                                     bio.textContent = u.bio.length > 80 ? u.bio.substring(0, 80) + '...' : u.bio;
                                     info.appendChild(bio);
                                 }
-
                                 item.appendChild(av);
                                 item.appendChild(info);
                                 results.appendChild(item);
                             });
                         })
-                        .catch(function(err) {
-                            console.error('Search failed:', err);
-                        });
-                }, 300);
+                        .catch(function(err) { console.error('Search failed:', err); });
+                } else {
+                    // Tweet search — use /api/tweets/search endpoint
+                    fetch('/api/tweets/search?q=' + encodeURIComponent(q))
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            results.innerHTML = '';
+                            if (!data.tweets || data.tweets.length === 0) {
+                                results.innerHTML = '<div style="padding:40px 20px;text-align:center;color:var(--text-secondary)">見つかりませんでした</div>';
+                                return;
+                            }
+                            data.tweets.forEach(function(tweet) {
+                                results.appendChild(buildTweetCard(tweet));
+                            });
+                        })
+                        .catch(function(err) { console.error('Tweet search failed:', err); });
+                }
+            }
+
+            // Debounced search
+            var debounceTimer;
+            searchInput.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                var q = searchInput.value.trim();
+                if (!q) {
+                    results.innerHTML = '';
+                    return;
+                }
+                debounceTimer = setTimeout(function() { runSearch(q); }, 300);
             });
         }
 
@@ -3377,14 +3642,10 @@
             if (composeBox) composeBox.style.display = 'none';
             if (feed) feed.style.display = 'none';
 
-            var existing = timeline.querySelector('.profile-view');
-            if (existing) existing.remove();
-            var existingNotif = timeline.querySelector('.notif-view');
-            if (existingNotif) existingNotif.remove();
-            var existingSearch = timeline.querySelector('.search-view');
-            if (existingSearch) existingSearch.remove();
-            var existingDetail = timeline.querySelector('.tweet-detail-view');
-            if (existingDetail) existingDetail.remove();
+            ['profile-view', 'notif-view', 'search-view', 'tweet-detail-view', 'bookmarks-view'].forEach(function(cls) {
+                var el = timeline.querySelector('.' + cls);
+                if (el) el.remove();
+            });
 
             var header = timeline.querySelector('.timeline-header h1');
             if (header) header.textContent = user.display_name;
@@ -3540,11 +3801,11 @@
 
             view.appendChild(info);
 
-            // Tweets — own tweets + reposts, with reply grouping
-            var tweetsContainer = document.createElement('div');
-            tweetsContainer.className = 'profile-tweets';
+            // Profile tabs
+            var profileTabs = document.createElement('div');
+            profileTabs.className = 'timeline-tabs';
 
-            // Merge and sort by created_at
+            // Merge and sort all tweets by created_at for use in tab rendering
             var allTweets = (tweets || []).slice();
             if (repostedTweets) {
                 repostedTweets.forEach(function(rt) {
@@ -3552,71 +3813,96 @@
                     allTweets.push(rt);
                 });
             }
-            // Sort newest first
             allTweets.sort(function(a, b) {
                 return new Date(b.created_at) - new Date(a.created_at);
             });
 
-            if (allTweets.length > 0) {
-                // Separate top-level and replies (same grouping logic as timeline)
-                var topLevel = [];
-                var repliesMap = {};
-                allTweets.forEach(function(tweet) {
-                    if (tweet.reply_to_id && !tweet._reposted_by) {
-                        if (!repliesMap[tweet.reply_to_id]) repliesMap[tweet.reply_to_id] = [];
-                        repliesMap[tweet.reply_to_id].push(tweet);
-                    } else {
-                        topLevel.push(tweet);
-                    }
-                });
+            var tweetsContainer = document.createElement('div');
+            tweetsContainer.className = 'profile-tweets';
 
-                topLevel.forEach(function(tweet) {
+            // Build reply map for tweet grouping
+            var profileRepliesMap = {};
+            allTweets.forEach(function(tweet) {
+                if (tweet.reply_to_id && !tweet._reposted_by) {
+                    if (!profileRepliesMap[tweet.reply_to_id]) profileRepliesMap[tweet.reply_to_id] = [];
+                    profileRepliesMap[tweet.reply_to_id].push(tweet);
+                }
+            });
+
+            function renderProfileTweets(container, filter) {
+                container.innerHTML = '';
+                var filtered;
+                if (filter === 'ツイート') {
+                    filtered = allTweets.filter(function(t) { return !t.reply_to_id || t._reposted_by; });
+                } else if (filter === '返信') {
+                    filtered = allTweets.filter(function(t) { return t.reply_to_id && !t._reposted_by; });
+                } else if (filter === 'メディア') {
+                    filtered = allTweets.filter(function(t) { return t.image_url; });
+                } else if (filter === 'いいね') {
+                    container.innerHTML = '<div class="feed-placeholder">いいねしたツイートはここに表示されます</div>';
+                    return;
+                } else {
+                    filtered = [];
+                }
+
+                if (!filtered || filtered.length === 0) {
+                    container.innerHTML = '<div class="feed-placeholder">まだありません</div>';
+                    return;
+                }
+
+                filtered.forEach(function(tweet) {
                     if (tweet._reposted_by) {
-                        // Wrap repost label + card in a container so the label visually
-                        // groups with the tweet card above the border-bottom
                         var repostWrapper = document.createElement('div');
                         repostWrapper.style.cssText = 'border-bottom:1px solid var(--border)';
-
                         var repostLabel = document.createElement('div');
                         repostLabel.style.cssText = 'padding:10px 20px 0 64px;font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:center;gap:6px;font-weight:500';
                         repostLabel.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></svg> ' + tweet._reposted_by + 'さんがリポスト';
-
-                        // Build the card but remove its border-bottom since the wrapper handles it
                         var card = buildTweetCard(tweet);
                         card.style.borderBottom = 'none';
                         card.style.paddingBottom = '10px';
-
                         repostWrapper.appendChild(repostLabel);
                         repostWrapper.appendChild(card);
-                        tweetsContainer.appendChild(repostWrapper);
+                        container.appendChild(repostWrapper);
                     } else {
                         var card = buildTweetCard(tweet);
-                        tweetsContainer.appendChild(card);
-                    }
-
-                    // Attach replies recursively (reuse same pattern as timeline)
-                    if (repliesMap[tweet.id]) {
-                        card.classList.add('has-replies');
-                        (function renderProfileReplies(parentId, container, depth) {
-                            var reps = repliesMap[parentId];
-                            if (!reps) return;
-                            reps.sort(function(a, b) { return a.id - b.id; });
-                            var rc = document.createElement('div');
-                            rc.className = 'tweet-replies';
-                            if (depth > 1) rc.style.marginLeft = '20px';
-                            reps.forEach(function(reply) {
-                                rc.appendChild(buildReplyCard(reply));
-                                if (depth < 5 && repliesMap[reply.id]) {
-                                    renderProfileReplies(reply.id, rc, depth + 1);
-                                }
-                            });
-                            container.appendChild(rc);
-                        })(tweet.id, tweetsContainer, 1);
+                        container.appendChild(card);
+                        if (profileRepliesMap[tweet.id]) {
+                            card.classList.add('has-replies');
+                            (function renderRepliesR(parentId, cont, depth) {
+                                var reps = profileRepliesMap[parentId];
+                                if (!reps) return;
+                                reps.sort(function(a, b) { return a.id - b.id; });
+                                var rc = document.createElement('div');
+                                rc.className = 'tweet-replies';
+                                if (depth > 1) rc.style.marginLeft = '20px';
+                                reps.forEach(function(reply) {
+                                    rc.appendChild(buildReplyCard(reply));
+                                    if (depth < 5 && profileRepliesMap[reply.id]) {
+                                        renderRepliesR(reply.id, rc, depth + 1);
+                                    }
+                                });
+                                cont.appendChild(rc);
+                            })(tweet.id, container, 1);
+                        }
                     }
                 });
-            } else {
-                tweetsContainer.innerHTML = '<div class="feed-placeholder">まだツイートがありません</div>';
             }
+
+            ['ツイート', '返信', 'メディア', 'いいね'].forEach(function(label, idx) {
+                var tab = document.createElement('button');
+                tab.className = 'timeline-tab' + (idx === 0 ? ' active' : '');
+                tab.textContent = label;
+                tab.onclick = function() {
+                    profileTabs.querySelectorAll('.timeline-tab').forEach(function(t) { t.classList.remove('active'); });
+                    tab.classList.add('active');
+                    renderProfileTweets(tweetsContainer, label);
+                };
+                profileTabs.appendChild(tab);
+            });
+            view.appendChild(profileTabs);
+
+            // Render default tab (ツイート)
+            renderProfileTweets(tweetsContainer, 'ツイート');
             view.appendChild(tweetsContainer);
 
             timeline.appendChild(view);
@@ -3893,6 +4179,8 @@
                 showSearch(true);
             } else if (state.view === 'tweet-detail' && state.params) {
                 showTweetDetail(state.params, true);
+            } else if (state.view === 'bookmarks') {
+                showBookmarks(true);
             } else {
                 showTimeline(true);
             }
