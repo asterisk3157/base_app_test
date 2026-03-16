@@ -345,7 +345,8 @@
         <h1>✨ 幻想のひとこと掲示板 ✨</h1>
         <form id="postForm" enctype="multipart/form-data">
             <div class="name-input-wrapper">
-                <input type="text" name="name" id="name" placeholder="詠み人（名前） / 秘密の合言葉は # の後ろに" maxlength="50">
+                <input type="text" name="name" id="name" placeholder="詠み人（名前） / 秘密の合言葉は # の後ろに" maxlength="50"
+                    onpaste="return false;" ondrop="return false;">
                 <div class="tripcode-hint">※ 名前のあとに「#秘密の呪文」を付けると、あなただけの刻印(トリップ)になります 例: アリス#alice</div>
             </div>
             <textarea name="content" id="content" placeholder="星降る夜に、何を想う？" required onpaste="return false;"

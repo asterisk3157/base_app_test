@@ -93,8 +93,8 @@ def post():
     # Process tripcode
     processed_name = generate_tripcode(raw_name)
     
-    # Lv.3 Defense: Backend Magical Barrier (WAF)
-    if contains_dark_magic(content):
+    # Lv.3 Defense: Backend Magical Barrier (WAF) applied to BOTH content and name
+    if contains_dark_magic(content) or contains_dark_magic(raw_name):
         return jsonify({'success': False, 'error': '結界発動：不正な魔法（ハッキング詠唱）を検知しました！'}), 400
         
     file_path = None
@@ -123,8 +123,8 @@ def post():
         conn.close()
     return jsonify({'success': True}), 200
 
+# Initialize DB when this file is loaded (works with flask run and direct execution)
+init_db()
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
-
-# Initialize DB when this file is loaded (works with flask run)
-init_db()
