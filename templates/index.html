@@ -2776,6 +2776,11 @@
                     var botList = document.getElementById('bot-list');
                     botList.innerHTML = '';
                     var bots = data.users.filter(function(u) { return u.is_bot; });
+                    // Shuffle randomly
+                    for (var i = bots.length - 1; i > 0; i--) {
+                        var j = Math.floor(Math.random() * (i + 1));
+                        var tmp = bots[i]; bots[i] = bots[j]; bots[j] = tmp;
+                    }
                     var showCount = Math.min(bots.length, 5);
 
                     for (var i = 0; i < showCount; i++) {
