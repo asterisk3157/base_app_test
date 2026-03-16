@@ -240,6 +240,44 @@ BOT_FALLBACK_TWEETS = {
         "知らんけど",
         "。",
     ],
+    'ohayo_bot': [
+        "おはよう",
+        "おはよう！！！！！！",
+        "おはようございます。今日もいい天気ですね（見てない）",
+        "おはよ",
+        "ohayo",
+        "おはようございます（15時）",
+    ],
+    'hakkyo_bot': [
+        "ｱｱｱｱｱｱｱｱｱｱｱｱｱｱｱｱｱｱ",
+        "無理無理無理無理無理無理無理無理",
+        "ﾜｰｰｰｰｰｰｰｰｰｰｰｰｰ",
+        "ギャアアアアアアアアアアアア",
+        "たすけてたすけてたすけてたすけて",
+        "!!!!!!!!!!!!!!!!!!!!",
+        "もうだめだああああああああ",
+    ],
+    'hitorigoto': [
+        "…",
+        "なんか",
+        "そういうこともある",
+        "虚無",
+        "ここはどこ",
+        "考えるのをやめた",
+        "　",
+    ],
+    'ogiri_mc': [
+        "【大喜利】こんなTwitterは嫌だ。回答をどうぞ",
+        "【大喜利】「なにそれ」と言いたくなる新機能とは？",
+        "【大喜利】AIが言いそうにないこと",
+        "【大喜利】フォロワー0人の人がつぶやいてそうなこと",
+        "【大喜利】深夜3時に見たら怖いツイート",
+    ],
+    'nagabun': [
+        "すみません長くなりますが、今日あったことを聞いてください。朝起きたらまず天気予報を確認したんですけど、曇りのち雨って書いてあって、でも空を見たら晴れてて、結局傘を持って行ったんですけど使わなくて、でも帰りに降ってきて「やっぱり」ってなりました。天気予報すごい。",
+        "ここから長文注意です。最近思うんですけど、SNSの「いいね」って本当に「いい」と思って押してるのか、それとも「見たよ」の意味なのか、はたまた「特に感想はないけど反応はしておこう」なのか、考え出すと夜も眠れません。みなさんはどう思いますか？（長い）",
+        "今日のランチについて3000文字くらい語りたいんですが許してください。まずカレーを食べたんですけど、このカレーが普通に美味しくて、普通に美味しいってすごいことだと思うんですよ。奇をてらわずに普通に美味しい。それだけで幸せじゃないですか。（続く）（続かない）",
+    ],
     'poke_trainer': [
         "受けループ相手に積んで全抜きしたときの快感、これのためにポケモンやってる。",
         "育成論を考えるのが対戦するより楽しい説。構築記事を書く作業が好き。",
@@ -331,7 +369,12 @@ BOT_PERSONALITIES = {
     'conspiracy_jp': "あなたはまこと、陰謀論っぽいけどジョーク寄りのツイートをするアカウントです。ガチすぎず、クスッとくる感じで日本語のツイートを1つ書いてください。140文字以内。",
     'tokusatsu_love': "あなたはヒロ、特撮オタクのアカウントです。仮面ライダーやスーパー戦隊に関する日本語のツイートを1つ書いてください。140文字以内。",
     'minimalist_jp': "あなたはあおい、ミニマリストのアカウントです。断捨離や持ち物を減らす生活に関する日本語のツイートを1つ書いてください。140文字以内。",
-    'anti_social': "あなたは🖕、無愛想で一言だけ皮肉を言うアカウントです。短い日本語のツイートを1つ書いてください。30文字以内。",
+    'anti_social': "あなたは.、無愛想で一言だけ皮肉を言うアカウントです。短い日本語のツイートを1つ書いてください。30文字以内。",
+    'ohayo_bot': "あなたはおはようしか言わないアカウントです。「おはよう」のバリエーションを日本語で1つ書いてください。20文字以内。",
+    'hakkyo_bot': "あなたは発狂しているアカウントです。意味不明な叫びや絶叫を1つ書いてください。カタカナか記号のみ。30文字以内。",
+    'hitorigoto': "あなたは虚空に向かって独り言を言うアカウントです。意味深だけど意味がない一言を日本語で書いてください。15文字以内。",
+    'ogiri_mc': "あなたは大喜利のMCです。面白いお題を1つ出してください。「【大喜利】」から始めてください。日本語で50文字以内。",
+    'nagabun': "あなたは何でも長文で語る人です。日常の些細なことについて200文字以上の長文ツイートを日本語で1つ書いてください。",
     'poke_trainer': "あなたはポケモン対戦勢のアカウントです。ダブルバトルや育成論など対戦ポケモンに関する日本語のツイートを1つ書いてください。140文字以内。",
     'astrology_jp': "あなたはluna、西洋占星術の勉強中のアカウントです。星座・ホロスコープ・水星逆行などに関する日本語のツイートを1つ書いてください。140文字以内。",
     'ramen_guru': "あなたはいっぺい、年間300杯食べるラーメンマニアのアカウントです。ラーメン（特に二郎系）に関する日本語のツイートを1つ書いてください。140文字以内。カロリーの話はしない。",
@@ -433,6 +476,11 @@ BOT_FALLBACK_REPLIES = {
     'tokusatsu_love': ["日曜朝組はみんなわかる。", "特撮の魂はずっと続く。", "平成ライダー全部見たら人生変わった。"],
     'minimalist_jp': ["物が少ないと心が軽い。", "断捨離の候補に入れてみて。", "所有しないという選択肢もある。"],
     'anti_social': ["は？", "知らんけど", "。"],
+    'ohayo_bot': ["おはよう！", "おはよ！", "おは！"],
+    'hakkyo_bot': ["ｱｱｱ", "!!!", "ﾜｰ"],
+    'hitorigoto': ["…", "そう", "ふーん"],
+    'ogiri_mc': ["座布団一枚！", "もう一声！", "【優勝】"],
+    'nagabun': ["（長文で返したいけど我慢する）", "それについて3000文字書けます", "詳しく聞かせてください（本気）"],
     'poke_trainer': ["育成論聞かせて。", "ダブルだと全然違う動きになる。", "レート潜ってみよう。"],
     'astrology_jp': ["水星逆行のせいかも。", "ホロスコープ読んでみたらどう？", "星の動き、気になる時期だ。"],
     'ramen_guru': ["それラーメン屋の近くにある？", "写真撮った？", "二郎系で解決できそう。"],
@@ -687,23 +735,23 @@ def init_db():
             # (username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot)
             ('user', 'You', '@you', None, None, '', '', '', 0),
             # Bot users — realistic Japanese Twitter/X personas
-            ('techbot',     'kōhei',             '@kh_and_and',        '/static/avatars/kh_and_and.png',
+            ('techbot',     'k̸ōhei',             '@kh_and_and',        '/static/avatars/kh_and_and.png',
              None, '都内でSaaSを作ってます\nvim使い。ターミナルの方が落ち着く\n積読が∞に増えていく', '東京', '', 1),
-            ('catlover99',  'n a n a',           '@and_and_and_7',     '/static/avatars/and_and_and_7.png',
+            ('catlover99',  '𝗻𝗮𝗻𝗮',           '@and_and_and_7',     '/static/avatars/and_and_and_7.png',
              None, '🐱🐱🐱と暮らしてる人\n帰ったら即モフ。TLは猫か飯しか流れてこない', '', '', 1),
-            ('newsflash',   'タケ/take',         '@take_now_',         '/static/avatars/take_now_.png',
+            ('newsflash',   'タケ/tḁke',         '@take_now_',         '/static/avatars/take_now_.png',
              None, '何でも実況してしまう癖\n元マスコミ志望だったけど挫折して今は普通の会社員\n誤報だったらすまん', '大阪', '1997/03/22', 1),
-            ('philobot',    'u m i',             '@umi__2am',          '/static/avatars/umi__2am.png',
+            ('philobot',    '海(umi)',             '@umi__2am',          '/static/avatars/umi__2am.png',
              None, '夜の方が頭が回る\ncoffee & cigarettes\n問いだけ投げて寝ます', '', '', 1),
-            ('muscle_log',  'D a i k i',         '@dk_and_iron',       '/static/avatars/dk_and_iron.png',
-             None, 'BP120 SQ160 DL180\n減量期つらい。チョコ味のプロテインだけが救い\nleg day is everything', '神奈川', '1995/08/14', 1),
-            ('jishou_chef', 'sachi.',            '@sachi_memo_',       '/static/avatars/sachi_memo_.png',
+            ('muscle_log',  'ÐΛIKI',         '@dk_and_iron',       '/static/avatars/dk_and_iron.png',
+             None, 'BP120 SQ160 DL180\n減量期つらい。チョコ味のプロテインだけが救い\nleg day is everything', 'ジム', '1995/08/14', 1),
+            ('jishou_chef', 'sᴀᴄʜɪ.',            '@sachi_memo_',       '/static/avatars/sachi_memo_.png',
              None, '自炊の記録用アカウント📝\n残り物で何か作る∞チャレンジ\n味噌汁だけはガチ。事故ったら正直に載せる', '名古屋', '', 1),
-            ('oshi_genkai', 'めるる@低浮上',     '@meru_is_dead',      '/static/avatars/meru_is_dead.png',
-             None, '⚰️全通⚰️\n円盤3積みは当たり前\n新ビジュで感情がぐちゃぐちゃになる人\nCDJ当落まだ？？？', '', '12/25', 1),
-            ('tenki_niki',  'yamato',            '@yamato_and_cloud',  '/static/avatars/yamato_and_cloud.png',
+            ('oshi_genkai', '꧁める꧂',     '@meru_is_dead',      '/static/avatars/meru_is_dead.png',
+             None, '⚰️全通⚰️\n円盤3積みは当たり前\n新ビジュで感情がぐちゃぐちゃになる人\nCDJ当落まだ？？？', '推しの心臓の近く', '12/25', 1),
+            ('tenki_niki',  'ʏᴀᴍᴀᴛᴏ',            '@yamato_and_cloud',  '/static/avatars/yamato_and_cloud.png',
              None, '気象予報士の卵です☁️\nCb(積乱雲)の写真をひたすら集めてる\n天気でしか会話できない日がある', '仙台', '', 1),
-            ('emoi_photo',  'shiori 𝟯𝟱mm',      '@shiori_35mm',       '/static/avatars/shiori_35mm.png',
+            ('emoi_photo',  '𝘴𝘩𝘪𝘰𝘳𝘪 35mm',      '@shiori_35mm',       '/static/avatars/shiori_35mm.png',
              None, '写ルンです。Nikon FM2。\n夕方と深夜のコンビニ専門\n撮って出し派。加工はしない主義', '京都', '2000/04/10', 1),
             # Additional bot users
             ('gameotaku',   'れい',               '@rei_gg',            None,
@@ -750,7 +798,7 @@ def init_db():
          '仮面ライダー全作品視聴済み\nスーパー戦隊はゴレンジャーから\n日曜朝は聖域', '', '1992/05/05', 1),
         ('minimalist_jp', 'あおい@ミニマリスト', '@aoi_minimal',    None, None,
          '持ち物は100個以下\n部屋に物がない方が落ち着く\n断捨離は人生の整理', '都内1K', '', 1),
-        ('anti_social',  '🖕',               '@___x___0',         None, None,
+        ('anti_social',  '.',               '@___x___0',         None, None,
          '', '', '', 1),
         ('poke_trainer', 'サトシじゃない人',   '@not_satoshi_poke', None, None,
          'ポケモン対戦勢\nレート2000↑\n育成論考えるのが趣味\nダブルバトル派', '', '', 1),
@@ -758,8 +806,19 @@ def init_db():
          '西洋占星術を独学中\n水星逆行のせいにしがち\n推しの星座はうお座\nホロスコープ読みます', '', '02/19', 1),
         ('ramen_guru',   'いっぺい',          '@ippei_ramen',      None, None,
          '年間300杯\n二郎系が主食\nラーメンの写真しか載せない\nカロリーは見ない主義', '全国のラーメン屋', '1988/12/01', 1),
-        ('sleep_deprived','zzz',             '@zzz_nemui',        None, None,
-         'ねむい', '', '', 1),
+        ('sleep_deprived','zZzZz',           '@zzz_nemui',        None, None,
+         'ねむい', 'お布団', '', 1),
+        # Chaotic new bots
+        ('ohayo_bot',    'おは☀️',            '@ohayo_man',        None, None,
+         'おはようしか言わない\n毎朝5時に起きてる(嘘)', '布団の中', '', 1),
+        ('hakkyo_bot',   'ｱｱｱｱｱｱ',           '@aaaaaaa_a',        None, None,
+         '', '限界', '', 1),
+        ('hitorigoto',   'θ',                '@theta_void',       None, None,
+         '虚空', '', '', 1),
+        ('ogiri_mc',     '大喜利MC',           '@ogiri_master',     None, None,
+         '突然大喜利を始める人\nお題は適当', '場末のステージ', '', 1),
+        ('nagabun',      '長文太郎',           '@nagabun_taro',     None, None,
+         'なんでも長文で語りたがる人\nすみません長いです', '', '', 1),
         ]
         c.executemany(
             'INSERT INTO users (username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
@@ -826,7 +885,7 @@ def init_db():
          '仮面ライダー全作品視聴済み\nスーパー戦隊はゴレンジャーから\n日曜朝は聖域', '', '1992/05/05', 1),
         ('minimalist_jp', 'あおい@ミニマリスト', '@aoi_minimal',    None, None,
          '持ち物は100個以下\n部屋に物がない方が落ち着く\n断捨離は人生の整理', '都内1K', '', 1),
-        ('anti_social',  '🖕',               '@___x___0',         None, None,
+        ('anti_social',  '.',               '@___x___0',         None, None,
          '', '', '', 1),
         ('poke_trainer', 'サトシじゃない人',   '@not_satoshi_poke', None, None,
          'ポケモン対戦勢\nレート2000↑\n育成論考えるのが趣味\nダブルバトル派', '', '', 1),
@@ -834,8 +893,19 @@ def init_db():
          '西洋占星術を独学中\n水星逆行のせいにしがち\n推しの星座はうお座\nホロスコープ読みます', '', '02/19', 1),
         ('ramen_guru',   'いっぺい',          '@ippei_ramen',      None, None,
          '年間300杯\n二郎系が主食\nラーメンの写真しか載せない\nカロリーは見ない主義', '全国のラーメン屋', '1988/12/01', 1),
-        ('sleep_deprived','zzz',             '@zzz_nemui',        None, None,
-         'ねむい', '', '', 1),
+        ('sleep_deprived','zZzZz',           '@zzz_nemui',        None, None,
+         'ねむい', 'お布団', '', 1),
+        # Chaotic new bots
+        ('ohayo_bot',    'おは☀️',            '@ohayo_man',        None, None,
+         'おはようしか言わない\n毎朝5時に起きてる(嘘)', '布団の中', '', 1),
+        ('hakkyo_bot',   'ｱｱｱｱｱｱ',           '@aaaaaaa_a',        None, None,
+         '', '限界', '', 1),
+        ('hitorigoto',   'θ',                '@theta_void',       None, None,
+         '虚空', '', '', 1),
+        ('ogiri_mc',     '大喜利MC',           '@ogiri_master',     None, None,
+         '突然大喜利を始める人\nお題は適当', '場末のステージ', '', 1),
+        ('nagabun',      '長文太郎',           '@nagabun_taro',     None, None,
+         'なんでも長文で語りたがる人\nすみません長いです', '', '', 1),
     ]
     for bot in new_bots:
         c.execute('SELECT id FROM users WHERE username = ?', (bot[0],))
@@ -851,9 +921,9 @@ def init_db():
         ('🐱🐱🐱と暮らしてる人\n帰ったら即モフ。TLは猫か飯しか流れてこない', '', '', 'catlover99'),
         ('何でも実況してしまう癖\n元マスコミ志望だったけど挫折して今は普通の会社員\n誤報だったらすまん', '大阪', '1997/03/22', 'newsflash'),
         ('夜の方が頭が回る\ncoffee & cigarettes\n問いだけ投げて寝ます', '', '', 'philobot'),
-        ('BP120 SQ160 DL180\n減量期つらい。チョコ味のプロテインだけが救い\nleg day is everything', '神奈川', '1995/08/14', 'muscle_log'),
+        ('BP120 SQ160 DL180\n減量期つらい。チョコ味のプロテインだけが救い\nleg day is everything', 'ジム', '1995/08/14', 'muscle_log'),
         ('自炊の記録用アカウント📝\n残り物で何か作る∞チャレンジ\n味噌汁だけはガチ。事故ったら正直に載せる', '名古屋', '', 'jishou_chef'),
-        ('⚰️全通⚰️\n円盤3積みは当たり前\n新ビジュで感情がぐちゃぐちゃになる人\nCDJ当落まだ？？？', '', '12/25', 'oshi_genkai'),
+        ('⚰️全通⚰️\n円盤3積みは当たり前\n新ビジュで感情がぐちゃぐちゃになる人\nCDJ当落まだ？？？', '推しの心臓の近く', '12/25', 'oshi_genkai'),
         ('気象予報士の卵です☁️\nCb(積乱雲)の写真をひたすら集めてる\n天気でしか会話できない日がある', '仙台', '', 'tenki_niki'),
         ('写ルンです。Nikon FM2。\n夕方と深夜のコンビニ専門\n撮って出し派。加工はしない主義', '京都', '2000/04/10', 'emoi_photo'),
         ('FPS/格ゲー\nランクマ回す日々。APEXダイヤ\n配信はしない派。黙々とやるタイプ', '', '', 'gameotaku'),
@@ -881,12 +951,37 @@ def init_db():
         ('ポケモン対戦勢\nレート2000↑\n育成論考えるのが趣味\nダブルバトル派', '', '', 'poke_trainer'),
         ('西洋占星術を独学中\n水星逆行のせいにしがち\n推しの星座はうお座\nホロスコープ読みます', '', '02/19', 'astrology_jp'),
         ('年間300杯\n二郎系が主食\nラーメンの写真しか載せない\nカロリーは見ない主義', '全国のラーメン屋', '1988/12/01', 'ramen_guru'),
-        ('ねむい', '', '', 'sleep_deprived'),
+        ('ねむい', 'お布団', '', 'sleep_deprived'),
+        ('おはようしか言わない\n毎朝5時に起きてる(嘘)', '布団の中', '', 'ohayo_bot'),
+        ('', '限界', '', 'hakkyo_bot'),
+        ('虚空', '', '', 'hitorigoto'),
+        ('突然大喜利を始める人\nお題は適当', '場末のステージ', '', 'ogiri_mc'),
+        ('なんでも長文で語りたがる人\nすみません長いです', '', '', 'nagabun'),
     ]
     for bio, loc, bday, uname in bio_updates:
         c.execute(
             'UPDATE users SET bio = ?, location = ?, birthday = ? WHERE username = ? AND is_bot = 1',
             (bio, loc, bday, uname)
+        )
+
+    # Migration: update display_names for renamed bots on existing DBs
+    display_name_updates = [
+        ('k̸ōhei',        'techbot'),
+        ('𝗻𝗮𝗻𝗮',        'catlover99'),
+        ('タケ/tḁke',    'newsflash'),
+        ('海(umi)',        'philobot'),
+        ('ÐΛIKI',        'muscle_log'),
+        ('sᴀᴄʜɪ.',       'jishou_chef'),
+        ('꧁める꧂',      'oshi_genkai'),
+        ('ʏᴀᴍᴀᴛᴏ',       'tenki_niki'),
+        ('𝘴𝘩𝘪𝘰𝘳𝘪 35mm', 'emoi_photo'),
+        ('.',             'anti_social'),
+        ('zZzZz',        'sleep_deprived'),
+    ]
+    for dname, uname in display_name_updates:
+        c.execute(
+            'UPDATE users SET display_name = ? WHERE username = ? AND is_bot = 1',
+            (dname, uname)
         )
 
     # Seed bot-to-bot follows (only if follows table is empty)
@@ -903,8 +998,39 @@ def init_db():
                 c.execute('INSERT OR IGNORE INTO follows (follower_id, following_id) VALUES (?, ?)',
                           (bot_id, target_id))
 
+    seed_bot_interactions(conn, c)
+
     conn.commit()
     conn.close()
+
+
+def seed_bot_interactions(conn, c):
+    """Seed realistic bot-to-bot reply interactions on a fresh DB."""
+    # Seed bot-to-bot replies (only if tweets table has < 50 entries, meaning fresh DB)
+    c.execute('SELECT COUNT(*) FROM tweets')
+    if c.fetchone()[0] < 50:
+        # Get all bot tweets
+        c.execute('SELECT t.id, t.user_id, u.username FROM tweets t JOIN users u ON u.id = t.user_id WHERE u.is_bot = 1')
+        bot_tweets = c.fetchall()
+        c.execute('SELECT id, username FROM users WHERE is_bot = 1')
+        all_bots = c.fetchall()
+
+        reply_templates = {
+            'general': ['わかる', 'それな', 'w', '草', 'まじで？', 'うける', 'いいなー', 'すごい', 'やば', 'わろた'],
+        }
+
+        # 30 random bot-to-bot replies
+        for _ in range(30):
+            if not bot_tweets or not all_bots:
+                break
+            tweet = random.choice(bot_tweets)
+            replier = random.choice([b for b in all_bots if b['id'] != tweet['user_id']])
+            content = random.choice(reply_templates['general'])
+            c.execute(
+                "INSERT INTO tweets (user_id, content, reply_to_id, created_at) VALUES (?, ?, ?, datetime('now', '-' || ? || ' seconds'))",
+                (replier['id'], content, tweet['id'], random.randint(3600, 259200))
+            )
+        conn.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -1135,6 +1261,43 @@ def get_single_tweet(tweet_id):
     if not row:
         return jsonify({'error': 'tweet not found'}), 404
     return jsonify({'tweet': _tweet_row_to_dict(row, False)})
+
+
+# DELETE /api/tweets/<id> — delete a tweet owned by the current cookie user
+# Only the tweet owner can delete. Cascades to likes, reposts, notifications,
+# and replies (including their likes).
+@app.route('/api/tweets/<int:tweet_id>', methods=['DELETE'])
+def delete_tweet(tweet_id):
+    user_id = get_current_user_id()
+    if user_id is None:
+        return jsonify({'error': 'authentication required'}), 401
+
+    conn = get_db()
+    c = conn.cursor()
+
+    # Verify the tweet belongs to the user
+    c.execute('SELECT user_id FROM tweets WHERE id = ?', (tweet_id,))
+    tweet = c.fetchone()
+    if not tweet:
+        conn.close()
+        return jsonify({'error': 'tweet not found'}), 404
+    if tweet['user_id'] != user_id:
+        conn.close()
+        return jsonify({'error': 'not your tweet'}), 403
+
+    # Delete related data first
+    c.execute('DELETE FROM likes WHERE tweet_id = ?', (tweet_id,))
+    c.execute('DELETE FROM reposts WHERE tweet_id = ?', (tweet_id,))
+    c.execute('DELETE FROM notifications WHERE tweet_id = ?', (tweet_id,))
+    # Delete replies to this tweet (and their likes)
+    c.execute('DELETE FROM likes WHERE tweet_id IN (SELECT id FROM tweets WHERE reply_to_id = ?)', (tweet_id,))
+    c.execute('DELETE FROM tweets WHERE reply_to_id = ?', (tweet_id,))
+    # Delete the tweet itself
+    c.execute('DELETE FROM tweets WHERE id = ?', (tweet_id,))
+
+    conn.commit()
+    conn.close()
+    return jsonify({'ok': True})
 
 
 # POST /api/tweets/<id>/like — toggle like for the current cookie user

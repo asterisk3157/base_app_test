@@ -339,28 +339,81 @@
         .tweet-meta {
             display: flex;
             align-items: center;
-            gap: 6px;
-            flex-wrap: wrap;
+            gap: 4px;
             margin-bottom: 4px;
+            overflow: hidden;
         }
 
         .tweet-display-name {
             font-weight: 700;
             font-size: 0.95rem;
             color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex-shrink: 1;
+            min-width: 0;
         }
 
         .tweet-handle {
             font-size: 0.9rem;
             color: var(--text-secondary);
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .tweet-time {
             font-size: 0.9rem;
             color: var(--text-secondary);
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .tweet-time::before { content: "·"; margin-right: 4px; margin-left: 4px; }
+
+        .tweet-more-btn {
+            margin-left: auto;
+            background: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            transition: background 0.2s, color 0.2s;
+            letter-spacing: 2px;
+            flex-shrink: 0;
+        }
+
+        .tweet-more-btn:hover {
+            background: rgba(29, 155, 240, 0.1);
+            color: var(--accent);
+        }
+
+        .tweet-context-menu {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            z-index: 100;
+            overflow: hidden;
+            min-width: 160px;
+        }
+
+        .tweet-context-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .tweet-context-item:hover { background: var(--bg-hover); }
+
+        .tweet-context-item.delete {
+            color: #F4212E;
+        }
 
         .tweet-content {
             font-size: 0.95rem;
@@ -1469,7 +1522,27 @@
                     <div class="trending-tag">#WebDev</div>
                     <div class="trending-count">8,700件のポスト</div>
                 </div>
-                <span class="show-more-link">さらに表示</span>
+                <div class="trending-item trending-extra" style="display:none">
+                    <div class="trending-label">エンタメのトレンド</div>
+                    <div class="trending-tag">#アニメ</div>
+                    <div class="trending-count">5.6万件のポスト</div>
+                </div>
+                <div class="trending-item trending-extra" style="display:none">
+                    <div class="trending-label">ゲームのトレンド</div>
+                    <div class="trending-tag">#原神</div>
+                    <div class="trending-count">2.1万件のポスト</div>
+                </div>
+                <div class="trending-item trending-extra" style="display:none">
+                    <div class="trending-label">スポーツのトレンド</div>
+                    <div class="trending-tag">#Jリーグ</div>
+                    <div class="trending-count">1.8万件のポスト</div>
+                </div>
+                <div class="trending-item trending-extra" style="display:none">
+                    <div class="trending-label">日本のトレンド</div>
+                    <div class="trending-tag">#確定申告</div>
+                    <div class="trending-count">4.3万件のポスト</div>
+                </div>
+                <span class="show-more-link" id="trend-show-more">さらに表示</span>
             </div>
           </div><!-- /.sidebar-right-inner -->
         </aside>
@@ -1703,12 +1776,20 @@
             if (e.key === 'Enter') { submitRegistration(); }
         });
 
-        // "さらに表示" link in the trending panel
-        document.querySelector('.show-more-link').addEventListener('click', function() {
-            this.textContent = '表示するものがありません';
-            this.style.color = 'var(--text-secondary)';
-            this.style.cursor = 'default';
-            this.style.pointerEvents = 'none';
+        // "さらに表示" link in the trending panel — toggles 4 hidden extra items
+        var trendExpanded = false;
+        document.getElementById('trend-show-more').addEventListener('click', function() {
+            var panel = this.closest('.panel');
+            var extras = panel.querySelectorAll('.trending-extra');
+            if (!trendExpanded) {
+                extras.forEach(function(el) { el.style.display = ''; });
+                this.textContent = '閉じる';
+                trendExpanded = true;
+            } else {
+                extras.forEach(function(el) { el.style.display = 'none'; });
+                this.textContent = 'さらに表示';
+                trendExpanded = false;
+            }
         });
 
         // ------------------------------------------------------------------
@@ -1754,10 +1835,11 @@
             const diffHr  = Math.floor(diffMin / 60);
             const diffDay = Math.floor(diffHr  / 24);
 
-            if (diffSec < 60)  return diffSec + '秒前';
-            if (diffMin < 60)  return diffMin + '分前';
-            if (diffHr  < 24)  return diffHr  + '時間前';
-            if (diffDay < 7)   return diffDay + '日前';
+            if (diffSec < 5)   return 'たった今';
+            if (diffSec < 60)  return diffSec + '秒';
+            if (diffMin < 60)  return diffMin + '分';
+            if (diffHr  < 24)  return diffHr  + '時間';
+            if (diffDay < 7)   return diffDay + '日';
 
             // Older than a week: show "3月15日" style
             return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
@@ -1806,6 +1888,51 @@
             metaEl.appendChild(nameEl);
             metaEl.appendChild(handleEl);
             metaEl.appendChild(timeEl);
+
+            // "···" more button — shown on all tweets, but delete menu only for own tweets
+            var moreBtn = document.createElement('button');
+            moreBtn.className = 'tweet-more-btn';
+            moreBtn.innerHTML = '···';
+            moreBtn.setAttribute('aria-label', 'その他のオプション');
+            moreBtn.onclick = function(e) {
+                e.stopPropagation();
+                // Only show delete for own tweets
+                if (!currentUser || tweet.user.id !== currentUser.id) return;
+
+                var existing = document.querySelector('.tweet-context-menu');
+                if (existing) existing.remove();
+
+                var menu = document.createElement('div');
+                menu.className = 'tweet-context-menu';
+
+                var deleteItem = document.createElement('div');
+                deleteItem.className = 'tweet-context-item delete';
+                deleteItem.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> 削除';
+                deleteItem.onclick = function(e) {
+                    e.stopPropagation();
+                    menu.remove();
+                    if (confirm('このツイートを削除しますか？')) {
+                        fetch('/api/tweets/' + tweet.id, { method: 'DELETE' })
+                            .then(function() { loadTweets(); });
+                    }
+                };
+
+                menu.appendChild(deleteItem);
+
+                var rect = moreBtn.getBoundingClientRect();
+                menu.style.position = 'fixed';
+                menu.style.left = (rect.left - 120) + 'px';
+                menu.style.top = (rect.bottom + 4) + 'px';
+                document.body.appendChild(menu);
+
+                setTimeout(function() {
+                    document.addEventListener('click', function close() {
+                        menu.remove();
+                        document.removeEventListener('click', close);
+                    }, { once: true });
+                }, 10);
+            };
+            metaEl.appendChild(moreBtn);
 
             // Content
             const contentEl = document.createElement('div');
@@ -3381,15 +3508,28 @@
                 });
 
                 topLevel.forEach(function(tweet) {
-                    // Repost label
                     if (tweet._reposted_by) {
+                        // Wrap repost label + card in a container so the label visually
+                        // groups with the tweet card above the border-bottom
+                        var repostWrapper = document.createElement('div');
+                        repostWrapper.style.cssText = 'border-bottom:1px solid var(--border)';
+
                         var repostLabel = document.createElement('div');
-                        repostLabel.style.cssText = 'padding:8px 20px 0 72px;font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:center;gap:6px';
-                        repostLabel.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></svg> ' + tweet._reposted_by + 'さんがリポスト';
-                        tweetsContainer.appendChild(repostLabel);
+                        repostLabel.style.cssText = 'padding:10px 20px 0 64px;font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:center;gap:6px;font-weight:500';
+                        repostLabel.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></svg> ' + tweet._reposted_by + 'さんがリポスト';
+
+                        // Build the card but remove its border-bottom since the wrapper handles it
+                        var card = buildTweetCard(tweet);
+                        card.style.borderBottom = 'none';
+                        card.style.paddingBottom = '10px';
+
+                        repostWrapper.appendChild(repostLabel);
+                        repostWrapper.appendChild(card);
+                        tweetsContainer.appendChild(repostWrapper);
+                    } else {
+                        var card = buildTweetCard(tweet);
+                        tweetsContainer.appendChild(card);
                     }
-                    var card = buildTweetCard(tweet);
-                    tweetsContainer.appendChild(card);
 
                     // Attach replies recursively (reuse same pattern as timeline)
                     if (repliesMap[tweet.id]) {
