@@ -52,11 +52,23 @@ def get_posts():
     conn.close()
     return {'posts': posts}
 
+def contains_dark_magic(text):
+    if not text:
+        return False
+    # List of forbidden keywords for basic XSS & SQLi
+    forbidden_words = ['<script>', 'javascript:', 'drop table', 'select ', 'union select', 'onload=', 'onerror=']
+    text_lower = text.lower()
+    return any(word in text_lower for word in forbidden_words)
+
 @app.route('/post', methods=['POST'])
 def post():
     content = request.form.get('content')
     file = request.files.get('file')
     
+    # Lv.3 Defense: Backend Magical Barrier (WAF)
+    if contains_dark_magic(content):
+        return jsonify({'success': False, 'error': '結界発動：不正な魔法（ハッキング詠唱）を検知しました！'}), 400
+        
     file_path = None
     if file and file.filename != '':
         if not allowed_file(file.filename):

@@ -298,7 +298,8 @@
     <div class="container">
         <h1>✨ 幻想のひとこと掲示板 ✨</h1>
         <form id="postForm" enctype="multipart/form-data">
-            <textarea name="content" id="content" placeholder="星降る夜に、何を想う？" required></textarea>
+            <textarea name="content" id="content" placeholder="星降る夜に、何を想う？" required onpaste="return false;"
+                ondrop="return false;"></textarea>
 
             <div class="controls-row">
                 <div class="file-upload-wrapper">
@@ -370,9 +371,16 @@
                 }
             }
 
-            // Intentionally using innerHTML to make XSS easier for the lecture
-            const contentHtml = `<div class="post-text">${post.content}</div>`;
-            div.innerHTML = contentHtml + mediaHtml;
+            // Lv.2 Defense: Create a text node instead of using innerHTML to prevent XSS execution
+            const textDiv = document.createElement('div');
+            textDiv.className = 'post-text';
+            textDiv.textContent = post.content; // Safely escape all HTML tags
+            div.appendChild(textDiv);
+
+            if (mediaHtml) {
+                // We safely append our controlled mediaHtml
+                div.insertAdjacentHTML('beforeend', mediaHtml);
+            }
 
             if (prepend && container.firstChild) {
                 container.insertBefore(div, container.firstChild);
