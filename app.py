@@ -992,7 +992,7 @@ def get_tweets():
                 u.avatar_url,
                 u.is_bot,
                 COUNT(DISTINCT l.id) AS like_count,
-                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) AS repost_count
+                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count
             FROM tweets t
             JOIN  users u ON u.id = t.user_id
             LEFT JOIN likes l ON l.tweet_id = t.id
@@ -1016,7 +1016,7 @@ def get_tweets():
                 u.avatar_url,
                 u.is_bot,
                 COUNT(DISTINCT l.id) AS like_count,
-                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) AS repost_count
+                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count
             FROM tweets t
             JOIN  users u ON u.id = t.user_id
             LEFT JOIN likes l ON l.tweet_id = t.id
@@ -1122,7 +1122,7 @@ def get_single_tweet(tweet_id):
         SELECT t.id, t.content, t.created_at, t.reply_to_id, t.quote_of_id,
                u.id AS user_id, u.display_name, u.handle, u.avatar_url, u.is_bot,
                COUNT(DISTINCT l.id) AS like_count,
-               (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) AS repost_count,
+               (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count,
                t.impressions
         FROM tweets t
         JOIN users u ON u.id = t.user_id
@@ -1390,7 +1390,7 @@ def get_user_profile(handle):
             t.id, t.content, t.created_at, t.reply_to_id, t.quote_of_id, t.impressions,
             u.id AS user_id, u.display_name, u.handle, u.avatar_url, u.is_bot,
             COUNT(DISTINCT l.id) AS like_count,
-            (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) AS repost_count
+            (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count
         FROM tweets t
         JOIN users u ON u.id = t.user_id
         LEFT JOIN likes l ON l.tweet_id = t.id
@@ -1422,7 +1422,7 @@ def get_user_profile(handle):
         SELECT t.id, t.content, t.created_at, t.reply_to_id, t.quote_of_id,
                u.id AS user_id, u.display_name, u.handle, u.avatar_url, u.is_bot,
                COUNT(DISTINCT l.id) AS like_count,
-               (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) AS repost_count,
+               (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count,
                t.impressions
         FROM reposts rp
         JOIN tweets t ON t.id = rp.tweet_id

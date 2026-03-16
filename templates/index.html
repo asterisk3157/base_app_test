@@ -2441,9 +2441,10 @@
         // ------------------------------------------------------------------
         // Notifications tab view (Twitter-style, replaces timeline content)
         // ------------------------------------------------------------------
-        function showNotifications() {
+        function showNotifications(fromPopstate) {
             currentView = 'notifications';
             window.scrollTo(0, 0);
+            if (!fromPopstate) pushView('notifications');
 
             var timeline = document.getElementById('top');
             var tabs = document.getElementById('timeline-tabs');
@@ -2535,9 +2536,12 @@
                         item.appendChild(iconDiv);
                         item.appendChild(avDiv);
                         item.appendChild(textDiv);
-                        item.onclick = function() {
-                            // Could navigate to the tweet in future
-                        };
+                        item.style.cursor = 'pointer';
+                        (function(tweetId) {
+                            item.onclick = function() {
+                                if (tweetId) showTweetDetail(tweetId);
+                            };
+                        })(n.tweet_id);
                         view.appendChild(item);
                     });
                 })
@@ -2863,9 +2867,10 @@
         // ------------------------------------------------------------------
         // Tweet detail view — show a single tweet with replies
         // ------------------------------------------------------------------
-        function showTweetDetail(tweetId) {
+        function showTweetDetail(tweetId, fromPopstate) {
             currentView = 'tweet-detail';
             window.scrollTo(0, 0);
+            if (!fromPopstate) pushView('tweet-detail', tweetId);
 
             var timeline = document.getElementById('top');
             var composeBox = timeline.querySelector('.compose-box');
@@ -2998,7 +3003,7 @@
         // ------------------------------------------------------------------
         // Profile view — SPA-style overlay replacing timeline content
         // ------------------------------------------------------------------
-        function showProfile(handle) {
+        function showProfile(handle, fromPopstate) {
             fetch('/api/users/' + encodeURIComponent(handle) + '/profile')
                 .then(function(res) { return res.json(); })
                 .then(function(data) {
@@ -3006,7 +3011,7 @@
                     renderProfileView(data.user, data.tweets, data.reposted_tweets);
                     currentView = 'profile';
                     window.scrollTo(0, 0);
-                    // Update nav active states
+                    if (!fromPopstate) pushView('profile', handle);
                     document.querySelectorAll('.nav-item').forEach(function(btn) {
                         btn.classList.remove('active');
                     });
@@ -3016,7 +3021,7 @@
                 });
         }
 
-        function showTimeline() {
+        function showTimeline(fromPopstate) {
             var timeline = document.getElementById('top');
 
             // Remove profile, notification, search, and tweet-detail views
@@ -3057,15 +3062,17 @@
             if (homeNav) homeNav.classList.add('active');
 
             currentView = 'timeline';
+            if (!fromPopstate) pushView('timeline');
             loadTweets();
         }
 
         // ------------------------------------------------------------------
         // Search view — user search (Twitter-style)
         // ------------------------------------------------------------------
-        function showSearch() {
+        function showSearch(fromPopstate) {
             currentView = 'search';
             window.scrollTo(0, 0);
+            if (!fromPopstate) pushView('search');
 
             var timeline = document.getElementById('top');
             var tabs = document.getElementById('timeline-tabs');
@@ -3663,8 +3670,35 @@
         });
 
         // ------------------------------------------------------------------
+        // SPA history management (browser back/forward)
+        // ------------------------------------------------------------------
+        function pushView(view, params) {
+            var state = { view: view };
+            if (params) state.params = params;
+            history.pushState(state, '', '');
+        }
+
+        window.addEventListener('popstate', function(e) {
+            var state = e.state;
+            if (!state || !state.view || state.view === 'timeline') {
+                showTimeline(true);
+            } else if (state.view === 'profile' && state.params) {
+                showProfile(state.params, true);
+            } else if (state.view === 'notifications') {
+                showNotifications(true);
+            } else if (state.view === 'search') {
+                showSearch(true);
+            } else if (state.view === 'tweet-detail' && state.params) {
+                showTweetDetail(state.params, true);
+            } else {
+                showTimeline(true);
+            }
+        });
+
+        // ------------------------------------------------------------------
         // Initialise
         // ------------------------------------------------------------------
+        history.replaceState({ view: 'timeline' }, '', '');
         initApp();
 
         // Auto-refresh timeline and notification badge every 10 seconds
