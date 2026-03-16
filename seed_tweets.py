@@ -987,7 +987,7 @@ def main():
     # ------------------------------------------------------------------
     # Step 3: Generate tweets spread across the last 30 days
     # ------------------------------------------------------------------
-    now = datetime.now()
+    now = datetime.utcnow()  # Use UTC to match SQLite CURRENT_TIMESTAMP
     tweet_records = []  # (user_id, username, content, created_at)
 
     for username, user_id in bots.items():

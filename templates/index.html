@@ -1835,7 +1835,8 @@
             const diffHr  = Math.floor(diffMin / 60);
             const diffDay = Math.floor(diffHr  / 24);
 
-            if (diffSec < 5)   return 'たった今';
+            if (diffSec < 0)   return 'たった今';  // future timestamp (clock skew)
+            if (diffSec < 10)  return 'たった今';
             if (diffSec < 60)  return diffSec + '秒';
             if (diffMin < 60)  return diffMin + '分';
             if (diffHr  < 24)  return diffHr  + '時間';
