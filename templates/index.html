@@ -9,184 +9,255 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Cinzel:wght@400;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Kaisei+Decol:wght@400;700&display=swap"
         rel="stylesheet">
     <style>
         :root {
+            --text-main: #e8e0d0;
+            --text-muted: #a09882;
             --primary-glow: #e6c875;
-            --background-dark: #0f111a;
-            --glass-bg: rgba(20, 25, 40, 0.45);
-            --glass-border: rgba(230, 200, 117, 0.3);
-            --text-main: #fcf8e8;
-            --text-muted: #b8a67a;
+            --glass-bg: rgba(10, 12, 20, 0.55);
+            --glass-border: rgba(230, 200, 117, 0.15);
         }
 
-        body {
-            font-family: 'Kaisei Decol', serif;
+        * {
             margin: 0;
             padding: 0;
-            min-height: 100vh;
-            background: radial-gradient(circle at 50% 10%, #2a223a 0%, var(--background-dark) 80%);
-            color: var(--text-main);
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            overflow-x: hidden;
-            position: relative;
+            box-sizing: border-box;
         }
 
-        /* Starry background effect */
-        body::before {
-            content: "";
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-image:
-                radial-gradient(1px 1px at 20px 30px, #ffffff, rgba(0, 0, 0, 0)),
-                radial-gradient(1px 1px at 40px 70px, #ffffff, rgba(0, 0, 0, 0)),
-                radial-gradient(1.5px 1.5px at 150px 150px, #ffffff, rgba(0, 0, 0, 0)),
-                radial-gradient(1px 1px at 90px 40px, rgba(255, 255, 255, 0.8), rgba(0, 0, 0, 0));
-            background-repeat: repeat;
-            background-size: 200px 200px;
-            opacity: 0.5;
-            z-index: -1;
-            animation: twinkle 5s infinite linear;
-        }
-
-        @keyframes twinkle {
-            0% {
-                opacity: 0.3;
-                transform: translateY(0);
-            }
-
-            50% {
-                opacity: 0.6;
-            }
-
-            100% {
-                opacity: 0.3;
-                transform: translateY(-10px);
-            }
-        }
-
-        .container {
+        html,
+        body {
             width: 100%;
-            max-width: 650px;
-            margin: 40px 20px;
-            padding: 40px 30px;
-            background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--glass-border);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4),
-                0 0 20px rgba(230, 200, 117, 0.1) inset;
-            position: relative;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Kaisei Decol', serif;
+            color: var(--text-main);
         }
 
-        h1 {
-            font-family: 'Cinzel', 'Kaisei Decol', serif;
-            text-align: center;
-            font-size: 2rem;
-            margin-top: 0;
-            margin-bottom: 30px;
-            color: var(--primary-glow);
-            text-shadow: 0 0 15px rgba(230, 200, 117, 0.5);
-            letter-spacing: 2px;
-            border-bottom: 1px solid transparent;
-            padding-bottom: 15px;
-            position: relative;
+        /* === Full-screen Background === */
+        body {
+            background: url('/static/img/bg_window.png') no-repeat center center;
+            background-size: cover;
+            display: flex;
+            flex-direction: row;
         }
 
-        h1::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 20%;
-            width: 60%;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--primary-glow), transparent);
-        }
-
-        form {
+        /* === LEFT PANEL: YouTube Live Style Comment Feed === */
+        .comment-feed {
+            width: 320px;
+            min-width: 280px;
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            justify-content: flex-end;
+            padding: 20px 15px 20px 15px;
+            background: linear-gradient(to right, rgba(5, 5, 15, 0.75) 0%, rgba(5, 5, 15, 0.4) 80%, transparent 100%);
             position: relative;
+            z-index: 10;
         }
 
-        textarea {
-            width: 100%;
-            height: 100px;
-            background: rgba(10, 15, 25, 0.6);
-            border: 1px solid var(--glass-border);
+        .feed-title {
+            position: absolute;
+            top: 20px;
+            left: 15px;
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            color: var(--primary-glow);
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(230, 200, 117, 0.4);
+        }
+
+        .feed-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 50px;
+            padding-right: 5px;
+            /* Hide scrollbar for cleaner YouTube Live look */
+            scrollbar-width: thin;
+            scrollbar-color: rgba(230, 200, 117, 0.2) transparent;
+        }
+
+        .feed-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .feed-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .feed-container::-webkit-scrollbar-thumb {
+            background: rgba(230, 200, 117, 0.3);
+            border-radius: 10px;
+        }
+
+        /* Each comment bubble */
+        .comment {
+            background: rgba(0, 0, 0, 0.45);
             border-radius: 12px;
+            padding: 8px 12px;
+            animation: commentSlideIn 0.4s ease-out forwards;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            word-break: break-word;
+        }
+
+        .comment-name {
+            font-size: 0.75rem;
+            color: var(--primary-glow);
+            font-weight: bold;
+            margin-bottom: 2px;
+            text-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
+        }
+
+        .comment-text {
+            font-size: 0.88rem;
+            color: var(--text-main);
+            line-height: 1.4;
+        }
+
+        .comment-media {
+            max-width: 100%;
+            border-radius: 6px;
+            margin-top: 5px;
+            max-height: 150px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .comment-file-link {
+            display: inline-block;
+            margin-top: 5px;
+            padding: 4px 10px;
+            border-radius: 5px;
+            background: rgba(230, 200, 117, 0.1);
+            color: var(--primary-glow);
+            text-decoration: none;
+            font-size: 0.8rem;
+            border: 1px solid rgba(230, 200, 117, 0.15);
+        }
+
+        .comment-file-link:hover {
+            background: rgba(230, 200, 117, 0.2);
+        }
+
+        @keyframes commentSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* === CENTER SPACER: Just the background showing through === */
+        .center-space {
+            flex: 1;
+        }
+
+        /* === RIGHT PANEL: Input Forms === */
+        .input-panel {
+            width: 360px;
+            min-width: 300px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 20px 20px 25px 20px;
+            background: linear-gradient(to left, rgba(5, 5, 15, 0.7) 0%, rgba(5, 5, 15, 0.35) 80%, transparent 100%);
+            position: relative;
+            z-index: 10;
+        }
+
+        .input-panel .panel-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            color: var(--primary-glow);
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: 15px;
+            text-shadow: 0 0 15px rgba(230, 200, 117, 0.5);
+        }
+
+        .input-box {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
             padding: 15px;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-box textarea {
+            width: 100%;
+            height: 80px;
+            background: rgba(10, 15, 25, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 10px 12px;
             color: var(--text-main);
             font-family: 'Kaisei Decol', serif;
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             resize: none;
-            box-sizing: border-box;
             transition: all 0.3s ease;
         }
 
-        textarea:focus {
+        .input-box textarea:focus {
             outline: none;
             border-color: var(--primary-glow);
-            box-shadow: 0 0 15px rgba(230, 200, 117, 0.2);
-            background: rgba(10, 15, 25, 0.8);
+            box-shadow: 0 0 10px rgba(230, 200, 117, 0.15);
         }
 
-        textarea::placeholder {
+        .input-box textarea::placeholder,
+        .input-box input::placeholder {
             color: var(--text-muted);
             opacity: 0.7;
             font-style: italic;
         }
 
-        .name-input-wrapper {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        #name {
+        .input-box input[type="text"] {
             width: 100%;
-            background: rgba(10, 15, 25, 0.4);
+            background: rgba(10, 15, 25, 0.5);
             border: 1px solid var(--glass-border);
             border-radius: 8px;
-            padding: 10px 15px;
+            padding: 8px 12px;
             color: var(--text-main);
             font-family: 'Kaisei Decol', serif;
-            font-size: 1rem;
-            box-sizing: border-box;
+            font-size: 0.9rem;
             transition: all 0.3s ease;
         }
 
-        #name:focus {
+        .input-box input[type="text"]:focus {
             outline: none;
             border-color: var(--primary-glow);
-            box-shadow: 0 0 10px rgba(230, 200, 117, 0.2);
-            background: rgba(10, 15, 25, 0.6);
+            box-shadow: 0 0 10px rgba(230, 200, 117, 0.15);
         }
 
         .tripcode-hint {
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             color: var(--text-muted);
-            opacity: 0.8;
-            margin-left: 5px;
+            opacity: 0.75;
+            margin-top: -5px;
         }
 
-        /* File Upload Styling */
         .controls-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
         }
 
+        /* File upload */
         .file-upload-wrapper {
             position: relative;
             overflow: hidden;
@@ -204,171 +275,108 @@
         }
 
         .file-upload-btn {
-            background: rgba(230, 200, 117, 0.1);
+            background: rgba(230, 200, 117, 0.08);
             border: 1px solid var(--glass-border);
             color: var(--text-main);
-            padding: 10px 20px;
-            border-radius: 30px;
+            padding: 7px 14px;
+            border-radius: 20px;
             font-family: 'Kaisei Decol', serif;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
             transition: all 0.3s ease;
         }
 
         .file-upload-wrapper:hover .file-upload-btn {
-            background: rgba(230, 200, 117, 0.2);
-            box-shadow: 0 0 10px rgba(230, 200, 117, 0.2);
+            background: rgba(230, 200, 117, 0.18);
+        }
+
+        #fileName {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-left: 5px;
         }
 
         button[type="submit"] {
             background: linear-gradient(135deg, #d4af37, #aa7c11);
             color: #1a1a1a;
             border: none;
-            padding: 12px 30px;
-            border-radius: 30px;
+            padding: 9px 22px;
+            border-radius: 20px;
             font-family: 'Kaisei Decol', serif;
             font-weight: 700;
-            font-size: 1.1rem;
+            font-size: 0.95rem;
             cursor: pointer;
             transition: all 0.4s ease;
-            box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+            box-shadow: 0 3px 12px rgba(212, 175, 55, 0.3);
             letter-spacing: 1px;
         }
 
         button[type="submit"]:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
+            box-shadow: 0 5px 18px rgba(212, 175, 55, 0.5);
             background: linear-gradient(135deg, #eadd89, #d4af37);
         }
 
-        hr {
-            border: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(230, 200, 117, 0.3), transparent);
-            margin: 35px 0;
-        }
-
-        #posts {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .post {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-left: 3px solid var(--primary-glow);
-            padding: 18px 20px;
-            border-radius: 8px;
-            line-height: 1.6;
-            font-size: 1.05rem;
-            animation: fadeIn 0.8s ease forwards;
-            backdrop-filter: blur(5px);
-            transition: transform 0.3s ease, background 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .post-name {
-            font-size: 0.9rem;
-            color: #d4af37;
-            /* Gold color for names */
-            font-weight: bold;
-            display: inline-block;
-            margin-bottom: 2px;
-            text-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
-            border-bottom: 1px dashed rgba(212, 175, 55, 0.3);
-            padding-bottom: 3px;
-            width: fit-content;
-        }
-
-        .post:hover {
-            transform: scale(1.01);
-            background: rgba(255, 255, 255, 0.06);
-        }
-
-        .post-media {
-            max-width: 100%;
-            border-radius: 8px;
-            border: 1px solid var(--glass-border);
-            max-height: 300px;
-            object-fit: cover;
-            display: block;
-            margin-top: 10px;
-        }
-
-        .post-file-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 8px 15px;
-            border-radius: 5px;
-            color: var(--primary-glow);
-            text-decoration: none;
-            font-size: 0.9rem;
-            border: 1px solid rgba(230, 200, 117, 0.2);
-            width: fit-content;
-        }
-
-        .post-file-link:hover {
-            background: rgba(230, 200, 117, 0.1);
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(15px);
+        /* === Responsive === */
+        @media (max-width: 900px) {
+            body {
+                flex-direction: column;
             }
 
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            .comment-feed {
+                width: 100%;
+                height: 50vh;
+                background: rgba(5, 5, 15, 0.7);
             }
-        }
 
-        /* Helper to hide file name text if empty */
-        #fileName {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-left: 10px;
-            vertical-align: middle;
+            .center-space {
+                display: none;
+            }
+
+            .input-panel {
+                width: 100%;
+                height: auto;
+                background: rgba(5, 5, 15, 0.8);
+            }
         }
     </style>
 </head>
 
 <body>
-    <div class="container">
-        <h1>✨ 星に願いを ✨</h1>
-        <form id="postForm" enctype="multipart/form-data">
-            <div class="name-input-wrapper">
-                <input type="text" name="name" id="name" placeholder="詠み人（名前） / 秘密の合言葉は # の後ろに" maxlength="50"
-                    onpaste="return false;" ondrop="return false;">
-                <div class="tripcode-hint">※ 名前のあとに「#秘密の呪文」を付けると、あなただけの刻印(トリップ)になります 例: アリス#alice</div>
-            </div>
-            <textarea name="content" id="content" placeholder="星降る夜に、何を想う？" required onpaste="return false;"
-                ondrop="return false;"></textarea>
-
-            <div class="controls-row">
-                <div class="file-upload-wrapper">
-                    <button type="button" class="file-upload-btn">
-                        <span>📎 魔法の欠片を添える</span>
-                    </button>
-                    <!-- Strict accept attribute to hint the OS file picker -->
-                    <input type="file" name="file" id="fileInput" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif,.webp">
-                    <span id="fileName"></span>
-                </div>
-
-                <button type="submit">言の葉を紡ぐ</button>
-            </div>
-        </form>
-        <hr>
-        <div id="posts">
+    <!-- LEFT: YouTube Live style comment feed -->
+    <div class="comment-feed">
+        <div class="feed-title">✨ 星に願いを</div>
+        <div class="feed-container" id="posts">
             <!-- Posts will be loaded here via JS -->
         </div>
+    </div>
+
+    <!-- CENTER: Just the background image showing through -->
+    <div class="center-space"></div>
+
+    <!-- RIGHT: Input panel for posting -->
+    <div class="input-panel">
+        <div class="panel-title">💫 願いを紡ぐ</div>
+        <form id="postForm" enctype="multipart/form-data">
+            <div class="input-box">
+                <textarea name="content" id="content" placeholder="星に何を願う？" required onpaste="return false;"
+                    ondrop="return false;"></textarea>
+
+                <div class="controls-row">
+                    <div class="file-upload-wrapper">
+                        <button type="button" class="file-upload-btn">📎 添える</button>
+                        <input type="file" name="file" id="fileInput"
+                            accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif,.webp">
+                    </div>
+                    <span id="fileName"></span>
+                    <button type="submit">願いを紡ぐ</button>
+                </div>
+
+                <input type="text" name="name" id="name" placeholder="詠み人（名前） / 秘密は # の後ろに" maxlength="50"
+                    onpaste="return false;" ondrop="return false;">
+                <div class="tripcode-hint">※ 名前#呪文 → あなただけの刻印(トリップ) 例: アリス#alice</div>
+            </div>
+        </form>
     </div>
 
     <script>
@@ -382,69 +390,61 @@
                 const fileExt = file.name.split('.').pop().toLowerCase();
 
                 if (!allowedExtensions.includes(fileExt)) {
-                    // Alert user immediately!
                     alert('この魔導書（ファイル形式）は解読できません。\n対応フォーマット: ' + allowedExtensions.join(', '));
-                    this.value = ''; // Clear the invalid file
-                    fileNameDisplay.textContent = ''; // Clear the text
+                    this.value = '';
+                    fileNameDisplay.textContent = '';
                 } else {
-                    // Valid file, display name
                     fileNameDisplay.textContent = file.name;
                 }
             } else {
                 fileNameDisplay.textContent = '';
             }
         });
-        // Track the highest ID we have seen so far to prevent reloading the whole list
+
+        // Track the highest ID we have seen so far
         let lastHighestId = 0;
         let isInitialLoad = true;
 
-        function renderPost(post, container, prepend = false) {
+        function renderPost(post, container) {
             const div = document.createElement('div');
-            div.className = 'post';
+            div.className = 'comment';
             div.id = 'post-' + post.id;
 
-            // Handle potential media
-            let mediaHtml = '';
-            if (post.file_path) {
-                const ext = post.file_path.split('.').pop().toLowerCase();
-                // If it's an image, display it
-                if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
-                    mediaHtml = `<img src="${post.file_path}" class="post-media" alt="魔法の欠片">`;
-                } else if (ext === 'pdf') {
-                    // PDF => Open in new tab icon
-                    mediaHtml = `<a href="${post.file_path}" class="post-file-link" target="_blank" rel="noopener noreferrer">📄 古めかしい羊皮紙（PDF）を開く</a>`;
-                } else if (['doc', 'docx'].includes(ext)) {
-                    // Word => Download icon
-                    mediaHtml = `<a href="${post.file_path}" class="post-file-link" download>📝 使いの書状を解読する（ダウンロード）</a>`;
-                } else {
-                    // Default fallback
-                    mediaHtml = `<a href="${post.file_path}" class="post-file-link" download>📎 魔法の遺物を持ち帰る</a>`;
-                }
-            }
-
-            // Lv.2 Defense: Create a text node instead of using innerHTML
-
-            // Add Name / Tripcode
+            // Name / Tripcode
             const nameDiv = document.createElement('div');
-            nameDiv.className = 'post-name';
+            nameDiv.className = 'comment-name';
             nameDiv.textContent = post.name || '名無しの魔法使い';
             div.appendChild(nameDiv);
 
+            // Content (safe from XSS)
             const textDiv = document.createElement('div');
-            textDiv.className = 'post-text';
-            textDiv.textContent = post.content; // Safely escape all HTML tags
+            textDiv.className = 'comment-text';
+            textDiv.textContent = post.content;
             div.appendChild(textDiv);
 
-            if (mediaHtml) {
-                // We safely append our controlled mediaHtml
-                div.insertAdjacentHTML('beforeend', mediaHtml);
+            // Handle media
+            if (post.file_path) {
+                const ext = post.file_path.split('.').pop().toLowerCase();
+                if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
+                    const img = document.createElement('img');
+                    img.src = post.file_path;
+                    img.className = 'comment-media';
+                    img.alt = '魔法の欠片';
+                    div.appendChild(img);
+                } else if (ext === 'pdf') {
+                    div.insertAdjacentHTML('beforeend',
+                        `<a href="${post.file_path}" class="comment-file-link" target="_blank" rel="noopener noreferrer">📄 PDF を開く</a>`);
+                } else if (['doc', 'docx'].includes(ext)) {
+                    div.insertAdjacentHTML('beforeend',
+                        `<a href="${post.file_path}" class="comment-file-link" download>📝 Word をダウンロード</a>`);
+                } else {
+                    div.insertAdjacentHTML('beforeend',
+                        `<a href="${post.file_path}" class="comment-file-link" download>📎 ファイルを保存</a>`);
+                }
             }
 
-            if (prepend && container.firstChild) {
-                container.insertBefore(div, container.firstChild);
-            } else {
-                container.appendChild(div);
-            }
+            // Always append to the bottom (YouTube Live style: newest at the bottom)
+            container.appendChild(div);
         }
 
         function loadPosts() {
@@ -452,29 +452,32 @@
                 .then(response => response.json())
                 .then(data => {
                     const postsDiv = document.getElementById('posts');
-                    // data.posts is ordered DESC (highest ID first)
                     const currentHighestId = data.posts.length > 0 ? data.posts[0].id : 0;
 
                     if (isInitialLoad) {
-                        // First load: render everything
-                        postsDiv.innerHTML = ''; // Clear exactly once
-                        data.posts.forEach(post => {
-                            // Append normally (they are already in DESC order from backend)
-                            renderPost(post, postsDiv, false);
+                        postsDiv.innerHTML = '';
+                        // data.posts is DESC (newest first), but we want oldest at the top
+                        const reversed = [...data.posts].reverse();
+                        reversed.forEach(post => {
+                            renderPost(post, postsDiv);
                         });
                         isInitialLoad = false;
+                        // Auto-scroll to the bottom
+                        postsDiv.scrollTop = postsDiv.scrollHeight;
                     } else {
                         // Polling: Only process posts that are newer than our last known ID
                         const newPosts = data.posts.filter(post => post.id > lastHighestId);
-
-                        // We must append newer posts at the TOP of the container. 
-                        // Since newPosts has the newest item at index 0, we process it backwards to prepend properly.
-                        for (let i = newPosts.length - 1; i >= 0; i--) {
-                            renderPost(newPosts[i], postsDiv, true);
+                        // newPosts is DESC, reverse to append oldest-first
+                        const reversedNew = [...newPosts].reverse();
+                        reversedNew.forEach(post => {
+                            renderPost(post, postsDiv);
+                        });
+                        // Auto-scroll to show newest comment
+                        if (newPosts.length > 0) {
+                            postsDiv.scrollTop = postsDiv.scrollHeight;
                         }
                     }
 
-                    // Update the tracker
                     lastHighestId = Math.max(lastHighestId, currentHighestId);
                 });
         }
@@ -482,18 +485,16 @@
         document.getElementById('postForm').addEventListener('submit', function (e) {
             e.preventDefault();
 
-            // UI Feedback
             const submitBtn = this.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerText;
             submitBtn.innerText = '紡ぎ中... ✨';
             submitBtn.disabled = true;
 
             const nameInput = document.getElementById('name');
-            // Save the name to localStorage for future posts
             if (nameInput.value) {
                 localStorage.setItem('fantasy_board_name', nameInput.value);
             } else {
-                localStorage.removeItem('fantasy_board_name'); // Clear if they chose to post anonymously
+                localStorage.removeItem('fantasy_board_name');
             }
 
             const formData = new FormData(this);
@@ -504,15 +505,11 @@
                 .then(response => response.json().then(data => ({ status: response.status, body: data })))
                 .then(({ status, body }) => {
                     if (status >= 400 && body.error) {
-                        // Show error alert if file type or other backend logic invalidates the request
                         alert(body.error);
                     } else {
-                        // Success! Clear inputs ONLY for content and file
                         document.getElementById('content').value = '';
                         document.getElementById('fileInput').value = '';
                         document.getElementById('fileName').textContent = '';
-
-                        // Immediately load the new post
                         loadPosts();
                     }
                 })
@@ -521,7 +518,6 @@
                     alert("送信中に魔法の乱れが生じました。もう一度お試しください。");
                 })
                 .finally(() => {
-                    // Restore button state
                     submitBtn.innerText = originalText;
                     submitBtn.disabled = false;
                 });
