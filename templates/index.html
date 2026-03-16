@@ -3107,21 +3107,78 @@
                     actions.appendChild(likeBtn);
                     card.appendChild(actions);
 
+                    // Inline reply compose for detail view
+                    var detailReplyBox = document.createElement('div');
+                    detailReplyBox.style.cssText = 'display:flex;gap:10px;padding:12px 20px;border-bottom:1px solid var(--border)';
+
+                    var replyAvatar = currentUser ? buildAvatar(currentUser, 36) : buildDefaultAvatar(36);
+                    var replyTextarea = document.createElement('textarea');
+                    replyTextarea.className = 'reply-textarea';
+                    replyTextarea.placeholder = '返信をツイート...';
+                    replyTextarea.style.flex = '1';
+                    replyTextarea.maxLength = 280;
+
+                    var replySubmit = document.createElement('button');
+                    replySubmit.className = 'reply-submit';
+                    replySubmit.textContent = '返信';
+                    replySubmit.onclick = function() {
+                        var content = replyTextarea.value.trim();
+                        if (!content) return;
+                        fetch('/api/tweets', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ content: content, reply_to_id: tweet.id })
+                        }).then(function(res) {
+                            if (res.status === 401) { showRegistrationModal(); return; }
+                            return res.json();
+                        }).then(function() {
+                            // Refresh the detail view to show the new reply
+                            showTweetDetail(tweetId);
+                        });
+                    };
+
+                    detailReplyBox.appendChild(replyAvatar);
+                    detailReplyBox.appendChild(replyTextarea);
+                    detailReplyBox.appendChild(replySubmit);
+                    card.appendChild(detailReplyBox);
+
                     view.appendChild(card);
 
                     // Show replies to this tweet below
+                    // Fetch all tweets (no filter) to find replies
                     fetch('/api/tweets')
                         .then(function(r) { return r.json(); })
                         .then(function(allData) {
-                            var replies = allData.tweets.filter(function(t) { return t.reply_to_id === tweet.id; });
-                            replies.sort(function(a, b) { return a.id - b.id; });
-                            if (replies.length > 0) {
+                            // Build a replies map for recursive rendering
+                            var repliesMap = {};
+                            allData.tweets.forEach(function(t) {
+                                if (t.reply_to_id) {
+                                    if (!repliesMap[t.reply_to_id]) repliesMap[t.reply_to_id] = [];
+                                    repliesMap[t.reply_to_id].push(t);
+                                }
+                            });
+
+                            var directReplies = repliesMap[tweet.id];
+                            if (directReplies && directReplies.length > 0) {
                                 var repliesHeader = document.createElement('div');
                                 repliesHeader.style.cssText = 'padding:14px 20px;font-weight:700;border-top:1px solid var(--border);border-bottom:1px solid var(--border)';
                                 repliesHeader.textContent = '返信';
                                 view.appendChild(repliesHeader);
-                                replies.forEach(function(reply) {
+
+                                directReplies.sort(function(a, b) { return a.id - b.id; });
+                                directReplies.forEach(function(reply) {
                                     view.appendChild(buildTweetCard(reply));
+
+                                    // Also render sub-replies recursively
+                                    if (repliesMap[reply.id]) {
+                                        var subContainer = document.createElement('div');
+                                        subContainer.className = 'tweet-replies';
+                                        repliesMap[reply.id].sort(function(a, b) { return a.id - b.id; });
+                                        repliesMap[reply.id].forEach(function(subReply) {
+                                            subContainer.appendChild(buildReplyCard(subReply));
+                                        });
+                                        view.appendChild(subContainer);
+                                    }
                                 });
                             }
                         });

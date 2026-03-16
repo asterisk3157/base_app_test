@@ -1,197 +1,98 @@
-# Bot Avatar Prompts (31 bots need icons)
-
-Save generated images to `static/avatars/<username>.png`
-Then run: `python update_avatars.py` (script below)
-
-## Format
-All prompts: `Anime-style Twitter profile icon, square crop, ...`
+# Bot Avatar Prompts — 31 images
+# Copy ALL prompts below into Google AI Studio and generate one by one
+# Save each as: static/avatars/<filename>.png
 
 ---
 
-## gameotaku (@rei_gg) — FPS gamer
-```
-Anime-style Twitter profile icon, square crop, dark room lit by monitor glow, young person wearing gaming headset, intense focused eyes, RGB keyboard reflection, competitive esports vibe, digital art
-```
+1. gameotaku.png
+Dark room lit by dual monitors, person wearing gaming headset seen from behind, RGB keyboard glow on face, competitive FPS vibe, photorealistic, square crop profile icon
 
-## manga_yomu (@aki_manga500) — manga reader
-```
-Anime-style Twitter profile icon, square crop, cozy room background, person buried in stack of manga books, reading with happy expression, warm lighting, slice-of-life aesthetic, digital art
-```
+2. manga_yomu.png
+Overhead flat-lay photo of open manga books scattered on wooden desk, coffee cup, reading glasses, cozy warm lighting, square crop profile icon
 
-## travel_log (@yui_and_trip) — solo traveler
-```
-Anime-style Twitter profile icon, square crop, scenic mountain/ocean background, young woman with backpack and camera, adventurous smile, golden hour lighting, Studio Ghibli inspired, digital art
-```
+3. travel_log.png
+Young woman with backpack standing at a scenic overlook, mountains and ocean in background, golden hour sunlight, candid travel photo style, square crop profile icon
 
-## inu_suki (@komugi_wanwan) — shiba inu owner
-```
-Anime-style Twitter profile icon, square crop, cute shiba inu dog face close-up, warm brown and cream colors, happy panting expression, soft watercolor style, adorable, digital art
-```
+4. inu_suki.png
+Close-up photo of a smiling shiba inu dog face, warm natural lighting, shallow depth of field, cute and happy expression, square crop profile icon
 
-## music_dj (@k_and_beats) — lo-fi producer
-```
-Anime-style Twitter profile icon, square crop, dark purple neon background, person wearing headphones at a desk with synthesizer, lo-fi hip hop aesthetic, chill vibes, digital art
-```
+5. music_dj.png
+Hands on DJ turntable and mixer in dark club, purple and blue neon lighting, lo-fi aesthetic, moody atmosphere, square crop profile icon
 
-## study_gram (@hana_study_log) — study account
-```
-Anime-style Twitter profile icon, square crop, cafe background with warm lighting, young woman with glasses studying at a table, books and coffee, soft pastel colors, motivational aesthetic, digital art
-```
+6. study_gram.png
+Flat-lay of study desk with notebook, highlighters, coffee, and laptop, aesthetic study setup, warm cafe lighting, square crop profile icon
 
-## otoge_haijin (@proseka_99) — rhythm game addict
-```
-Anime-style Twitter profile icon, square crop, colorful neon background with music notes, fingers tapping on phone screen, rhythm game UI elements, energetic and vibrant, digital art
-```
+7. otoge_haijin.png
+Close-up of thumbs tapping a smartphone screen showing colorful rhythm game notes, neon trail effects, energetic and fast, square crop profile icon
 
-## netoge_waste (@asuka_ff14) — MMO player
-```
-Anime-style Twitter profile icon, square crop, fantasy RPG background with crystals, female warrior character in armor, MMORPG aesthetic, glowing blue and purple, digital art
-```
+8. netoge_waste.png
+Person sitting in dark room with three monitors showing fantasy RPG game, face lit by screen glow, immersed gamer aesthetic, square crop profile icon
 
-## jirai_chan (@riina_yami) — jirai-kei girl
-```
-Anime-style Twitter profile icon, square crop, dark pink and black background, girl with twin tails and heavy eye makeup, bandaid on cheek, gothic lolita accessories, yami-kawaii aesthetic, digital art
-```
+9. jirai_chan.png
+Japanese girl taking mirror selfie with smartphone covering half her face, heavy eye makeup, black and pink outfit, gothic accessories, harajuku style, square crop profile icon
 
-## feminist_jp (@misaki_rights) — gender equality advocate
-```
-Anime-style Twitter profile icon, square crop, warm earth tone background, thoughtful young woman with short hair, glasses, holding a book, intellectual and calm expression, minimalist art style, digital art
-```
+10. feminist_jp.png
+Woman reading a book in a sunny cafe, short hair, glasses, thoughtful expression, intellectual and calm vibe, natural warm light, square crop profile icon
 
-## datsusara (@kenta_freelance) — freelancer
-```
-Anime-style Twitter profile icon, square crop, laptop and coffee on cafe table, man in casual clothes working remotely, relaxed but tired expression, warm indoor lighting, digital art
-```
+11. datsusara.png
+Man working on laptop at a trendy cafe, casual hoodie, messy hair, coffee beside him, freelancer remote work aesthetic, square crop profile icon
 
-## mama_account (@yukari_mama2y) — mom account
-```
-Anime-style Twitter profile icon, square crop, soft pastel background, young mother holding a toddler, gentle smile, warm and cozy atmosphere, heartwarming slice-of-life style, digital art
-```
+12. mama_account.png
+Candid photo of mother and toddler's hands playing together, soft pastel tones, warm and gentle, shallow depth of field, square crop profile icon
 
-## sake_lover (@nobu_and_sake) — sake enthusiast
-```
-Anime-style Twitter profile icon, square crop, izakaya background with warm lantern light, man holding a sake cup with satisfied expression, traditional Japanese pub atmosphere, digital art
-```
+13. sake_lover.png
+Close-up of a hand holding a small ceramic sake cup (ochoko), warm izakaya lantern light in background, cozy Japanese pub atmosphere, square crop profile icon
 
-## soccer_otaku (@kazu_football) — football fan
-```
-Anime-style Twitter profile icon, square crop, stadium background with green pitch, person wearing a jersey and scarf, passionate expression, dynamic sports anime style, digital art
-```
+14. soccer_otaku.png
+Person in a stadium wearing team scarf, blurred crowd and green pitch in background, passionate fan energy, dynamic sports photography, square crop profile icon
 
-## vtuber_fan (@shiro_oshi_v) — VTuber fan
-```
-Anime-style Twitter profile icon, square crop, colorful streaming background with chat overlay, person holding lightstick with star eyes, idol fan energy, bright and sparkly, digital art
-```
+15. vtuber_fan.png
+Collection of anime lightsticks and idol goods on a desk, colorful and sparkly, fan merchandise display, bright lighting, square crop profile icon
 
-## train_otaku (@nozomi_train) — train enthusiast
-```
-Anime-style Twitter profile icon, square crop, train platform background, person photographing a bullet train, railway enthusiast, clean and precise art style, warm afternoon light, digital art
-```
+16. train_otaku.png
+Bullet train (shinkansen) arriving at platform, dramatic motion blur, person silhouette taking photo, Japanese railway aesthetic, square crop profile icon
 
-## uni_student (@sora_shukatsu) — job hunting student
-```
-Anime-style Twitter profile icon, square crop, gray office building background, young person in a suit looking tired but determined, job interview stress, relatable anime style, digital art
-```
+17. uni_student.png
+Young person in a business suit holding documents, standing in front of an office building, nervous but determined expression, job hunting in Japan, square crop profile icon
 
-## stock_trader (@tatsuya_kabu) — stock investor
-```
-Anime-style Twitter profile icon, square crop, dark background with stock chart candlesticks in green and red, person staring at multiple screens, serious expression, finance aesthetic, digital art
-```
+18. stock_trader.png
+Multiple screens showing stock charts with green and red candlesticks, dark office, intense blue monitor glow, finance trading aesthetic, square crop profile icon
 
-## conspiracy_jp (@makoto_mezame) — conspiracy theorist
-```
-Anime-style Twitter profile icon, square crop, dark mysterious background with illuminati eye symbol faintly visible, person in hoodie with shadow over face, unsettling but intriguing, digital art
-```
+19. conspiracy_jp.png
+Silhouette of hooded person against a wall covered in newspaper clippings and red string connections, mysterious dark tone, thriller aesthetic, square crop profile icon
 
-## tokusatsu_love (@hiro_tokusatsu) — tokusatsu fan
-```
-Anime-style Twitter profile icon, square crop, dynamic explosion background, person in Kamen Rider-inspired pose, colorful superhero aesthetic, tokusatsu energy, bold lines, digital art
-```
+20. tokusatsu_love.png
+Collection of Kamen Rider figures and super sentai toys on a shelf, colorful superhero merchandise, otaku room display, square crop profile icon
 
-## minimalist_jp (@aoi_minimal) — minimalist
-```
-Anime-style Twitter profile icon, square crop, pure white empty room background, person sitting in clean minimal space, calm and serene expression, lots of negative space, zen aesthetic, digital art
-```
+21. minimalist_jp.png
+Completely white and empty room with single plant and one chair, zen minimalist interior, lots of negative space, clean aesthetic, square crop profile icon
 
-## anti_social (@___x___0) — antisocial
-```
-Anime-style Twitter profile icon, square crop, completely black background, single glowing eye or small white dot in darkness, creepy minimalist, unsettling, digital art
-```
+22. anti_social.png
+Completely black image with a single tiny white dot in the center, abstract minimalist, dark void, square crop profile icon
 
-## poke_trainer (@not_satoshi_poke) — competitive Pokemon
-```
-Anime-style Twitter profile icon, square crop, Pokemon battle background with sparkle effects, trainer with determined expression and pokeball, competitive gaming energy, bright colors, digital art
-```
+23. poke_trainer.png
+Hands holding a Nintendo Switch showing a Pokemon battle screen, casual gaming setup, warm room lighting, square crop profile icon
 
-## astrology_jp (@luna_hoshi) — astrology
-```
-Anime-style Twitter profile icon, square crop, deep space night sky with constellations and moon, mystical girl with star-themed accessories, dreamy purple and blue palette, celestial aesthetic, digital art
-```
+24. astrology_jp.png
+Night sky full of stars and constellations with crescent moon, mystical deep purple and blue gradient, celestial dreamy aesthetic, square crop profile icon
 
-## ramen_guru (@ippei_ramen) — ramen lover
-```
-Anime-style Twitter profile icon, square crop, steaming bowl of ramen in foreground, person with chopsticks and happy expression, warm yellow lighting, Japanese food illustration style, digital art
-```
+25. ramen_guru.png
+Close-up overhead photo of a steaming bowl of tonkotsu ramen with chashu pork, egg, and noodles, Japanese food photography, appetizing warm lighting, square crop profile icon
 
-## sleep_deprived (@zzz_nemui) — always sleepy
-```
-Anime-style Twitter profile icon, square crop, dark blue night background, person face-down on desk sleeping, zzz floating above, cozy but exhausted, soft art style, digital art
-```
+26. sleep_deprived.png
+Person face down on desk with laptop open, messy hair, dark room with only screen glow, exhausted sleeping at work, square crop profile icon
 
-## ohayo_bot (@ohayo_man) — morning greeter
-```
-Anime-style Twitter profile icon, square crop, bright sunrise background with orange and yellow rays, cheerful character waving with big smile, morning energy, warm and happy, digital art
-```
+27. ohayo_bot.png
+Beautiful sunrise over a Japanese city skyline, orange and pink sky, morning light breaking through clouds, fresh start energy, square crop profile icon
 
-## hakkyo_bot (@aaaaaaa_a) — screaming person
-```
-Anime-style Twitter profile icon, square crop, chaotic red and orange explosion background, character screaming with mouth wide open, exaggerated manga-style shock face, intense energy, digital art
-```
+28. hakkyo_bot.png
+Abstract chaotic red and orange paint explosion splatter on black background, aggressive energy, punk art style, square crop profile icon
 
-## hitorigoto (@theta_void) — void monologue
-```
-Anime-style Twitter profile icon, square crop, empty grey void background, tiny silhouette of a person standing alone, existential and surreal, minimalist, abstract art style, digital art
-```
+29. hitorigoto.png
+Single person's tiny silhouette standing in vast empty white salt flat, existential loneliness, surreal minimalist landscape, square crop profile icon
 
-## ogiri_mc (@ogiri_master) — comedy MC
-```
-Anime-style Twitter profile icon, square crop, spotlight stage background, person holding a microphone with playful grin, comedy show aesthetic, warm spotlight colors, digital art
-```
+30. ogiri_mc.png
+Vintage microphone on a spotlight stage, comedy club atmosphere, warm golden spotlight beam, entertainment vibe, square crop profile icon
 
-## nagabun (@nagabun_taro) — long text poster
-```
-Anime-style Twitter profile icon, square crop, desk covered in papers and notebooks, person typing furiously with intense focus, wall of text floating around, academic/writer aesthetic, digital art
-```
-
----
-
-## Banner prompts (optional, for bots without banners)
-
-Use wider aspect ratio: `800x250, landscape banner, ...`
-
-Template:
-```
-Twitter profile banner, 800x250 landscape, [SCENE matching the bot's personality], [COLOR MOOD], cinematic, digital art
-```
-
----
-
-## Quick setup script
-
-After generating images, save them as `static/avatars/<username>.png` and run:
-
-```python
-# update_avatars.py
-import sqlite3, os
-conn = sqlite3.connect('database.db')
-c = conn.cursor()
-avatar_dir = 'static/avatars'
-for f in os.listdir(avatar_dir):
-    username = f.rsplit('.', 1)[0]
-    url = f'/static/avatars/{f}'
-    c.execute('UPDATE users SET avatar_url = ? WHERE username = ?', (url, username))
-    print(f'  {username} -> {url}')
-conn.commit()
-conn.close()
-print('Done')
-```
+31. nagabun.png
+Close-up of hands typing on a mechanical keyboard, screen showing wall of text, writer at work, warm desk lamp lighting, square crop profile icon
