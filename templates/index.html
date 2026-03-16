@@ -646,33 +646,21 @@
         /* Reply threads                                              */
         /* ---------------------------------------------------------- */
         .tweet-card.has-replies {
-            position: relative;
-        }
-
-        .tweet-card.has-replies::after {
-            content: '';
-            position: absolute;
-            left: 40px;
-            bottom: 0;
-            width: 2px;
-            height: 14px;
-            background: var(--border);
+            border-bottom: none;
         }
 
         .tweet-replies {
-            position: relative;
-            border-left: none;
-            margin-left: 0;
+            border-left: 2px solid var(--border);
+            margin-left: 40px;
+            margin-bottom: 0;
         }
 
-        .tweet-replies::before {
-            content: '';
-            position: absolute;
-            left: 40px;
-            top: 0;
-            width: 2px;
-            height: 100%;
-            background: var(--border);
+        .tweet-replies .reply-card {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tweet-replies .reply-card:last-child {
+            border-bottom: 1px solid var(--border);
         }
 
         .reply-card {
