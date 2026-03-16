@@ -523,6 +523,26 @@ def _bot_reply(bot_user_id, bot_username, tweet_id, tweet_content):
         pass
 
 
+def _bot_follow_back(bot_id, user_id, should_follow):
+    """Bot follows back or unfollows a user with low probability."""
+    try:
+        # 30% chance to follow back, 20% chance to unfollow back
+        prob = 0.30 if should_follow else 0.20
+        if random.random() > prob:
+            return
+
+        conn = get_db()
+        c = conn.cursor()
+        if should_follow:
+            c.execute('INSERT OR IGNORE INTO follows (follower_id, following_id) VALUES (?, ?)', (bot_id, user_id))
+        else:
+            c.execute('DELETE FROM follows WHERE follower_id = ? AND following_id = ?', (bot_id, user_id))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
 def trigger_bot_reactions(tweet_id, tweet_content, poster_user_id):
     """Schedule bot reactions with FF-aware probability."""
     conn = get_db()
@@ -868,6 +888,20 @@ def init_db():
             'UPDATE users SET bio = ?, location = ?, birthday = ? WHERE username = ? AND is_bot = 1',
             (bio, loc, bday, uname)
         )
+
+    # Seed bot-to-bot follows (only if follows table is empty)
+    c.execute('SELECT COUNT(*) FROM follows')
+    if c.fetchone()[0] == 0:
+        c.execute('SELECT id FROM users WHERE is_bot = 1')
+        bot_ids = [r['id'] for r in c.fetchall()]
+        for bot_id in bot_ids:
+            # Each bot follows 3-8 random other bots
+            others = [bid for bid in bot_ids if bid != bot_id]
+            follow_count = min(random.randint(3, 8), len(others))
+            targets = random.sample(others, follow_count)
+            for target_id in targets:
+                c.execute('INSERT OR IGNORE INTO follows (follower_id, following_id) VALUES (?, ?)',
+                          (bot_id, target_id))
 
     conn.commit()
     conn.close()
@@ -1524,12 +1558,34 @@ def toggle_follow(target_user_id):
     c.execute('SELECT id FROM follows WHERE follower_id = ? AND following_id = ?', (user_id, target_user_id))
     existing = c.fetchone()
 
-    if existing:
-        c.execute('DELETE FROM follows WHERE follower_id = ? AND following_id = ?', (user_id, target_user_id))
-        following = False
-    else:
+    if not existing:
+        # User just followed someone
         c.execute('INSERT INTO follows (follower_id, following_id) VALUES (?, ?)', (user_id, target_user_id))
         following = True
+
+        # Auto follow-back: if target is a bot, maybe follow back after delay
+        c.execute('SELECT is_bot FROM users WHERE id = ?', (target_user_id,))
+        target_row = c.fetchone()
+        if target_row and target_row['is_bot']:
+            threading.Timer(
+                random.uniform(5, 60),
+                _bot_follow_back,
+                args=[target_user_id, user_id, True]
+            ).start()
+    else:
+        # User just unfollowed someone
+        c.execute('DELETE FROM follows WHERE follower_id = ? AND following_id = ?', (user_id, target_user_id))
+        following = False
+
+        # Maybe unfollow back
+        c.execute('SELECT is_bot FROM users WHERE id = ?', (target_user_id,))
+        target_row = c.fetchone()
+        if target_row and target_row['is_bot']:
+            threading.Timer(
+                random.uniform(10, 120),
+                _bot_follow_back,
+                args=[target_user_id, user_id, False]
+            ).start()
 
     conn.commit()
 
