@@ -2437,6 +2437,7 @@
         // ------------------------------------------------------------------
         function showNotifications() {
             currentView = 'notifications';
+            window.scrollTo(0, 0);
 
             var timeline = document.getElementById('top');
             var tabs = document.getElementById('timeline-tabs');
@@ -2858,6 +2859,7 @@
         // ------------------------------------------------------------------
         function showTweetDetail(tweetId) {
             currentView = 'tweet-detail';
+            window.scrollTo(0, 0);
 
             var timeline = document.getElementById('top');
             var composeBox = timeline.querySelector('.compose-box');
@@ -2997,6 +2999,7 @@
                     if (data.error) return;
                     renderProfileView(data.user, data.tweets, data.reposted_tweets);
                     currentView = 'profile';
+                    window.scrollTo(0, 0);
                     // Update nav active states
                     document.querySelectorAll('.nav-item').forEach(function(btn) {
                         btn.classList.remove('active');
@@ -3056,6 +3059,7 @@
         // ------------------------------------------------------------------
         function showSearch() {
             currentView = 'search';
+            window.scrollTo(0, 0);
 
             var timeline = document.getElementById('top');
             var tabs = document.getElementById('timeline-tabs');
