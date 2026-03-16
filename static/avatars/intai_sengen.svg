@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#455a64"/>
+  <!-- Box/frame for text -->
+  <rect x="40" y="65" width="120" height="70" rx="5" fill="#37474f" stroke="#607d8b" stroke-width="2"/>
+  <!-- Text "引退" -->
+  <text x="100" y="115" text-anchor="middle" font-family="sans-serif" font-weight="bold" font-size="45" fill="#cfd8dc">引退</text>
+  <!-- X through it -->
+  <line x1="35" y1="60" x2="165" y2="140" stroke="#f44336" stroke-width="8" stroke-linecap="round" opacity="0.8"/>
+  <line x1="165" y1="60" x2="35" y2="140" stroke="#f44336" stroke-width="8" stroke-linecap="round" opacity="0.8"/>
+</svg>

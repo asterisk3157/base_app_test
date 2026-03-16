@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#fff3e0"/>
+  <!-- Large hand (parent) -->
+  <path d="M70 130 Q60 125 58 110 Q56 95 65 85 L75 82 Q80 80 85 82 L90 85 Q95 80 100 82 Q105 80 108 85 Q115 88 115 95 Q118 105 115 115 Q112 125 105 130 Z" fill="#e8b88a" stroke="#d4a06a" stroke-width="1.5"/>
+  <!-- Small hand (child) nestled inside -->
+  <path d="M80 115 Q76 112 76 106 Q76 100 80 97 L84 96 Q86 95 88 96 L90 97 Q92 95 94 97 Q96 96 98 98 Q100 100 100 104 Q101 108 99 112 Q97 116 93 118 Z" fill="#f5cba7" stroke="#e8b88a" stroke-width="1"/>
+  <!-- Heart above -->
+  <path d="M95 60 Q95 50 100 50 Q105 50 105 60 Q105 50 110 50 Q115 50 115 60 Q115 72 105 80 Q95 72 95 60 Z" fill="#e57373" opacity="0.7"/>
+</svg>

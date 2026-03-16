@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#1a1a40"/>
+  <!-- Crescent moon -->
+  <circle cx="95" cy="90" r="35" fill="#ffd54f"/>
+  <circle cx="110" cy="82" r="30" fill="#1a1a40"/>
+  <!-- Stars -->
+  <!-- Large star -->
+  <polygon points="145,60 148,70 158,70 150,76 153,86 145,80 137,86 140,76 132,70 142,70" fill="#fff9c4"/>
+  <!-- Medium star -->
+  <polygon points="130,110 132,116 138,116 133,120 135,126 130,122 125,126 127,120 122,116 128,116" fill="#fff9c4" opacity="0.8"/>
+  <!-- Small stars -->
+  <circle cx="60" cy="55" r="2" fill="#fff9c4" opacity="0.7"/>
+  <circle cx="150" cy="40" r="1.5" fill="#fff9c4" opacity="0.6"/>
+  <circle cx="70" cy="140" r="2" fill="#fff9c4" opacity="0.5"/>
+  <circle cx="140" cy="140" r="1.5" fill="#fff9c4" opacity="0.6"/>
+  <circle cx="50" cy="110" r="1.5" fill="#fff9c4" opacity="0.4"/>
+  <circle cx="120" cy="45" r="2" fill="#fff9c4" opacity="0.7"/>
+  <!-- Twinkle -->
+  <path d="M160 90 L162 85 L164 90 L169 92 L164 94 L162 99 L160 94 L155 92 Z" fill="#fff9c4" opacity="0.6"/>
+</svg>

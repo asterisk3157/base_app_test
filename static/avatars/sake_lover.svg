@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#fafafa"/>
+  <!-- Ochoko (sake cup) -->
+  <path d="M70 95 L75 135 Q77 140 100 140 Q123 140 125 135 L130 95 Z" fill="#f5f5f5" stroke="#bdbdbd" stroke-width="2"/>
+  <!-- Cup interior shadow -->
+  <ellipse cx="100" cy="98" rx="28" ry="8" fill="#e0e0e0"/>
+  <!-- Sake liquid -->
+  <ellipse cx="100" cy="100" rx="26" ry="7" fill="#fff9c4" opacity="0.8"/>
+  <!-- Cup bottom -->
+  <rect x="88" y="140" width="24" height="6" rx="3" fill="#e0e0e0" stroke="#bdbdbd" stroke-width="1"/>
+  <!-- Steam wisps -->
+  <path d="M88 88 Q85 78 89 68" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <path d="M100 86 Q97 74 101 64" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <path d="M112 88 Q109 78 113 68" fill="none" stroke="#ccc" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
+  <!-- Japanese character hint -->
+  <text x="100" y="125" text-anchor="middle" font-family="serif" font-size="16" fill="#bdbdbd" opacity="0.5">酒</text>
+</svg>

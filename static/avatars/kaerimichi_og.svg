@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="km_sky" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ff8a65"/>
+      <stop offset="60%" stop-color="#ffcc80"/>
+      <stop offset="100%" stop-color="#a1887f"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#km_sky)"/>
+  <!-- Ground -->
+  <rect x="0" y="140" width="200" height="60" fill="#795548"/>
+  <!-- Path/road receding -->
+  <polygon points="80,200 120,200 108,140 92,140" fill="#a1887f"/>
+  <!-- Footprints going away (getting smaller) -->
+  <!-- Pair 1 (closest, biggest) -->
+  <ellipse cx="95" cy="185" rx="5" ry="8" fill="#5d4037" transform="rotate(-5 95 185)"/>
+  <ellipse cx="108" cy="183" rx="5" ry="8" fill="#5d4037" transform="rotate(5 108 183)"/>
+  <!-- Pair 2 -->
+  <ellipse cx="96" cy="170" rx="4" ry="6" fill="#5d4037" transform="rotate(-5 96 170)"/>
+  <ellipse cx="106" cy="168" rx="4" ry="6" fill="#5d4037" transform="rotate(5 106 168)"/>
+  <!-- Pair 3 -->
+  <ellipse cx="97" cy="158" rx="3" ry="5" fill="#5d4037" transform="rotate(-5 97 158)"/>
+  <ellipse cx="104" cy="156" rx="3" ry="5" fill="#5d4037" transform="rotate(5 104 156)"/>
+  <!-- Pair 4 (smallest, farthest) -->
+  <ellipse cx="98" cy="148" rx="2.5" ry="4" fill="#5d4037" transform="rotate(-5 98 148)"/>
+  <ellipse cx="103" cy="146" rx="2.5" ry="4" fill="#5d4037" transform="rotate(5 103 146)"/>
+  <!-- Sunset sun -->
+  <circle cx="100" cy="100" r="25" fill="#ff7043" opacity="0.7"/>
+</svg>

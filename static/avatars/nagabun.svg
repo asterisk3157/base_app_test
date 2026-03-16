@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#f5f5f5"/>
+  <!-- Wall of tiny text forming a face shape -->
+  <!-- Forehead area -->
+  <text x="65" y="50" font-family="monospace" font-size="6" fill="#666">言葉言葉言葉言葉言葉言葉</text>
+  <text x="58" y="57" font-family="monospace" font-size="6" fill="#666">文章文章文章文章文章文章文章</text>
+  <text x="52" y="64" font-family="monospace" font-size="6" fill="#555">言葉言葉言葉言葉言葉言葉言葉言</text>
+  <text x="48" y="71" font-family="monospace" font-size="6" fill="#555">長文長文長文長文長文長文長文長文長</text>
+  <text x="45" y="78" font-family="monospace" font-size="6" fill="#444">言葉言葉言葉言葉言葉言葉言葉言葉言葉</text>
+  <!-- Eye level - gaps for eyes -->
+  <text x="42" y="85" font-family="monospace" font-size="6" fill="#444">長文長文長</text>
+  <text x="120" y="85" font-family="monospace" font-size="6" fill="#444">長文長文長</text>
+  <text x="42" y="92" font-family="monospace" font-size="6" fill="#444">言葉言葉言</text>
+  <text x="120" y="92" font-family="monospace" font-size="6" fill="#444">言葉言葉言</text>
+  <!-- Nose area -->
+  <text x="42" y="99" font-family="monospace" font-size="6" fill="#333">文章文章文章文章文章文章文章文章文章</text>
+  <text x="42" y="106" font-family="monospace" font-size="6" fill="#333">長文長文長文長文長文長文長文長文長文</text>
+  <!-- Mouth area - gap -->
+  <text x="45" y="113" font-family="monospace" font-size="6" fill="#333">言葉言葉言</text>
+  <text x="115" y="113" font-family="monospace" font-size="6" fill="#333">言葉言葉言</text>
+  <!-- Chin -->
+  <text x="48" y="120" font-family="monospace" font-size="6" fill="#444">長文長文長文長文長文長文長文長文</text>
+  <text x="52" y="127" font-family="monospace" font-size="6" fill="#444">言葉言葉言葉言葉言葉言葉言葉</text>
+  <text x="58" y="134" font-family="monospace" font-size="6" fill="#555">文章文章文章文章文章文章文</text>
+  <text x="65" y="141" font-family="monospace" font-size="6" fill="#555">長文長文長文長文長文長</text>
+  <text x="72" y="148" font-family="monospace" font-size="6" fill="#666">言葉言葉言葉言葉言</text>
+  <text x="80" y="155" font-family="monospace" font-size="6" fill="#666">文章文章文章文章</text>
+</svg>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#e8f5e9"/>
+  <!-- Musical note body -->
+  <ellipse cx="85" cy="120" rx="18" ry="14" fill="#4caf50" transform="rotate(-15 85 120)"/>
+  <!-- Note stem -->
+  <line x1="102" y1="115" x2="102" y2="55" stroke="#4caf50" stroke-width="5"/>
+  <!-- Note flag -->
+  <path d="M102 55 Q120 60 115 80 Q110 70 102 72" fill="#4caf50"/>
+  <!-- Face on note -->
+  <!-- Happy closed eyes -->
+  <path d="M74 113 Q78 109 82 113" fill="none" stroke="#1b5e20" stroke-width="2" stroke-linecap="round"/>
+  <path d="M88 110 Q92 106 96 110" fill="none" stroke="#1b5e20" stroke-width="2" stroke-linecap="round"/>
+  <!-- Small smile -->
+  <path d="M78 121 Q85 127 92 121" fill="none" stroke="#1b5e20" stroke-width="2" stroke-linecap="round"/>
+  <!-- Blush -->
+  <circle cx="72" cy="118" r="3" fill="#a5d6a7" opacity="0.7"/>
+  <circle cx="96" cy="115" r="3" fill="#a5d6a7" opacity="0.7"/>
+</svg>

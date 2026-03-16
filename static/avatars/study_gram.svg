@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#fce4ec"/>
+  <!-- Open book -->
+  <path d="M50 130 L50 80 Q100 70 100 80 L100 130 Q100 120 50 130 Z" fill="#fff" stroke="#795548" stroke-width="2"/>
+  <path d="M150 130 L150 80 Q100 70 100 80 L100 130 Q100 120 150 130 Z" fill="#fff" stroke="#795548" stroke-width="2"/>
+  <!-- Book spine -->
+  <line x1="100" y1="80" x2="100" y2="130" stroke="#795548" stroke-width="2"/>
+  <!-- Text lines left page -->
+  <line x1="60" y1="90" x2="92" y2="88" stroke="#ccc" stroke-width="1.5"/>
+  <line x1="60" y1="97" x2="92" y2="95" stroke="#ccc" stroke-width="1.5"/>
+  <line x1="60" y1="104" x2="92" y2="102" stroke="#ccc" stroke-width="1.5"/>
+  <line x1="60" y1="111" x2="85" y2="109" stroke="#ccc" stroke-width="1.5"/>
+  <!-- Text lines right page -->
+  <line x1="108" y1="88" x2="140" y2="90" stroke="#ccc" stroke-width="1.5"/>
+  <line x1="108" y1="95" x2="140" y2="97" stroke="#ccc" stroke-width="1.5"/>
+  <line x1="108" y1="102" x2="140" y2="104" stroke="#ccc" stroke-width="1.5"/>
+  <!-- Coffee cup -->
+  <rect x="118" y="52" width="30" height="28" rx="4" fill="#795548"/>
+  <!-- Cup handle -->
+  <path d="M148 58 Q160 62 160 68 Q160 74 148 76" fill="none" stroke="#795548" stroke-width="3"/>
+  <!-- Coffee surface -->
+  <ellipse cx="133" cy="56" rx="13" ry="4" fill="#5d4037"/>
+  <!-- Steam -->
+  <path d="M125 48 Q123 38 127 30" fill="none" stroke="#bbb" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <path d="M133 46 Q131 36 135 28" fill="none" stroke="#bbb" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+  <path d="M141 48 Q139 38 143 30" fill="none" stroke="#bbb" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+</svg>

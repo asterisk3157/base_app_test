@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#fff8e1"/>
+  <!-- Sun circle -->
+  <circle cx="100" cy="100" r="40" fill="#ffb300"/>
+  <!-- Sun rays -->
+  <line x1="100" y1="45" x2="100" y2="25" stroke="#ffb300" stroke-width="6" stroke-linecap="round"/>
+  <line x1="100" y1="155" x2="100" y2="175" stroke="#ffb300" stroke-width="6" stroke-linecap="round"/>
+  <line x1="45" y1="100" x2="25" y2="100" stroke="#ffb300" stroke-width="6" stroke-linecap="round"/>
+  <line x1="155" y1="100" x2="175" y2="100" stroke="#ffb300" stroke-width="6" stroke-linecap="round"/>
+  <line x1="62" y1="62" x2="48" y2="48" stroke="#ffb300" stroke-width="6" stroke-linecap="round"/>
+  <line x1="138" y1="62" x2="152" y2="48" stroke="#ffb300" stroke-width="6" stroke-linecap="round"/>
+  <line x1="62" y1="138" x2="48" y2="152" stroke="#ffb300" stroke-width="6" stroke-linecap="round"/>
+  <line x1="138" y1="138" x2="152" y2="152" stroke="#ffb300" stroke-width="6" stroke-linecap="round"/>
+  <!-- Happy eyes -->
+  <path d="M82 92 Q88 85 94 92" fill="none" stroke="#5d4037" stroke-width="3" stroke-linecap="round"/>
+  <path d="M106 92 Q112 85 118 92" fill="none" stroke="#5d4037" stroke-width="3" stroke-linecap="round"/>
+  <!-- Smile -->
+  <path d="M85 108 Q100 122 115 108" fill="none" stroke="#5d4037" stroke-width="3" stroke-linecap="round"/>
+</svg>

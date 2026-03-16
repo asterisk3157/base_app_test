@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <radialGradient id="oo_bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#4a148c"/>
+      <stop offset="100%" stop-color="#311b92"/>
+    </radialGradient>
+  </defs>
+  <circle cx="100" cy="100" r="100" fill="url(#oo_bg)"/>
+  <!-- Microphone -->
+  <circle cx="90" cy="80" r="15" fill="#bdbdbd" stroke="#999" stroke-width="1.5"/>
+  <!-- Mic mesh -->
+  <path d="M78 75 Q90 70 102 75" fill="none" stroke="#999" stroke-width="0.8"/>
+  <path d="M77 80 Q90 75 103 80" fill="none" stroke="#999" stroke-width="0.8"/>
+  <path d="M78 85 Q90 80 102 85" fill="none" stroke="#999" stroke-width="0.8"/>
+  <!-- Mic body -->
+  <rect x="86" y="94" width="8" height="35" rx="3" fill="#757575"/>
+  <rect x="84" y="94" width="12" height="4" rx="2" fill="#999"/>
+  <!-- Music notes floating -->
+  <!-- Note 1 -->
+  <ellipse cx="125" cy="75" rx="7" ry="5" fill="#ce93d8" transform="rotate(-15 125 75)"/>
+  <line x1="131" y1="73" x2="131" y2="52" stroke="#ce93d8" stroke-width="2.5"/>
+  <path d="M131 52 Q140 55 138 65" fill="#ce93d8"/>
+  <!-- Note 2 -->
+  <ellipse cx="145" cy="95" rx="5" ry="4" fill="#ba68c8" transform="rotate(-15 145 95)"/>
+  <line x1="149" y1="93" x2="149" y2="78" stroke="#ba68c8" stroke-width="2"/>
+  <!-- Note 3 (small) -->
+  <ellipse cx="118" cy="55" rx="4" ry="3" fill="#e1bee7" transform="rotate(-10 118 55)" opacity="0.8"/>
+  <line x1="121" y1="53" x2="121" y2="42" stroke="#e1bee7" stroke-width="1.5" opacity="0.8"/>
+</svg>

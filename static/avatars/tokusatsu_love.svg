@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#b71c1c"/>
+  <!-- Helmet shape -->
+  <path d="M50 110 Q50 55 100 45 Q150 55 150 110 Q150 140 100 145 Q50 140 50 110 Z" fill="#e53935" stroke="#c62828" stroke-width="2"/>
+  <!-- Visor -->
+  <path d="M55 95 Q100 110 145 95 Q145 115 100 120 Q55 115 55 95 Z" fill="#212121"/>
+  <!-- Visor reflection -->
+  <path d="M65 98 Q100 108 135 98" fill="none" stroke="#555" stroke-width="1.5" opacity="0.5"/>
+  <!-- Center crest -->
+  <path d="M95 50 L100 45 L105 50 L100 75 Z" fill="#ffd54f"/>
+  <!-- Forehead V -->
+  <path d="M70 80 L100 70 L130 80" fill="none" stroke="#ffd54f" stroke-width="3"/>
+  <!-- Mouthplate -->
+  <path d="M75 125 Q100 132 125 125 Q125 140 100 143 Q75 140 75 125 Z" fill="#bdbdbd" stroke="#999" stroke-width="1"/>
+  <!-- Mouthplate lines -->
+  <line x1="80" y1="130" x2="120" y2="130" stroke="#999" stroke-width="0.8"/>
+  <line x1="82" y1="135" x2="118" y2="135" stroke="#999" stroke-width="0.8"/>
+</svg>

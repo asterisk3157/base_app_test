@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#7b1fa2"/>
+  <!-- Raised fist -->
+  <path d="M85 130 L85 95 Q85 85 90 82 L90 65 Q92 60 96 60 L96 78" fill="#e8b88a" stroke="#d4a06a" stroke-width="1.5"/>
+  <path d="M96 78 L96 58 Q98 53 102 53 L102 75" fill="#e8b88a" stroke="#d4a06a" stroke-width="1.5"/>
+  <path d="M102 75 L102 56 Q104 51 108 51 L108 72" fill="#e8b88a" stroke="#d4a06a" stroke-width="1.5"/>
+  <path d="M108 72 L108 60 Q110 55 114 55 L114 80 Q114 90 115 95 L115 130" fill="#e8b88a" stroke="#d4a06a" stroke-width="1.5"/>
+  <!-- Palm area -->
+  <rect x="85" y="80" width="30" height="50" rx="5" fill="#e8b88a"/>
+  <!-- Thumb -->
+  <path d="M85 92 L78 88 Q74 86 76 82 L82 82 Q85 82 85 86" fill="#e8b88a" stroke="#d4a06a" stroke-width="1.5"/>
+  <!-- Wrist -->
+  <rect x="87" y="128" width="26" height="20" rx="3" fill="#e8b88a"/>
+  <!-- Equality symbol -->
+  <line x1="130" y1="95" x2="155" y2="95" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+  <line x1="130" y1="108" x2="155" y2="108" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+</svg>

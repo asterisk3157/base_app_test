@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#1a1a1a"/>
+  <!-- Triangle -->
+  <polygon points="100,40 150,140 50,140" fill="none" stroke="#ffd54f" stroke-width="3"/>
+  <!-- Eye outer -->
+  <ellipse cx="100" cy="100" rx="22" ry="15" fill="#ffd54f"/>
+  <!-- Iris -->
+  <circle cx="100" cy="100" r="12" fill="#1a1a1a"/>
+  <!-- Pupil -->
+  <circle cx="100" cy="100" r="6" fill="#ffd54f"/>
+  <!-- Eye shine -->
+  <circle cx="104" cy="97" r="2" fill="white" opacity="0.8"/>
+  <!-- Light rays from triangle -->
+  <line x1="75" y1="40" x2="65" y2="25" stroke="#ffd54f" stroke-width="1.5" opacity="0.4"/>
+  <line x1="100" y1="35" x2="100" y2="18" stroke="#ffd54f" stroke-width="1.5" opacity="0.4"/>
+  <line x1="125" y1="40" x2="135" y2="25" stroke="#ffd54f" stroke-width="1.5" opacity="0.4"/>
+  <!-- Side rays -->
+  <line x1="45" y1="140" x2="35" y2="150" stroke="#ffd54f" stroke-width="1" opacity="0.3"/>
+  <line x1="155" y1="140" x2="165" y2="150" stroke="#ffd54f" stroke-width="1" opacity="0.3"/>
+</svg>

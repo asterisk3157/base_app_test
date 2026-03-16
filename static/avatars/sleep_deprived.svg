@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#283593"/>
+  <!-- Face circle -->
+  <circle cx="100" cy="105" r="45" fill="#ffcc80"/>
+  <!-- Closed left eye (curved line) -->
+  <path d="M75 95 Q82 102 90 95" fill="none" stroke="#5d4037" stroke-width="3" stroke-linecap="round"/>
+  <!-- Closed right eye -->
+  <path d="M110 95 Q117 102 125 95" fill="none" stroke="#5d4037" stroke-width="3" stroke-linecap="round"/>
+  <!-- Under-eye bags -->
+  <path d="M75 100 Q82 105 90 100" fill="none" stroke="#c8a87c" stroke-width="2" opacity="0.5"/>
+  <path d="M110 100 Q117 105 125 100" fill="none" stroke="#c8a87c" stroke-width="2" opacity="0.5"/>
+  <!-- Small open mouth -->
+  <ellipse cx="100" cy="125" rx="6" ry="4" fill="#5d4037"/>
+  <!-- Zzz -->
+  <text x="130" y="65" font-family="sans-serif" font-weight="bold" font-size="28" fill="white" opacity="0.9">Z</text>
+  <text x="145" y="48" font-family="sans-serif" font-weight="bold" font-size="22" fill="white" opacity="0.7">z</text>
+  <text x="155" y="35" font-family="sans-serif" font-weight="bold" font-size="16" fill="white" opacity="0.5">z</text>
+</svg>

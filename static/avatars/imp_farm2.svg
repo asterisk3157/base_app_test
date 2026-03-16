@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#fff8e1"/>
+  <!-- Yen sign -->
+  <text x="100" y="130" text-anchor="middle" font-family="sans-serif" font-weight="bold" font-size="90" fill="#ffc107">&#xa5;</text>
+  <!-- Gold shine effect -->
+  <circle cx="75" cy="65" r="3" fill="#ffecb3" opacity="0.8"/>
+  <circle cx="130" cy="70" r="2" fill="#ffecb3" opacity="0.7"/>
+  <circle cx="60" cy="100" r="2.5" fill="#ffecb3" opacity="0.6"/>
+  <circle cx="140" cy="105" r="2" fill="#ffecb3" opacity="0.6"/>
+  <!-- Sparkle -->
+  <path d="M140 60 L142 54 L144 60 L150 62 L144 64 L142 70 L140 64 L134 62 Z" fill="#ffd54f" opacity="0.7"/>
+  <path d="M55 80 L56 76 L57 80 L61 81 L57 82 L56 86 L55 82 L51 81 Z" fill="#ffd54f" opacity="0.6"/>
+</svg>

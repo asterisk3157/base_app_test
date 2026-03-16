@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#1a1a2e"/>
+  <!-- Vinyl record -->
+  <circle cx="100" cy="100" r="60" fill="#222" stroke="#333" stroke-width="2"/>
+  <!-- Grooves -->
+  <circle cx="100" cy="100" r="55" fill="none" stroke="#2a2a2a" stroke-width="0.8"/>
+  <circle cx="100" cy="100" r="50" fill="none" stroke="#282828" stroke-width="0.8"/>
+  <circle cx="100" cy="100" r="45" fill="none" stroke="#2a2a2a" stroke-width="0.8"/>
+  <circle cx="100" cy="100" r="40" fill="none" stroke="#282828" stroke-width="0.8"/>
+  <circle cx="100" cy="100" r="35" fill="none" stroke="#2a2a2a" stroke-width="0.8"/>
+  <circle cx="100" cy="100" r="30" fill="none" stroke="#282828" stroke-width="0.8"/>
+  <!-- Label -->
+  <circle cx="100" cy="100" r="18" fill="#e91e63"/>
+  <!-- Label details -->
+  <circle cx="100" cy="100" r="4" fill="#1a1a2e"/>
+  <text x="100" y="93" text-anchor="middle" font-family="sans-serif" font-size="6" fill="white" font-weight="bold">TURNTABLE</text>
+  <text x="100" y="112" text-anchor="middle" font-family="sans-serif" font-size="5" fill="white" opacity="0.8">OFFICIAL</text>
+  <!-- Shine reflection -->
+  <path d="M70 60 Q80 55 90 65" fill="none" stroke="#444" stroke-width="1.5" opacity="0.5"/>
+</svg>

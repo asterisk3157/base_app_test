@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#4caf50"/>
+  <!-- Soccer ball -->
+  <circle cx="100" cy="100" r="50" fill="white" stroke="#333" stroke-width="2"/>
+  <!-- Pentagon center -->
+  <polygon points="100,75 115,85 110,102 90,102 85,85" fill="#333"/>
+  <!-- Pentagon top-left -->
+  <polygon points="73,62 88,55 95,70 85,82 70,76" fill="#333"/>
+  <!-- Pentagon top-right -->
+  <polygon points="127,62 130,76 115,82 105,70 112,55" fill="#333"/>
+  <!-- Pentagon bottom-left -->
+  <polygon points="68,100 82,98 88,115 78,126 65,115" fill="#333"/>
+  <!-- Pentagon bottom-right -->
+  <polygon points="132,100 135,115 122,126 112,115 118,98" fill="#333"/>
+  <!-- Pentagon bottom -->
+  <polygon points="90,128 110,128 118,142 100,150 82,142" fill="#333"/>
+</svg>

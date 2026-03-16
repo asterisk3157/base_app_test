@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#fce4ec"/>
+  <!-- Heart -->
+  <path d="M100 135 Q70 110 70 85 Q70 65 85 65 Q95 65 100 78 Q105 65 115 65 Q130 65 130 85 Q130 110 100 135 Z" fill="#e91e63"/>
+  <!-- Heart shine -->
+  <ellipse cx="85" cy="80" rx="6" ry="8" fill="#f48fb1" opacity="0.5" transform="rotate(-15 85 80)"/>
+  <!-- Sparkles -->
+  <path d="M55 60 L57 55 L59 60 L64 62 L59 64 L57 69 L55 64 L50 62 Z" fill="#f8bbd0"/>
+  <path d="M140 55 L142 50 L144 55 L149 57 L144 59 L142 64 L140 59 L135 57 Z" fill="#f8bbd0"/>
+  <path d="M130 120 L131 117 L132 120 L135 121 L132 122 L131 125 L130 122 L127 121 Z" fill="#f8bbd0" opacity="0.8"/>
+  <path d="M65 130 L66 127 L67 130 L70 131 L67 132 L66 135 L65 132 L62 131 Z" fill="#f8bbd0" opacity="0.8"/>
+  <!-- Small sparkle dots -->
+  <circle cx="148" cy="80" r="2" fill="#f48fb1" opacity="0.6"/>
+  <circle cx="50" cy="90" r="2" fill="#f48fb1" opacity="0.6"/>
+  <circle cx="120" cy="50" r="1.5" fill="#f48fb1" opacity="0.5"/>
+</svg>

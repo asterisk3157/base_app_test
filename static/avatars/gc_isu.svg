@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#e0e0e0"/>
+  <!-- Chair back -->
+  <rect x="70" y="45" width="60" height="55" rx="8" fill="#616161" stroke="#424242" stroke-width="2"/>
+  <!-- Chair seat -->
+  <rect x="65" y="98" width="70" height="15" rx="4" fill="#757575" stroke="#616161" stroke-width="1.5"/>
+  <!-- Center post -->
+  <rect x="96" y="113" width="8" height="20" fill="#424242"/>
+  <!-- Base star (5 legs) -->
+  <line x1="100" y1="133" x2="65" y2="150" stroke="#424242" stroke-width="4" stroke-linecap="round"/>
+  <line x1="100" y1="133" x2="135" y2="150" stroke="#424242" stroke-width="4" stroke-linecap="round"/>
+  <line x1="100" y1="133" x2="80" y2="155" stroke="#424242" stroke-width="4" stroke-linecap="round"/>
+  <line x1="100" y1="133" x2="120" y2="155" stroke="#424242" stroke-width="4" stroke-linecap="round"/>
+  <line x1="100" y1="133" x2="100" y2="158" stroke="#424242" stroke-width="4" stroke-linecap="round"/>
+  <!-- Casters -->
+  <circle cx="65" cy="152" r="4" fill="#333"/>
+  <circle cx="135" cy="152" r="4" fill="#333"/>
+  <circle cx="80" cy="157" r="4" fill="#333"/>
+  <circle cx="120" cy="157" r="4" fill="#333"/>
+  <circle cx="100" cy="160" r="4" fill="#333"/>
+</svg>

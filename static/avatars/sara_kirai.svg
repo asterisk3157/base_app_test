@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#212121"/>
+  <!-- Turntable platter -->
+  <circle cx="100" cy="105" r="50" fill="#333" stroke="#444" stroke-width="2"/>
+  <!-- Vinyl grooves -->
+  <circle cx="100" cy="105" r="45" fill="none" stroke="#3a3a3a" stroke-width="0.5"/>
+  <circle cx="100" cy="105" r="40" fill="none" stroke="#3a3a3a" stroke-width="0.5"/>
+  <circle cx="100" cy="105" r="35" fill="none" stroke="#3a3a3a" stroke-width="0.5"/>
+  <circle cx="100" cy="105" r="30" fill="none" stroke="#3a3a3a" stroke-width="0.5"/>
+  <circle cx="100" cy="105" r="25" fill="none" stroke="#3a3a3a" stroke-width="0.5"/>
+  <circle cx="100" cy="105" r="20" fill="none" stroke="#3a3a3a" stroke-width="0.5"/>
+  <!-- Label -->
+  <circle cx="100" cy="105" r="14" fill="#e53935"/>
+  <circle cx="100" cy="105" r="3" fill="#212121"/>
+  <!-- Tonearm -->
+  <line x1="155" y1="45" x2="155" y2="55" stroke="#999" stroke-width="3"/>
+  <line x1="155" y1="55" x2="125" y2="85" stroke="#999" stroke-width="2.5"/>
+  <line x1="125" y1="85" x2="118" y2="90" stroke="#bbb" stroke-width="2"/>
+  <!-- Tonearm base -->
+  <circle cx="155" cy="45" r="5" fill="#666"/>
+</svg>

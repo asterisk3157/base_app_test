@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#fff8e1"/>
+  <!-- Star rating display -->
+  <!-- Star 1 - filled -->
+  <polygon points="45,100 50,88 55,100 67,102 58,110 61,122 50,116 39,122 42,110 33,102" fill="#ffc107" stroke="#f9a825" stroke-width="1"/>
+  <!-- Star 2 - filled -->
+  <polygon points="70,100 75,88 80,100 92,102 83,110 86,122 75,116 64,122 67,110 58,102" fill="#ffc107" stroke="#f9a825" stroke-width="1"/>
+  <!-- Star 3 - filled -->
+  <polygon points="95,100 100,88 105,100 117,102 108,110 111,122 100,116 89,122 92,110 83,102" fill="#ffc107" stroke="#f9a825" stroke-width="1"/>
+  <!-- Star 4 - empty -->
+  <polygon points="120,100 125,88 130,100 142,102 133,110 136,122 125,116 114,122 117,110 108,102" fill="none" stroke="#e0e0e0" stroke-width="2"/>
+  <!-- Star 5 - empty -->
+  <polygon points="145,100 150,88 155,100 167,102 158,110 161,122 150,116 139,122 142,110 133,102" fill="none" stroke="#e0e0e0" stroke-width="2"/>
+  <!-- Label text -->
+  <text x="100" y="145" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#999">BEGINNER</text>
+</svg>

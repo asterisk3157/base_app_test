@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#d32f2f"/>
+  <!-- Explosion spikes -->
+  <polygon points="100,15 110,50 140,20 125,55 170,40 140,70 185,70 145,85 180,110 140,105 160,140 125,115 140,165 110,125 100,170 90,125 60,165 75,115 40,140 60,105 20,110 55,85 15,70 60,70 30,40 75,55 60,20 90,50" fill="#ff5252"/>
+  <!-- Face circle -->
+  <circle cx="100" cy="100" r="38" fill="#ff8a80"/>
+  <!-- Angry eyes (>_<) -->
+  <path d="M75 88 L88 96 L75 104" fill="none" stroke="#b71c1c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M125 88 L112 96 L125 104" fill="none" stroke="#b71c1c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Screaming mouth -->
+  <ellipse cx="100" cy="120" rx="15" ry="12" fill="#b71c1c"/>
+  <ellipse cx="100" cy="118" rx="10" ry="5" fill="#d32f2f"/>
+</svg>

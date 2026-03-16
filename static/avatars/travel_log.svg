@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#e8f5e9"/>
+  <!-- Backpack body -->
+  <rect x="65" y="65" width="70" height="80" rx="12" fill="#8d6e63" stroke="#6d4c41" stroke-width="2"/>
+  <!-- Backpack top flap -->
+  <path d="M65 85 Q65 60 100 58 Q135 60 135 85" fill="#a1887f" stroke="#6d4c41" stroke-width="2"/>
+  <!-- Front pocket -->
+  <rect x="75" y="100" width="50" height="30" rx="6" fill="#795548" stroke="#5d4037" stroke-width="1.5"/>
+  <!-- Pocket zipper -->
+  <line x1="85" y1="115" x2="115" y2="115" stroke="#d7ccc8" stroke-width="1.5"/>
+  <!-- Straps -->
+  <path d="M72 70 L72 150" fill="none" stroke="#6d4c41" stroke-width="4" stroke-linecap="round"/>
+  <path d="M128 70 L128 150" fill="none" stroke="#6d4c41" stroke-width="4" stroke-linecap="round"/>
+  <!-- Flag pin -->
+  <line x1="120" y1="50" x2="120" y2="72" stroke="#555" stroke-width="2"/>
+  <polygon points="120,50 140,56 120,62" fill="#e53935"/>
+</svg>

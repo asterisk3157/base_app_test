@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#1a1a2e"/>
+  <!-- Arcade cabinet body -->
+  <rect x="60" y="40" width="80" height="120" rx="5" fill="#37474f"/>
+  <!-- Screen bezel -->
+  <rect x="68" y="50" width="64" height="48" rx="3" fill="#263238"/>
+  <!-- Screen -->
+  <rect x="72" y="54" width="56" height="40" rx="2" fill="#1b5e20"/>
+  <!-- Screen content (pixel game) -->
+  <rect x="80" y="62" width="6" height="6" fill="#76ff03"/>
+  <rect x="95" y="70" width="6" height="6" fill="#76ff03"/>
+  <rect x="110" y="66" width="6" height="6" fill="#76ff03"/>
+  <rect x="90" y="80" width="6" height="4" fill="#ffeb3b"/>
+  <!-- Score text -->
+  <text x="76" y="60" font-family="monospace" font-size="5" fill="#76ff03">SCORE:999</text>
+  <!-- Control panel -->
+  <rect x="65" y="102" width="70" height="25" rx="2" fill="#455a64"/>
+  <!-- Joystick -->
+  <circle cx="85" cy="114" r="4" fill="#212121"/>
+  <rect x="83" y="106" width="4" height="8" rx="1" fill="#333"/>
+  <!-- Buttons -->
+  <circle cx="108" cy="110" r="5" fill="#f44336"/>
+  <circle cx="122" cy="110" r="5" fill="#2196f3"/>
+  <circle cx="115" cy="120" r="5" fill="#ffeb3b"/>
+  <!-- Cabinet base -->
+  <rect x="65" y="132" width="70" height="28" rx="3" fill="#263238"/>
+  <!-- Coin slot -->
+  <rect x="95" y="140" width="10" height="3" rx="1" fill="#111"/>
+</svg>

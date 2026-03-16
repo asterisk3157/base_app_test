@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#e3f2fd"/>
+  <!-- Bullet train nose -->
+  <path d="M60 120 Q60 75 100 55 Q140 75 140 120 Z" fill="white" stroke="#90a4ae" stroke-width="2"/>
+  <!-- Blue stripe -->
+  <path d="M62 110 Q65 80 100 62 Q135 80 138 110" fill="none" stroke="#1565c0" stroke-width="6"/>
+  <!-- Windshield -->
+  <path d="M75 100 Q78 85 100 75 Q122 85 125 100 Z" fill="#263238" opacity="0.8"/>
+  <!-- Windshield reflection -->
+  <path d="M82 95 Q90 85 100 80" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.4"/>
+  <!-- Headlights -->
+  <circle cx="78" cy="115" r="5" fill="#ffeb3b"/>
+  <circle cx="122" cy="115" r="5" fill="#ffeb3b"/>
+  <!-- Bottom -->
+  <rect x="58" y="118" width="84" height="12" rx="3" fill="#e0e0e0" stroke="#bdbdbd" stroke-width="1"/>
+  <!-- Nose tip highlight -->
+  <line x1="96" y1="58" x2="104" y2="58" stroke="#90a4ae" stroke-width="2" stroke-linecap="round"/>
+</svg>

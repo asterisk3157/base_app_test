@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#eceff1"/>
+  <!-- Vast empty space with tiny figure -->
+  <!-- Tiny person silhouette -->
+  <circle cx="100" cy="140" r="3" fill="#78909c"/>
+  <line x1="100" y1="143" x2="100" y2="155" stroke="#78909c" stroke-width="1.5"/>
+  <line x1="100" y1="148" x2="96" y2="153" stroke="#78909c" stroke-width="1.5"/>
+  <line x1="100" y1="148" x2="104" y2="153" stroke="#78909c" stroke-width="1.5"/>
+  <line x1="100" y1="155" x2="96" y2="163" stroke="#78909c" stroke-width="1.5"/>
+  <line x1="100" y1="155" x2="104" y2="163" stroke="#78909c" stroke-width="1.5"/>
+  <!-- Tiny thought bubble -->
+  <circle cx="105" cy="133" r="1.5" fill="#b0bec5"/>
+  <circle cx="108" cy="128" r="2" fill="#b0bec5"/>
+  <ellipse cx="114" cy="122" rx="6" ry="4" fill="#b0bec5"/>
+</svg>

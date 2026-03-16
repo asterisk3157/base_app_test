@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#212121"/>
+  <!-- Glitching text box -->
+  <rect x="35" y="75" width="130" height="50" rx="4" fill="#333" stroke="#555" stroke-width="1"/>
+  <!-- Glitch slice 1 (shifted right) -->
+  <rect x="40" y="78" width="120" height="12" fill="#333"/>
+  <text x="47" y="88" font-family="monospace" font-size="10" fill="#0f0" opacity="0.8">ERR0R_COLL</text>
+  <!-- Glitch slice 2 (shifted left, red channel) -->
+  <rect x="32" y="90" width="125" height="12" fill="#333"/>
+  <text x="37" y="100" font-family="monospace" font-size="10" fill="#f44336" opacity="0.7">APSE_SYS_F</text>
+  <!-- Glitch slice 3 (shifted right, blue channel) -->
+  <rect x="42" y="102" width="120" height="12" fill="#333"/>
+  <text x="50" y="112" font-family="monospace" font-size="10" fill="#2196f3" opacity="0.7">AIL_#@!$%^</text>
+  <!-- Glitch artifacts -->
+  <rect x="45" y="115" width="30" height="3" fill="#0f0" opacity="0.4"/>
+  <rect x="90" y="118" width="50" height="2" fill="#f44336" opacity="0.3"/>
+  <rect x="60" y="70" width="40" height="2" fill="#2196f3" opacity="0.3"/>
+  <!-- Scan lines -->
+  <rect x="0" y="60" width="200" height="1" fill="#fff" opacity="0.05"/>
+  <rect x="0" y="80" width="200" height="1" fill="#fff" opacity="0.05"/>
+  <rect x="0" y="100" width="200" height="1" fill="#fff" opacity="0.05"/>
+  <rect x="0" y="120" width="200" height="1" fill="#fff" opacity="0.05"/>
+  <rect x="0" y="140" width="200" height="1" fill="#fff" opacity="0.05"/>
+  <!-- Static noise dots -->
+  <rect x="150" y="65" width="3" height="3" fill="#fff" opacity="0.1"/>
+  <rect x="30" y="130" width="4" height="2" fill="#0f0" opacity="0.2"/>
+  <rect x="160" y="125" width="3" height="4" fill="#f44336" opacity="0.15"/>
+</svg>

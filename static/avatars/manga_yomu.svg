@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#fff5e6"/>
+  <!-- Bottom book -->
+  <rect x="55" y="105" width="90" height="14" rx="2" fill="#e74c3c" stroke="#c0392b" stroke-width="1"/>
+  <!-- Middle book -->
+  <rect x="55" y="89" width="90" height="14" rx="2" fill="#3498db" stroke="#2980b9" stroke-width="1"/>
+  <!-- Top book -->
+  <rect x="55" y="73" width="90" height="14" rx="2" fill="#2ecc71" stroke="#27ae60" stroke-width="1"/>
+  <!-- Book spines detail -->
+  <line x1="60" y1="73" x2="60" y2="87" stroke="#1a9c54" stroke-width="1"/>
+  <line x1="60" y1="89" x2="60" y2="103" stroke="#1a6fa8" stroke-width="1"/>
+  <line x1="60" y1="105" x2="60" y2="119" stroke="#b9301a" stroke-width="1"/>
+  <!-- Bookmark sticking out top -->
+  <rect x="115" y="55" width="8" height="22" rx="1" fill="#f39c12"/>
+  <polygon points="115,77 119,72 123,77" fill="#f39c12"/>
+  <!-- Text lines on top book -->
+  <line x1="70" y1="79" x2="100" y2="79" stroke="#1a9c54" stroke-width="1.5" opacity="0.5"/>
+  <line x1="70" y1="83" x2="90" y2="83" stroke="#1a9c54" stroke-width="1.5" opacity="0.5"/>
+</svg>

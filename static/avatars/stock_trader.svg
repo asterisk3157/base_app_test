@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#1b1b2f"/>
+  <!-- Grid lines -->
+  <line x1="40" y1="140" x2="160" y2="140" stroke="#333" stroke-width="1"/>
+  <line x1="40" y1="120" x2="160" y2="120" stroke="#333" stroke-width="0.5" opacity="0.5"/>
+  <line x1="40" y1="100" x2="160" y2="100" stroke="#333" stroke-width="0.5" opacity="0.5"/>
+  <line x1="40" y1="80" x2="160" y2="80" stroke="#333" stroke-width="0.5" opacity="0.5"/>
+  <line x1="40" y1="60" x2="160" y2="60" stroke="#333" stroke-width="0.5" opacity="0.5"/>
+  <!-- Green candle 1 (bullish) -->
+  <line x1="60" y1="115" x2="60" y2="85" stroke="#4caf50" stroke-width="1.5"/>
+  <rect x="54" y="90" width="12" height="20" fill="#4caf50"/>
+  <!-- Red candle 2 (bearish) -->
+  <line x1="80" y1="120" x2="80" y2="75" stroke="#f44336" stroke-width="1.5"/>
+  <rect x="74" y="80" width="12" height="25" fill="#f44336"/>
+  <!-- Green candle 3 -->
+  <line x1="100" y1="110" x2="100" y2="65" stroke="#4caf50" stroke-width="1.5"/>
+  <rect x="94" y="70" width="12" height="30" fill="#4caf50"/>
+  <!-- Red candle 4 -->
+  <line x1="120" y1="105" x2="120" y2="55" stroke="#f44336" stroke-width="1.5"/>
+  <rect x="114" y="60" width="12" height="30" fill="#f44336"/>
+  <!-- Green candle 5 (big pump) -->
+  <line x1="140" y1="95" x2="140" y2="45" stroke="#4caf50" stroke-width="1.5"/>
+  <rect x="134" y="50" width="12" height="35" fill="#4caf50"/>
+</svg>
