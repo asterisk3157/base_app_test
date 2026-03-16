@@ -333,10 +333,35 @@
             position: absolute;
             width: 4px;
             height: 4px;
-            background: #fff;
             border-radius: 50%;
-            box-shadow: 0 0 6px 2px #fff, 0 0 15px 4px rgba(200, 220, 255, 0.8), 0 0 30px 8px rgba(150, 180, 255, 0.4);
-            animation: shootStar 3s linear forwards;
+            animation: shootStar var(--star-speed) linear forwards;
+        }
+
+        .shooting-star.color-yellow {
+            background: #ffe066;
+            box-shadow: 0 0 6px 2px #ffe066, 0 0 15px 4px rgba(255, 224, 102, 0.8), 0 0 30px 8px rgba(255, 200, 50, 0.4);
+        }
+
+        .shooting-star.color-yellow::after {
+            background: linear-gradient(to left, rgba(255, 224, 102, 0.8), transparent);
+        }
+
+        .shooting-star.color-blue {
+            background: #6ec6ff;
+            box-shadow: 0 0 6px 2px #6ec6ff, 0 0 15px 4px rgba(110, 198, 255, 0.8), 0 0 30px 8px rgba(80, 160, 255, 0.4);
+        }
+
+        .shooting-star.color-blue::after {
+            background: linear-gradient(to left, rgba(110, 198, 255, 0.8), transparent);
+        }
+
+        .shooting-star.color-red {
+            background: #ff7e7e;
+            box-shadow: 0 0 6px 2px #ff7e7e, 0 0 15px 4px rgba(255, 126, 126, 0.8), 0 0 30px 8px rgba(255, 100, 100, 0.4);
+        }
+
+        .shooting-star.color-red::after {
+            background: linear-gradient(to left, rgba(255, 126, 126, 0.8), transparent);
         }
 
         .shooting-star::after {
@@ -347,7 +372,6 @@
             transform: translateY(-50%);
             width: 80px;
             height: 2px;
-            background: linear-gradient(to left, rgba(255, 255, 255, 0.8), transparent);
         }
 
         @keyframes shootStar {
@@ -371,49 +395,31 @@
         }
 
         /* === INPUT LOCK/UNLOCK STATES === */
-        .input-box.locked {
-            opacity: 0.4;
-            pointer-events: none;
-            position: relative;
+        .comment-input-area {
+            display: none;
+            /* Hidden by default */
+            flex-direction: column;
+            gap: 10px;
         }
 
-        .input-box.unlocked {
-            opacity: 1;
-            pointer-events: auto;
+        .comment-input-area.visible {
+            display: flex;
             animation: inputGlow 0.6s ease-in-out infinite alternate;
         }
 
         @keyframes inputGlow {
             from {
-                box-shadow: 0 0 10px rgba(230, 200, 117, 0.2), inset 0 0 5px rgba(230, 200, 117, 0.05);
+                box-shadow: 0 0 10px rgba(230, 200, 117, 0.2);
             }
 
             to {
-                box-shadow: 0 0 25px rgba(230, 200, 117, 0.5), inset 0 0 10px rgba(230, 200, 117, 0.1);
-                border-color: var(--primary-glow);
+                box-shadow: 0 0 25px rgba(230, 200, 117, 0.5);
             }
-        }
-
-        .lock-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-            color: var(--text-muted);
-            letter-spacing: 2px;
-            z-index: 20;
-            border-radius: 14px;
-            pointer-events: none;
         }
 
         .star-status {
             text-align: center;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             color: var(--text-muted);
             margin-bottom: 8px;
             min-height: 1.2em;
@@ -475,21 +481,24 @@
         <div class="panel-title">💫 願いを紡ぐ</div>
         <div class="star-status" id="starStatus">🌙 流れ星を待て...</div>
         <form id="postForm" enctype="multipart/form-data">
-            <div class="input-box locked" id="inputBox">
-                <div class="lock-overlay" id="lockOverlay">🌙 流れ星を待て...</div>
-                <textarea name="content" id="content" placeholder="星に何を願う？" required disabled onpaste="return false;"
-                    ondrop="return false;"></textarea>
+            <div class="input-box" id="inputBox">
+                <!-- Comment area: hidden when stars aren't flowing -->
+                <div class="comment-input-area" id="commentArea">
+                    <textarea name="content" id="content" placeholder="星に何を願う？" required onpaste="return false;"
+                        ondrop="return false;"></textarea>
 
-                <div class="controls-row">
-                    <div class="file-upload-wrapper">
-                        <button type="button" class="file-upload-btn">📎 添える</button>
-                        <input type="file" name="file" id="fileInput"
-                            accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif,.webp">
+                    <div class="controls-row">
+                        <div class="file-upload-wrapper">
+                            <button type="button" class="file-upload-btn">📎 添える</button>
+                            <input type="file" name="file" id="fileInput"
+                                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif,.webp">
+                        </div>
+                        <span id="fileName"></span>
+                        <button type="submit">願いを紡ぐ</button>
                     </div>
-                    <span id="fileName"></span>
-                    <button type="submit">願いを紡ぐ</button>
                 </div>
 
+                <!-- Name always visible and editable -->
                 <input type="text" name="name" id="name" placeholder="詠み人（名前） / 秘密は # の後ろに" maxlength="50"
                     onpaste="return false;" ondrop="return false;">
                 <div class="tripcode-hint">※ 名前#呪文 → あなただけの刻印(トリップ) 例: アリス#alice</div>
@@ -652,64 +661,59 @@
         setInterval(loadPosts, 2000);
 
         // =============================================
-        // 🌠 SHOOTING STAR INPUT GATE
+        // 🌠 SHOOTING STAR INPUT GATE (Enhanced)
         // =============================================
-        const STAR_INTERVAL = 10000; // 10 seconds between stars
-        const STAR_DURATION = 3000;  // 3 seconds of input time
+        const COLORS = ['color-yellow', 'color-blue', 'color-red'];
         let inputUnlocked = false;
+
+        function randInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
 
         function lockInput() {
             inputUnlocked = false;
-            const inputBox = document.getElementById('inputBox');
-            const lockOverlay = document.getElementById('lockOverlay');
+            const commentArea = document.getElementById('commentArea');
             const starStatus = document.getElementById('starStatus');
-            const content = document.getElementById('content');
-            const submitBtn = document.querySelector('button[type="submit"]');
 
-            inputBox.classList.remove('unlocked');
-            inputBox.classList.add('locked');
-            lockOverlay.style.display = 'flex';
-            content.disabled = true;
-            submitBtn.disabled = true;
+            commentArea.classList.remove('visible');
             starStatus.textContent = '🌙 流れ星を待て...';
             starStatus.classList.remove('active');
         }
 
         function unlockInput() {
             inputUnlocked = true;
-            const inputBox = document.getElementById('inputBox');
-            const lockOverlay = document.getElementById('lockOverlay');
+            const commentArea = document.getElementById('commentArea');
             const starStatus = document.getElementById('starStatus');
             const content = document.getElementById('content');
-            const submitBtn = document.querySelector('button[type="submit"]');
 
-            inputBox.classList.remove('locked');
-            inputBox.classList.add('unlocked');
-            lockOverlay.style.display = 'none';
-            content.disabled = false;
-            submitBtn.disabled = false;
+            commentArea.classList.add('visible');
             starStatus.textContent = '🌠 流れ星が来た！今だ！願いを紡げ！';
             starStatus.classList.add('active');
 
-            // Auto-focus the textarea so user can type immediately
+            // Auto-focus the textarea
             content.focus();
         }
 
-        function spawnShootingStar() {
+        function spawnSingleStar(duration) {
             const zone = document.getElementById('starZone');
             const star = document.createElement('div');
-            star.className = 'shooting-star';
 
-            // Random start position (within the top 60% of the zone)
-            const startX = Math.random() * 60 + 20; // 20-80% from left
-            const startY = Math.random() * 40 + 5;  // 5-45% from top
+            // Random color
+            const color = COLORS[randInt(0, COLORS.length - 1)];
+            star.className = 'shooting-star ' + color;
 
-            // Random direction and distance
-            const angle = Math.random() * 60 + 30; // 30-90 degrees (downward arc)
-            const distance = 400 + Math.random() * 300;
+            // Use entire zone: 0-100%
+            const startX = Math.random() * 100;
+            const startY = Math.random() * 60; // top 60% of zone
+
+            // Fully random direction (0-360 degrees)
+            const angle = Math.random() * 360;
+            const distance = 300 + Math.random() * 500;
             const dx = Math.cos(angle * Math.PI / 180) * distance;
             const dy = Math.sin(angle * Math.PI / 180) * distance;
 
+            // Set per-star duration via CSS variable
+            star.style.setProperty('--star-speed', duration + 's');
             star.style.left = startX + '%';
             star.style.top = startY + '%';
             star.style.setProperty('--star-angle', angle + 'deg');
@@ -718,48 +722,41 @@
 
             zone.appendChild(star);
 
-            // Remove the star element after animation
+            // Remove after animation
             setTimeout(() => {
                 star.remove();
-            }, STAR_DURATION);
+            }, duration * 1000 + 100);
         }
 
-        function triggerShootingStar() {
-            // Spawn the visual star
-            spawnShootingStar();
+        function triggerShootingStars() {
+            // Random parameters for this wave
+            const duration = randInt(3, 7);   // 3-7 seconds
+            const count = randInt(1, 10);     // 1-10 stars
+            const durationMs = duration * 1000;
 
-            // Unlock input
+            // Spawn all stars for this wave (stagger slightly)
+            for (let i = 0; i < count; i++) {
+                const delay = Math.random() * 500; // slight stagger within 0.5s
+                setTimeout(() => spawnSingleStar(duration), delay);
+            }
+
+            // Unlock input for the duration of the stars
             unlockInput();
 
-            // After STAR_DURATION, lock input again
+            // After stars finish, lock again and schedule next wave
             setTimeout(() => {
                 lockInput();
-                startCountdown();
-            }, STAR_DURATION);
+                scheduleNextWave();
+            }, durationMs);
         }
 
-        // Countdown display
-        let countdownInterval = null;
-        function startCountdown() {
-            const starStatus = document.getElementById('starStatus');
-            let remaining = STAR_INTERVAL / 1000;
-
-            if (countdownInterval) clearInterval(countdownInterval);
-
-            countdownInterval = setInterval(() => {
-                remaining--;
-                if (remaining > 0) {
-                    starStatus.textContent = '🌙 次の流れ星まで... ' + remaining + '秒';
-                } else {
-                    clearInterval(countdownInterval);
-                }
-            }, 1000);
+        function scheduleNextWave() {
+            const waitTime = randInt(4, 10); // 4-10 seconds until next wave
+            setTimeout(triggerShootingStars, waitTime * 1000);
         }
 
-        // Start the cycle
-        // First star comes after STAR_INTERVAL
-        startCountdown();
-        setInterval(triggerShootingStar, STAR_INTERVAL);
+        // Start the first wave after a random initial delay
+        scheduleNextWave();
     </script>
 </body>
 
