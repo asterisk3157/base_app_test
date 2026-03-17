@@ -4,86 +4,965 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Board</title>
+    <title>✨ 星に願いを ✨</title>
+    <!-- Content Security Policy: Prevent XSS from running unauthorized scripts -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';">
+    
+    <!-- Google Fonts for a magical/fantasy feel -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Kaisei+Decol:wght@400;700&display=swap"
+        rel="stylesheet">
     <style>
+        :root {
+            --text-main: #e8e0d0;
+            --text-muted: #a09882;
+            --primary-glow: #e6c875;
+            --glass-bg: rgba(10, 12, 20, 0.55);
+            --glass-border: rgba(230, 200, 117, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
         body {
-            font-family: sans-serif;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Kaisei Decol', serif;
+            color: var(--text-main);
         }
 
-        h1 {
-            border-bottom: 2px solid #333;
+        /* === Full-screen Background === */
+        body {
+            background: url('/static/img/bg_window.png') no-repeat center center;
+            background-size: cover;
+            display: flex;
+            flex-direction: row;
         }
 
-        form {
-            margin-bottom: 20px;
+        /* === LEFT PANEL: YouTube Live Style Comment Feed (Floating) === */
+        .comment-feed {
+            position: fixed;
+            top: 25px;
+            bottom: 25px;
+            left: 20px;
+            width: 320px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 15px;
+            background: rgba(5, 5, 15, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px; /* Restored rounded corners for floating look */
+            z-index: 10;
         }
 
-        textarea {
+        .feed-title {
+            position: relative;
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            color: var(--primary-glow);
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(230, 200, 117, 0.4);
+            margin-top: 5px; /* Slide even higher up */
+            margin-bottom: 10px;
+            text-align: left;
+            flex-shrink: 0;
+        }
+
+        .feed-container {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding-right: 5px;
+            /* Thin scrollbar for clean look */
+            scrollbar-width: thin;
+            scrollbar-color: rgba(230, 200, 117, 0.2) transparent;
+        }
+
+        .feed-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .feed-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .feed-container::-webkit-scrollbar-thumb {
+            background: rgba(230, 200, 117, 0.3);
+            border-radius: 10px;
+        }
+
+        /* Each comment line - YouTube Live flat style */
+        .comment {
+            padding: 3px 0;
+            animation: commentSlideIn 0.3s ease-out forwards;
+            word-break: break-word;
+            line-height: 1.5;
+            font-size: 0.88rem;
+        }
+
+        .comment-name {
+            font-size: 0.82rem;
+            color: var(--primary-glow);
+            font-weight: bold;
+            margin-right: 6px;
+            text-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
+        }
+
+        .comment-text {
+            color: var(--text-main);
+        }
+
+        .comment-media {
+            max-width: 100%;
+            border-radius: 6px;
+            margin-top: 5px;
+            max-height: 150px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .comment-file-link {
+            display: inline-block;
+            margin-top: 5px;
+            padding: 4px 10px;
+            border-radius: 5px;
+            background: rgba(230, 200, 117, 0.1);
+            color: var(--primary-glow);
+            text-decoration: none;
+            font-size: 0.8rem;
+            border: 1px solid rgba(230, 200, 117, 0.15);
+        }
+
+        .comment-file-link:hover {
+            background: rgba(230, 200, 117, 0.2);
+        }
+
+        @keyframes commentSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* === CENTER SPACER: Just the background showing through === */
+        .center-space {
+            flex: 1;
+        }
+
+        /* === RIGHT PANEL: Input Forms === */
+        .input-panel {
+            width: 360px;
+            min-width: 300px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            padding: 20px 20px 25px 20px;
+            background: linear-gradient(to left, rgba(5, 5, 15, 0.7) 0%, rgba(5, 5, 15, 0.35) 80%, transparent 100%);
+            position: relative;
+            z-index: 10;
+        }
+
+        .input-panel .panel-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.2rem;
+            color: var(--primary-glow);
+            letter-spacing: 2px;
+            text-align: center;
+            margin-bottom: 15px;
+            text-shadow: 0 0 15px rgba(230, 200, 117, 0.5);
+        }
+
+        .input-box {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 15px;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .input-box textarea {
             width: 100%;
             height: 80px;
-            margin-bottom: 10px;
+            background: rgba(10, 15, 25, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            color: var(--text-main);
+            font-family: 'Kaisei Decol', serif;
+            font-size: 0.95rem;
+            resize: none;
+            transition: all 0.3s ease;
         }
 
-        button {
-            padding: 10px 20px;
+        .input-box textarea:focus {
+            outline: none;
+            border-color: var(--primary-glow);
+            box-shadow: 0 0 10px rgba(230, 200, 117, 0.15);
+        }
+
+        .input-box textarea::placeholder,
+        .input-box input::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+            font-style: italic;
+        }
+
+        .input-box input[type="text"] {
+            width: 100%;
+            background: rgba(10, 15, 25, 0.5);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: var(--text-main);
+            font-family: 'Kaisei Decol', serif;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .input-box input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-glow);
+            box-shadow: 0 0 10px rgba(230, 200, 117, 0.15);
+        }
+
+        .tripcode-hint {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            opacity: 0.75;
+            margin-top: -5px;
+        }
+
+        .controls-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* File upload */
+        .file-upload-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-upload-wrapper input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
             cursor: pointer;
+            height: 100%;
+            width: 100%;
         }
 
-        .post {
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
+        .file-upload-btn {
+            background: rgba(230, 200, 117, 0.08);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            padding: 7px 14px;
+            border-radius: 20px;
+            font-family: 'Kaisei Decol', serif;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .file-upload-wrapper:hover .file-upload-btn {
+            background: rgba(230, 200, 117, 0.18);
+        }
+
+        #fileName {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-left: 5px;
+        }
+
+        button[type="submit"] {
+            background: linear-gradient(135deg, #d4af37, #aa7c11);
+            color: #1a1a1a;
+            border: none;
+            padding: 9px 22px;
+            border-radius: 20px;
+            font-family: 'Kaisei Decol', serif;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            box-shadow: 0 3px 12px rgba(212, 175, 55, 0.3);
+            letter-spacing: 1px;
+        }
+
+        button[type="submit"]:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 18px rgba(212, 175, 55, 0.5);
+            background: linear-gradient(135deg, #eadd89, #d4af37);
+        }
+
+        /* === SHOOTING STAR === */
+        .star-zone {
+            position: absolute;
+            top: 0;
+            left: 320px;
+            right: 360px;
+            bottom: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 5;
+        }
+
+        .shooting-star {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            animation: shootStar var(--star-speed) linear forwards;
+        }
+
+        .shooting-star.color-yellow {
+            background: #ffe066;
+            box-shadow: 0 0 6px 2px #ffe066, 0 0 15px 4px rgba(255, 224, 102, 0.8), 0 0 30px 8px rgba(255, 200, 50, 0.4);
+        }
+
+        .shooting-star.color-yellow::after {
+            background: linear-gradient(to left, rgba(255, 224, 102, 0.8), transparent);
+        }
+
+        .shooting-star.color-blue {
+            background: #6ec6ff;
+            box-shadow: 0 0 6px 2px #6ec6ff, 0 0 15px 4px rgba(110, 198, 255, 0.8), 0 0 30px 8px rgba(80, 160, 255, 0.4);
+        }
+
+        .shooting-star.color-blue::after {
+            background: linear-gradient(to left, rgba(110, 198, 255, 0.8), transparent);
+        }
+
+        .shooting-star.color-red {
+            background: #ff7e7e;
+            box-shadow: 0 0 6px 2px #ff7e7e, 0 0 15px 4px rgba(255, 126, 126, 0.8), 0 0 30px 8px rgba(255, 100, 100, 0.4);
+        }
+
+        .shooting-star.color-red::after {
+            background: linear-gradient(to left, rgba(255, 126, 126, 0.8), transparent);
+        }
+
+        .shooting-star::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 100%;
+            transform: translateY(-50%);
+            width: 80px;
+            height: 2px;
+        }
+
+        @keyframes shootStar {
+            0% {
+                opacity: 0;
+                transform: translate(0, 0) rotate(var(--star-angle));
+            }
+
+            5% {
+                opacity: 1;
+            }
+
+            85% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(var(--star-dx), var(--star-dy)) rotate(var(--star-angle));
+            }
+        }
+
+        /* === INPUT LOCK/UNLOCK STATES === */
+        .comment-input-area {
+            display: none;
+            /* Hidden by default */
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .comment-input-area.visible {
+            display: flex;
+            animation: inputGlow 0.6s ease-in-out infinite alternate;
+        }
+
+        @keyframes inputGlow {
+            from {
+                box-shadow: 0 0 10px rgba(230, 200, 117, 0.2);
+            }
+
+            to {
+                box-shadow: 0 0 25px rgba(230, 200, 117, 0.5);
+            }
+        }
+
+        .star-status {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            min-height: 1.2em;
+            transition: color 0.3s;
+        }
+
+        .star-status.active {
+            color: var(--primary-glow);
+            text-shadow: 0 0 10px rgba(230, 200, 117, 0.5);
+        }
+
+        /* === METEORITE CRASH ANIMATION === */
+        .meteorite {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #ff6600, #cc3300, #660000);
+            box-shadow: 0 0 20px 8px rgba(255, 100, 0, 0.7), 0 0 60px 20px rgba(255, 50, 0, 0.4);
+            z-index: 1000;
+            pointer-events: none;
+            animation: meteoriteFly 1.2s ease-in forwards;
+        }
+
+        .meteorite::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 100%;
+            transform: translateY(-50%);
+            width: 120px;
+            height: 8px;
+            background: linear-gradient(to right, rgba(255, 150, 0, 0.9), rgba(255, 100, 0, 0.4), transparent);
+            border-radius: 50%;
+        }
+
+        @keyframes meteoriteFly {
+            0% {
+                top: -50px;
+                left: 70%;
+                opacity: 1;
+                transform: scale(0.5) rotate(0deg);
+            }
+            70% {
+                opacity: 1;
+                transform: scale(1.5) rotate(180deg);
+            }
+            100% {
+                top: 50%;
+                left: 50px;
+                opacity: 0;
+                transform: scale(2) rotate(360deg);
+            }
+        }
+
+        .comment-feed.shake {
+            animation: feedShake 0.5s ease-in-out;
+        }
+
+        @keyframes feedShake {
+            0%, 100% { transform: translateX(0); }
+            15% { transform: translateX(-15px) translateY(5px); }
+            30% { transform: translateX(12px) translateY(-3px); }
+            45% { transform: translateX(-10px) translateY(4px); }
+            60% { transform: translateX(8px) translateY(-2px); }
+            75% { transform: translateX(-5px); }
+        }
+
+        .impact-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 15% 50%, rgba(255, 150, 0, 0.6), transparent 60%);
+            z-index: 999;
+            pointer-events: none;
+            animation: flashFade 0.6s ease-out forwards;
+        }
+
+        @keyframes flashFade {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* === Responsive === */
+        @media (max-width: 900px) {
+            body {
+                flex-direction: column;
+            }
+
+            .comment-feed {
+                width: calc(100% - 40px);
+                max-height: 40vh;
+                left: 10px;
+                bottom: 10px;
+            }
+
+            .center-space {
+                display: none;
+            }
+
+            .star-zone {
+                left: 0;
+                right: 0;
+            }
+
+            .input-panel {
+                width: 100%;
+                height: auto;
+                background: rgba(5, 5, 15, 0.8);
+            }
         }
     </style>
 </head>
 
 <body>
-    <h1>ひとこと掲示板</h1>
-    <form id="postForm">
-        <textarea name="content" id="content" placeholder="今なにしてる？" required></textarea>
-        <button type="submit">投稿する</button>
-    </form>
-    <hr>
-    <div id="posts">
-        <!-- Posts will be loaded here via JS -->
+    <!-- LEFT: YouTube Live style comment feed -->
+    <div class="comment-feed">
+        <div class="feed-title">✨ 星に願いを</div>
+        <div class="feed-container" id="posts">
+            <!-- Posts will be loaded here via JS -->
+        </div>
+    </div>
+
+    <!-- CENTER: Just the background image showing through -->
+    <div class="center-space"></div>
+
+    <!-- SHOOTING STAR ZONE (overlays center) -->
+    <div class="star-zone" id="starZone"></div>
+
+    <!-- RIGHT: Input panel for posting -->
+    <div class="input-panel">
+        <div class="panel-title">💫 願いを紡ぐ</div>
+        <div class="star-status" id="starStatus">🌙 流れ星を待て...</div>
+        <form id="postForm" enctype="multipart/form-data">
+            <!-- CSRF Token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <div class="input-box" id="inputBox">
+                <!-- Comment area: hidden when stars aren't flowing -->
+                <div class="comment-input-area" id="commentArea">
+                    <textarea name="content" id="content" placeholder="星に何を願う？" required onpaste="return false;"
+                        ondrop="return false;"></textarea>
+
+                    <div class="controls-row">
+                        <div class="file-upload-wrapper">
+                            <button type="button" class="file-upload-btn">📎 添える</button>
+                            <input type="file" name="file" id="fileInput"
+                                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif,.webp">
+                        </div>
+                        <span id="fileName"></span>
+                        <button type="submit">願いを紡ぐ</button>
+                    </div>
+                </div>
+
+                <!-- Name always visible and editable -->
+                <input type="text" name="name" id="name" placeholder="詠み人（名前） / 秘密は # の後ろに" maxlength="50"
+                    onpaste="return false;" ondrop="return false;">
+                <div class="tripcode-hint">※ 名前#呪文 → あなただけの刻印(トリップ) 例: アリス#alice</div>
+            </div>
+        </form>
     </div>
 
     <script>
+        // File input explicit client-side validation
+        document.getElementById('fileInput').addEventListener('change', function () {
+            const fileNameDisplay = document.getElementById('fileName');
+            const file = this.files[0];
+
+            if (file) {
+                const allowedExtensions = ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'gif', 'webp'];
+                const fileExt = file.name.split('.').pop().toLowerCase();
+
+                if (!allowedExtensions.includes(fileExt)) {
+                    alert('この魔導書（ファイル形式）は解読できません。\n対応フォーマット: ' + allowedExtensions.join(', '));
+                    this.value = '';
+                    fileNameDisplay.textContent = '';
+                } else {
+                    fileNameDisplay.textContent = file.name;
+                }
+            } else {
+                fileNameDisplay.textContent = '';
+            }
+        });
+
+        // Track the highest ID we have seen so far
+        let lastHighestId = 0;
+        let isInitialLoad = true;
+
+        function renderPost(post, container) {
+            const div = document.createElement('div');
+            div.className = 'comment';
+            div.id = 'post-' + post.id;
+
+            // Name inline with text (YouTube Live style)
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'comment-name';
+            nameSpan.textContent = post.name || '名無しの魔法使い';
+            div.appendChild(nameSpan);
+
+            // Content inline (safe from XSS)
+            const textSpan = document.createElement('span');
+            textSpan.className = 'comment-text';
+            textSpan.textContent = post.content;
+            div.appendChild(textSpan);
+
+            // Handle media
+            if (post.file_path) {
+                const ext = post.file_path.split('.').pop().toLowerCase();
+                
+                if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
+                    const img = document.createElement('img');
+                    img.src = post.file_path;
+                    img.className = 'comment-media';
+                    img.alt = '魔法の欠片';
+                    div.appendChild(img);
+                } else {
+                    const fileLink = document.createElement('a');
+                    fileLink.href = post.file_path;
+                    fileLink.className = 'comment-file-link';
+                    
+                    if (ext === 'pdf') {
+                        fileLink.target = '_blank';
+                        fileLink.rel = 'noopener noreferrer';
+                        fileLink.textContent = '📄 PDF を開く';
+                    } else if (['doc', 'docx'].includes(ext)) {
+                        fileLink.setAttribute('download', '');
+                        fileLink.textContent = '📝 Word をダウンロード';
+                    } else {
+                        fileLink.setAttribute('download', '');
+                        fileLink.textContent = '📎 ファイルを保存';
+                    }
+                    div.appendChild(fileLink);
+                }
+            }
+
+            // Always append to the bottom (YouTube Live style)
+            container.appendChild(div);
+        }
+
         function loadPosts() {
             fetch('/api/posts')
                 .then(response => response.json())
                 .then(data => {
                     const postsDiv = document.getElementById('posts');
-                    postsDiv.innerHTML = '';
-                    data.posts.forEach(post => {
-                        const div = document.createElement('div');
-                        div.className = 'post';
-                        // Intentionally using innerHTML to make XSS easier for the lecture
-                        div.innerHTML = post.content;
-                        postsDiv.appendChild(div);
-                    });
+                    const currentHighestId = data.posts.length > 0 ? data.posts[0].id : 0;
+
+                    if (isInitialLoad) {
+                        postsDiv.innerHTML = '';
+                        // data.posts is DESC (newest first), but we want oldest at the top
+                        const reversed = [...data.posts].reverse();
+                        reversed.forEach(post => {
+                            renderPost(post, postsDiv);
+                        });
+                        isInitialLoad = false;
+                        // Auto-scroll to the bottom
+                        postsDiv.scrollTop = postsDiv.scrollHeight;
+                    } else {
+                        // Polling: Only process posts that are newer than our last known ID
+                        const newPosts = data.posts.filter(post => post.id > lastHighestId);
+                        // newPosts is DESC, reverse to append oldest-first
+                        const reversedNew = [...newPosts].reverse();
+                        reversedNew.forEach(post => {
+                            renderPost(post, postsDiv);
+                            // Check for special keywords in new posts
+                            checkSpecialKeywords(post.content);
+                        });
+                        // Auto-scroll to show newest comment
+                        if (newPosts.length > 0) {
+                            postsDiv.scrollTop = postsDiv.scrollHeight;
+                        }
+                    }
+
+                    lastHighestId = Math.max(lastHighestId, currentHighestId);
                 });
         }
 
         document.getElementById('postForm').addEventListener('submit', function (e) {
             e.preventDefault();
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerText;
+            submitBtn.innerText = '紡ぎ中... ✨';
+            submitBtn.disabled = true;
+
+            const nameInput = document.getElementById('name');
+            if (nameInput.value) {
+                localStorage.setItem('fantasy_board_name', nameInput.value);
+            } else {
+                localStorage.removeItem('fantasy_board_name');
+            }
+
             const formData = new FormData(this);
             fetch('/post', {
                 method: 'POST',
                 body: formData
-            }).then(() => {
-                document.getElementById('content').value = '';
-                loadPosts();
-            });
+            })
+                .then(response => response.json().then(data => ({ status: response.status, body: data })))
+                .then(({ status, body }) => {
+                    if (status >= 400 && body.error) {
+                        alert(body.error);
+                    } else {
+                        document.getElementById('content').value = '';
+                        document.getElementById('fileInput').value = '';
+                        document.getElementById('fileName').textContent = '';
+                        loadPosts();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error submitting post:', error);
+                    alert("送信中に魔法の乱れが生じました。もう一度お試しください。");
+                })
+                .finally(() => {
+                    submitBtn.innerText = originalText;
+                    submitBtn.disabled = false;
+                });
         });
+
+        // Restore name from localStorage if available
+        const savedName = localStorage.getItem('fantasy_board_name');
+        if (savedName) {
+            document.getElementById('name').value = savedName;
+        }
 
         // Load posts initially and every 2 seconds
         loadPosts();
         setInterval(loadPosts, 2000);
+
+        // =============================================
+        // 🌠 SHOOTING STAR INPUT GATE (Enhanced)
+        // =============================================
+        const COLORS = ['color-yellow', 'color-blue', 'color-red'];
+        let inputUnlocked = false;
+        let normalCyclePaused = false;
+        let normalCycleTimeout = null;
+
+        // 流星群 state
+        let meteorShowerActive = false;
+        let meteorShowerCooldown = false;
+        let meteorShowerSpawnInterval = null;
+
+        function randInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function lockInput() {
+            inputUnlocked = false;
+            const commentArea = document.getElementById('commentArea');
+            const starStatus = document.getElementById('starStatus');
+
+            commentArea.classList.remove('visible');
+            starStatus.textContent = '🌙 流れ星を待て...';
+            starStatus.classList.remove('active');
+        }
+
+        function unlockInput() {
+            inputUnlocked = true;
+            const commentArea = document.getElementById('commentArea');
+            const starStatus = document.getElementById('starStatus');
+            const content = document.getElementById('content');
+
+            commentArea.classList.add('visible');
+            if (!meteorShowerActive) {
+                starStatus.textContent = '🌠 流れ星が来た！今だ！願いを紡げ！';
+            }
+            starStatus.classList.add('active');
+
+            // Auto-focus the textarea
+            content.focus();
+        }
+
+        function spawnSingleStar(duration) {
+            const zone = document.getElementById('starZone');
+            const star = document.createElement('div');
+
+            // Random color
+            const color = COLORS[randInt(0, COLORS.length - 1)];
+            star.className = 'shooting-star ' + color;
+
+            // Use entire zone: 0-100%
+            const startX = Math.random() * 100;
+            const startY = Math.random() * 60; // top 60% of zone
+
+            // Fully random direction (0-360 degrees)
+            const angle = Math.random() * 360;
+            const distance = 300 + Math.random() * 500;
+            const dx = Math.cos(angle * Math.PI / 180) * distance;
+            const dy = Math.sin(angle * Math.PI / 180) * distance;
+
+            // Set per-star duration via CSS variable
+            star.style.setProperty('--star-speed', duration + 's');
+            star.style.left = startX + '%';
+            star.style.top = startY + '%';
+            star.style.setProperty('--star-angle', angle + 'deg');
+            star.style.setProperty('--star-dx', dx + 'px');
+            star.style.setProperty('--star-dy', dy + 'px');
+
+            zone.appendChild(star);
+
+            // Remove after animation
+            setTimeout(() => {
+                star.remove();
+            }, duration * 1000 + 100);
+        }
+
+        function triggerShootingStars() {
+            if (meteorShowerActive) return; // Don't interfere with meteor shower
+
+            // Random parameters for this wave
+            const duration = randInt(3, 7);   // 3-7 seconds
+            const count = randInt(1, 10);     // 1-10 stars
+            const durationMs = duration * 1000;
+
+            // Spawn all stars for this wave (stagger slightly)
+            for (let i = 0; i < count; i++) {
+                const delay = Math.random() * 500; // slight stagger within 0.5s
+                setTimeout(() => spawnSingleStar(duration), delay);
+            }
+
+            // Unlock input for the duration of the stars
+            unlockInput();
+
+            // After stars finish, lock again and schedule next wave
+            setTimeout(() => {
+                if (!meteorShowerActive) {
+                    lockInput();
+                    scheduleNextWave();
+                }
+            }, durationMs);
+        }
+
+        function scheduleNextWave() {
+            if (normalCyclePaused) return;
+            const waitTime = randInt(4, 10); // 4-10 seconds until next wave
+            normalCycleTimeout = setTimeout(triggerShootingStars, waitTime * 1000);
+        }
+
+        // =============================================
+        // ☄️ SPECIAL KEYWORD ACTIONS
+        // =============================================
+
+        function checkSpecialKeywords(content) {
+            if (!content) return;
+
+            // 隕石: Clear comment feed
+            if (content.includes('隕石')) {
+                triggerMeteorite();
+            }
+
+            // 流星群: 20s meteor shower
+            if (content.includes('流星群')) {
+                triggerMeteorShower();
+            }
+        }
+
+        // ☄️ METEORITE: Animated crash into comment feed
+        function triggerMeteorite() {
+            // Create the meteorite element
+            const meteorite = document.createElement('div');
+            meteorite.className = 'meteorite';
+            document.body.appendChild(meteorite);
+
+            // After the meteorite reaches the feed (1.2s animation)
+            setTimeout(() => {
+                meteorite.remove();
+
+                // Impact flash
+                const flash = document.createElement('div');
+                flash.className = 'impact-flash';
+                document.body.appendChild(flash);
+                setTimeout(() => flash.remove(), 600);
+
+                // Shake the comment feed
+                const feed = document.querySelector('.comment-feed');
+                feed.classList.add('shake');
+                setTimeout(() => feed.classList.remove('shake'), 500);
+
+                // Clear comments after impact
+                const postsDiv = document.getElementById('posts');
+                postsDiv.style.transition = 'opacity 0.2s';
+                postsDiv.style.opacity = '0';
+                setTimeout(() => {
+                    postsDiv.innerHTML = '';
+                    postsDiv.style.opacity = '1';
+                }, 200);
+            }, 1100);
+        }
+
+        // 🌌 METEOR SHOWER: 20s of continuous stars, keyword-only 30s cooldown
+        function triggerMeteorShower() {
+            if (meteorShowerActive || meteorShowerCooldown) return;
+
+            meteorShowerActive = true;
+
+            // Pause normal star cycle during shower
+            normalCyclePaused = true;
+            if (normalCycleTimeout) {
+                clearTimeout(normalCycleTimeout);
+                normalCycleTimeout = null;
+            }
+
+            // Unlock input for the entire shower
+            const starStatus = document.getElementById('starStatus');
+            starStatus.textContent = '🌌 流星群！！願いを紡ぎ放題！';
+            starStatus.classList.add('active');
+            unlockInput();
+
+            // Continuously spawn stars for 20 seconds
+            meteorShowerSpawnInterval = setInterval(() => {
+                const count = randInt(1, 5);
+                for (let i = 0; i < count; i++) {
+                    const dur = randInt(4, 10); // each star 4-10s
+                    const delay = Math.random() * 800;
+                    setTimeout(() => spawnSingleStar(dur), delay);
+                }
+            }, 1000); // spawn new stars every 1 second
+
+            // After 20 seconds, end the shower
+            setTimeout(() => {
+                clearInterval(meteorShowerSpawnInterval);
+                meteorShowerSpawnInterval = null;
+                meteorShowerActive = false;
+
+                // Lock input and resume normal star cycle immediately
+                lockInput();
+                normalCyclePaused = false;
+                scheduleNextWave();
+
+                // Start 30s cooldown (only blocks the keyword, NOT input)
+                meteorShowerCooldown = true;
+                setTimeout(() => {
+                    meteorShowerCooldown = false;
+                }, 30000); // 30 second keyword cooldown
+
+            }, 20000); // 20 second shower
+        }
+
+        // Start the first wave after a random initial delay
+        scheduleNextWave();
     </script>
 </body>
 
