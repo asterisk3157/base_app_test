@@ -1314,6 +1314,56 @@ def main():
     print(f"  Generated {repost_count} reposts.")
 
     # ------------------------------------------------------------------
+    # Step 7: Self-replies for impression farming bots
+    # ------------------------------------------------------------------
+    print("Generating self-replies for impression bots...")
+
+    SELF_REPLIES = {
+        'imp_farm1': [
+            "答えは「あなたの〇〇、好きだよ」\n\n具体的に伝えるだけで\n相手の心に一生残ります。\n\n共感したらRT\n保存して見返してね",
+            "答えは「名前の呼び方」\n\n急に下の名前で呼ばれると\n心臓止まりますよね。",
+            "秘訣は「ちょうどいい距離感」\n\n依存しない。でも無関心じゃない。\nこれが一番難しくて一番大事。",
+        ],
+        'imp_farm2': [
+            "答えは「まず行動すること」\n\n考えてる時間が一番もったいない。\n小さく始めて、続ける。それだけ。",
+            "答えは「固定費の見直し」\n\nスマホ代、サブスク、保険。\nここだけで月2万浮く人もいる。",
+            "答えは「質問力」\n\nいい質問ができる人は\nいい答えを引き出せる。",
+        ],
+        'imp_farm3': [
+            "大切にすべき人は\n「あなたの弱さを笑わない人」\n\nそういう人がいるなら\n今すぐ「ありがとう」って伝えて。",
+            "一番効果があったのは\n「相手に期待しないこと」\n\n冷たいんじゃない。\n自分を守る技術。",
+        ],
+        'imp_collapse': [
+            "すみません途中からバグりました",
+            "後半はフィクションです（前半も怪しい）",
+            "課金してください",
+            "※個人の感想です。効果には個人差があります。",
+        ],
+    }
+
+    self_reply_count = 0
+    for bot_username, replies in SELF_REPLIES.items():
+        bot_id = bots.get(bot_username)
+        if not bot_id:
+            continue
+        # Get this bot's top-level tweets
+        c.execute("SELECT id, created_at FROM tweets WHERE user_id = ? AND reply_to_id IS NULL", (bot_id,))
+        bot_tweets = c.fetchall()
+        for tweet_id, tweet_ts in bot_tweets:
+            if random.random() < 0.8:  # 80% get a self-reply
+                reply_content = random.choice(replies)
+                # Reply 1-5 minutes after the original
+                offset_sec = random.randint(60, 300)
+                c.execute(
+                    "INSERT INTO tweets (user_id, content, reply_to_id, created_at) VALUES (?, ?, ?, datetime(?, '+' || ? || ' seconds'))",
+                    (bot_id, reply_content, tweet_id, tweet_ts, offset_sec)
+                )
+                self_reply_count += 1
+
+    conn.commit()
+    print(f"  Generated {self_reply_count} self-replies.")
+
+    # ------------------------------------------------------------------
     # Summary
     # ------------------------------------------------------------------
     c.execute("SELECT COUNT(*) FROM tweets WHERE reply_to_id IS NULL")

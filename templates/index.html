@@ -1987,7 +1987,7 @@
             const contentEl = document.createElement('div');
             contentEl.className = 'tweet-content';
             // Intentionally using innerHTML to make XSS easier for the lecture
-            contentEl.innerHTML = tweet.content;
+            contentEl.innerHTML = tweet.content.replace(/\n/g, '<br>');
             // After setting innerHTML, wrap hashtags in clickable links
             contentEl.innerHTML = contentEl.innerHTML.replace(/#([^\s<]+)/g, '<a href="javascript:void(0)" onclick="searchHashtag(\'$1\')" style="color:var(--accent);text-decoration:none">#$1</a>');
             contentEl.style.cursor = 'pointer';
@@ -2258,7 +2258,7 @@
             // Content — intentionally using innerHTML to keep XSS for the lecture
             const contentEl = document.createElement('div');
             contentEl.className = 'tweet-content';
-            contentEl.innerHTML = tweet.content;
+            contentEl.innerHTML = tweet.content.replace(/\n/g, '<br>');
             // Wrap hashtags in clickable links
             contentEl.innerHTML = contentEl.innerHTML.replace(/#([^\s<]+)/g, '<a href="javascript:void(0)" onclick="searchHashtag(\'$1\')" style="color:var(--accent);text-decoration:none">#$1</a>');
 
@@ -3228,7 +3228,7 @@
                     var contentEl = document.createElement('div');
                     contentEl.className = 'tweet-detail-content';
                     // Intentionally using innerHTML for XSS lecture
-                    contentEl.innerHTML = tweet.content;
+                    contentEl.innerHTML = tweet.content.replace(/\n/g, '<br>');
                     card.appendChild(contentEl);
 
                     // Timestamp (full format)
