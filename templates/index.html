@@ -46,19 +46,19 @@
         /* === LEFT PANEL: YouTube Live Style Comment Feed (Floating) === */
         .comment-feed {
             position: fixed;
-            top: 60px;
-            bottom: 25px;
+            top: 0;
+            bottom: 0;
             left: 20px;
             width: 320px;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
-            padding: 20px 15px 15px 15px; /* Added top padding */
+            padding: 15px;
             background: rgba(5, 5, 15, 0.5);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 16px;
+            border-radius: 0 0 16px 16px; /* Keep bottom rounded, flag-like? No, better flush height */
             z-index: 10;
         }
 
@@ -69,7 +69,8 @@
             color: var(--primary-glow);
             letter-spacing: 2px;
             text-shadow: 0 0 10px rgba(230, 200, 117, 0.4);
-            margin-bottom: 15px;
+            margin-top: 10px; /* Slide higher up */
+            margin-bottom: 10px;
             text-align: left;
             flex-shrink: 0;
         }
