@@ -2,13 +2,13 @@
 
 ## 進行中
 
-- [x] ページネーション API（backend完了、frontend実装中）
-- [x] フォロー通知（backend完了、frontend実装中）
-- [x] ボット画像投稿（backend完了）
-- [ ] タイムスタンプ表示修正（frontend実装中）
-- [ ] 「新しいツイート」バー（frontend実装中）
-- [ ] 無限スクロール（frontend実装中）
-- [ ] モジュール化（app.py分割 + index.html分割）
+- [x] ページネーション API + 無限スクロール
+- [x] フォロー通知
+- [x] ボット画像投稿
+- [x] タイムスタンプ表示修正
+- [x] 「新しいツイート」バー（Twitter風pull-to-refresh）
+- [x] 無限スクロール
+- [ ] モジュール化（app.py分割 + index.html分割） ← NEXT
 
 ## 実装済み
 
