@@ -1759,9 +1759,12 @@
                     targetZ = Math.max(-TABLE_HEIGHT / 2 + RACKET_RADIUS, Math.min(TABLE_HEIGHT / 2 - RACKET_RADIUS, targetZ));
 
                     if (currentTeamId === 1) {
-                        targetX = Math.max(-TABLE_WIDTH / 2 + RACKET_RADIUS, Math.min(-RACKET_RADIUS, targetX));
+                        // Team 1 (Red) = left side. Before game starts, can't cross quarter line.
+                        const maxX = isGameRunning ? -RACKET_RADIUS : -TABLE_WIDTH / 4;
+                        targetX = Math.max(-TABLE_WIDTH / 2 + RACKET_RADIUS, Math.min(maxX, targetX));
                     } else {
-                        targetX = Math.max(RACKET_RADIUS, Math.min(TABLE_WIDTH / 2 - RACKET_RADIUS, targetX));
+                        const minX = isGameRunning ? RACKET_RADIUS : TABLE_WIDTH / 4;
+                        targetX = Math.max(minX, Math.min(TABLE_WIDTH / 2 - RACKET_RADIUS, targetX));
                     }
 
                     myRacket.position.x = targetX;
@@ -1892,9 +1895,9 @@
 
                 // Speed limit
                 const speed = Math.sqrt(puckVelocity.x ** 2 + puckVelocity.z ** 2);
-                if (speed > 1.2) {
-                    puckVelocity.x = (puckVelocity.x / speed) * 1.2;
-                    puckVelocity.z = (puckVelocity.z / speed) * 1.2;
+                if (speed > 0.6) {
+                    puckVelocity.x = (puckVelocity.x / speed) * 0.6;
+                    puckVelocity.z = (puckVelocity.z / speed) * 0.6;
                 }
 
                 // Wall Collisions - proper corner handling
