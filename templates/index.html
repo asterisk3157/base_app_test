@@ -46,14 +46,14 @@
         /* === LEFT PANEL: YouTube Live Style Comment Feed (Floating) === */
         .comment-feed {
             position: fixed;
-            top: 70px;
+            top: 60px;
             bottom: 25px;
             left: 20px;
             width: 320px;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
-            padding: 15px;
+            padding: 20px 15px 15px 15px; /* Added top padding */
             background: rgba(5, 5, 15, 0.5);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
@@ -63,15 +63,15 @@
         }
 
         .feed-title {
-            position: fixed;
-            top: 25px;
-            left: 25px;
+            position: relative;
             font-family: 'Cinzel', serif;
             font-size: 1.1rem;
             color: var(--primary-glow);
             letter-spacing: 2px;
             text-shadow: 0 0 10px rgba(230, 200, 117, 0.4);
-            z-index: 11;
+            margin-bottom: 15px;
+            text-align: left;
+            flex-shrink: 0;
         }
 
         .feed-container {
