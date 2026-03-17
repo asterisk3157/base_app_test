@@ -428,6 +428,32 @@ BOT_FALLBACK_TWEETS = {
 }
 
 # ---------------------------------------------------------------------------
+# Bot image URLs — bots with visual content can attach Unsplash images
+# ---------------------------------------------------------------------------
+BOT_IMAGE_URLS = {
+    'emoi_photo': [
+        'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600',
+        'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600',
+        'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=600',
+    ],
+    'travel_log': [
+        'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600',
+        'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600',
+    ],
+    'inu_suki': [
+        'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600',
+        'https://images.unsplash.com/photo-1583337130417-13104dec14a3?w=600',
+    ],
+    'ramen_guru': [
+        'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=600',
+    ],
+    'catlover99': [
+        'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=600',
+        'https://images.unsplash.com/photo-1573865526739-10659fec78a5?w=600',
+    ],
+}
+
+# ---------------------------------------------------------------------------
 # Self-reply content for impression farming bots
 # ---------------------------------------------------------------------------
 BOT_SELF_REPLIES = {
@@ -1378,9 +1404,13 @@ def index():
 
 # GET /api/tweets — list all tweets with user info and like counts
 # Accepts optional ?filter=following to show only tweets from followed users + self
+# Accepts optional ?page=1&limit=30 for pagination (backward compatible)
 @app.route('/api/tweets')
 def get_tweets():
     filter_mode = request.args.get('filter', 'all')  # 'all' or 'following'
+    page = int(request.args.get('page', 1))
+    limit = int(request.args.get('limit', 30))
+    offset = (page - 1) * limit
 
     conn = get_db()
     c = conn.cursor()
@@ -1395,7 +1425,7 @@ def get_tweets():
 
         if not following_ids:
             conn.close()
-            return jsonify({'tweets': []})
+            return jsonify({'tweets': [], 'page': page, 'has_more': False})
 
         # following_ids contains only integer PKs from the DB — safe to interpolate
         placeholders = ','.join('?' * len(following_ids))
@@ -1421,7 +1451,8 @@ def get_tweets():
             WHERE t.user_id IN ({placeholders})
             GROUP BY t.id
             ORDER BY t.created_at DESC
-        ''', list(following_ids))
+            LIMIT ? OFFSET ?
+        ''', list(following_ids) + [limit, offset])
     else:
         # Default: all tweets
         c.execute('''
@@ -1445,7 +1476,8 @@ def get_tweets():
             LEFT JOIN likes l ON l.tweet_id = t.id
             GROUP BY t.id
             ORDER BY t.created_at DESC
-        ''')
+            LIMIT ? OFFSET ?
+        ''', (limit, offset))
 
     rows = c.fetchall()
 
@@ -1471,7 +1503,7 @@ def get_tweets():
     conn.close()
 
     tweets = [_tweet_row_to_dict(row, row['id'] in liked_ids, row['id'] in reposted_ids, row['id'] in bookmarked_ids) for row in rows]
-    return jsonify({'tweets': tweets})
+    return jsonify({'tweets': tweets, 'page': page, 'has_more': len(tweets) == limit})
 
 
 # POST /api/tweets — create a new tweet
@@ -1964,10 +1996,15 @@ def generate_bot_tweet():
         fallback_list = BOT_FALLBACK_TWEETS.get(bot_username, ['Hello world!'])
         content = random.choice(fallback_list)
 
+    # Optionally attach an image URL for bots that have images (30% chance)
+    image_url = ''
+    if bot_username in BOT_IMAGE_URLS and random.random() < 0.3:
+        image_url = random.choice(BOT_IMAGE_URLS[bot_username])
+
     # Save the tweet
     c.execute(
-        'INSERT INTO tweets (user_id, content, reply_to_id, quote_of_id) VALUES (?, ?, ?, ?)',
-        (bot['id'], content, None, None)
+        'INSERT INTO tweets (user_id, content, reply_to_id, quote_of_id, image_url) VALUES (?, ?, ?, ?, ?)',
+        (bot['id'], content, None, None, image_url)
     )
     tweet_id = c.lastrowid
     conn.commit()
@@ -2005,7 +2042,7 @@ def generate_bot_tweet():
             t.created_at,
             t.reply_to_id,
             t.quote_of_id,
-            '' AS image_url,
+            t.image_url,
             u.id   AS user_id,
             u.display_name,
             u.handle,
@@ -2209,6 +2246,12 @@ def toggle_follow(target_user_id):
         # User just followed someone
         c.execute('INSERT INTO follows (follower_id, following_id) VALUES (?, ?)', (user_id, target_user_id))
         following = True
+
+        # Create follow notification for the target user
+        c.execute(
+            'INSERT INTO notifications (user_id, type, actor_id, tweet_id) VALUES (?, ?, ?, ?)',
+            (target_user_id, 'follow', user_id, None)
+        )
 
         # Auto follow-back: if target is a bot, maybe follow back after delay
         c.execute('SELECT is_bot FROM users WHERE id = ?', (target_user_id,))
