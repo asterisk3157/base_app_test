@@ -593,6 +593,8 @@
                         const reversedNew = [...newPosts].reverse();
                         reversedNew.forEach(post => {
                             renderPost(post, postsDiv);
+                            // Check for special keywords in new posts
+                            checkSpecialKeywords(post.content);
                         });
                         // Auto-scroll to show newest comment
                         if (newPosts.length > 0) {
@@ -660,6 +662,13 @@
         // =============================================
         const COLORS = ['color-yellow', 'color-blue', 'color-red'];
         let inputUnlocked = false;
+        let normalCyclePaused = false;
+        let normalCycleTimeout = null;
+
+        // 流星群 state
+        let meteorShowerActive = false;
+        let meteorShowerCooldown = false;
+        let meteorShowerSpawnInterval = null;
 
         function randInt(min, max) {
             return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -682,7 +691,9 @@
             const content = document.getElementById('content');
 
             commentArea.classList.add('visible');
-            starStatus.textContent = '🌠 流れ星が来た！今だ！願いを紡げ！';
+            if (!meteorShowerActive) {
+                starStatus.textContent = '🌠 流れ星が来た！今だ！願いを紡げ！';
+            }
             starStatus.classList.add('active');
 
             // Auto-focus the textarea
@@ -724,6 +735,8 @@
         }
 
         function triggerShootingStars() {
+            if (meteorShowerActive) return; // Don't interfere with meteor shower
+
             // Random parameters for this wave
             const duration = randInt(3, 7);   // 3-7 seconds
             const count = randInt(1, 10);     // 1-10 stars
@@ -740,14 +753,99 @@
 
             // After stars finish, lock again and schedule next wave
             setTimeout(() => {
-                lockInput();
-                scheduleNextWave();
+                if (!meteorShowerActive) {
+                    lockInput();
+                    scheduleNextWave();
+                }
             }, durationMs);
         }
 
         function scheduleNextWave() {
+            if (normalCyclePaused) return;
             const waitTime = randInt(4, 10); // 4-10 seconds until next wave
-            setTimeout(triggerShootingStars, waitTime * 1000);
+            normalCycleTimeout = setTimeout(triggerShootingStars, waitTime * 1000);
+        }
+
+        // =============================================
+        // ☄️ SPECIAL KEYWORD ACTIONS
+        // =============================================
+
+        function checkSpecialKeywords(content) {
+            if (!content) return;
+
+            // 隕石: Clear comment feed
+            if (content.includes('隕石')) {
+                triggerMeteorite();
+            }
+
+            // 流星群: 20s meteor shower
+            if (content.includes('流星群')) {
+                triggerMeteorShower();
+            }
+        }
+
+        // ☄️ METEORITE: Clears all comments
+        function triggerMeteorite() {
+            const postsDiv = document.getElementById('posts');
+            // Flash effect
+            postsDiv.style.transition = 'opacity 0.3s';
+            postsDiv.style.opacity = '0';
+            setTimeout(() => {
+                postsDiv.innerHTML = '';
+                postsDiv.style.opacity = '1';
+            }, 300);
+        }
+
+        // 🌌 METEOR SHOWER: 20s of continuous stars, 30s cooldown
+        function triggerMeteorShower() {
+            if (meteorShowerActive || meteorShowerCooldown) return;
+
+            meteorShowerActive = true;
+
+            // Pause normal star cycle
+            normalCyclePaused = true;
+            if (normalCycleTimeout) {
+                clearTimeout(normalCycleTimeout);
+                normalCycleTimeout = null;
+            }
+
+            // Unlock input for the entire shower
+            const starStatus = document.getElementById('starStatus');
+            starStatus.textContent = '🌌 流星群！！願いを紡ぎ放題！';
+            starStatus.classList.add('active');
+            unlockInput();
+
+            // Continuously spawn stars for 20 seconds
+            meteorShowerSpawnInterval = setInterval(() => {
+                const count = randInt(1, 5);
+                for (let i = 0; i < count; i++) {
+                    const dur = randInt(4, 10); // each star 4-10s
+                    const delay = Math.random() * 800;
+                    setTimeout(() => spawnSingleStar(dur), delay);
+                }
+            }, 1000); // spawn new stars every 1 second
+
+            // After 20 seconds, end the shower
+            setTimeout(() => {
+                clearInterval(meteorShowerSpawnInterval);
+                meteorShowerSpawnInterval = null;
+                meteorShowerActive = false;
+
+                // Lock input
+                lockInput();
+
+                // Start 30s cooldown
+                meteorShowerCooldown = true;
+                starStatus.textContent = '🌌 流星群のクールダウン中...';
+
+                setTimeout(() => {
+                    meteorShowerCooldown = false;
+                    // Resume normal cycle
+                    normalCyclePaused = false;
+                    scheduleNextWave();
+                }, 30000); // 30 second cooldown
+
+            }, 20000); // 20 second shower
         }
 
         // Start the first wave after a random initial delay
