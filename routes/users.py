@@ -404,6 +404,58 @@ def get_following(user_id):
     return jsonify({'users': users})
 
 
+# POST /api/users/<id>/mute — toggle mute for the current user on a target user
+@bp.route('/api/users/<int:target_id>/mute', methods=['POST'])
+def toggle_mute(target_id):
+    user_id = get_current_user_id()
+    if user_id is None:
+        return jsonify({'error': 'authentication required'}), 401
+    if user_id == target_id:
+        return jsonify({'error': 'cannot mute yourself'}), 400
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('SELECT id FROM mutes WHERE user_id = ? AND target_id = ?', (user_id, target_id))
+    existing = c.fetchone()
+    if existing:
+        c.execute('DELETE FROM mutes WHERE user_id = ? AND target_id = ?', (user_id, target_id))
+        muted = False
+    else:
+        c.execute('INSERT INTO mutes (user_id, target_id) VALUES (?, ?)', (user_id, target_id))
+        muted = True
+    conn.commit()
+    conn.close()
+    return jsonify({'muted': muted})
+
+
+# POST /api/users/<id>/block — toggle block for the current user on a target user
+# Blocking also removes follows in both directions.
+@bp.route('/api/users/<int:target_id>/block', methods=['POST'])
+def toggle_block(target_id):
+    user_id = get_current_user_id()
+    if user_id is None:
+        return jsonify({'error': 'authentication required'}), 401
+    if user_id == target_id:
+        return jsonify({'error': 'cannot block yourself'}), 400
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('SELECT id FROM blocks WHERE user_id = ? AND target_id = ?', (user_id, target_id))
+    existing = c.fetchone()
+    if existing:
+        c.execute('DELETE FROM blocks WHERE user_id = ? AND target_id = ?', (user_id, target_id))
+        blocked = False
+    else:
+        c.execute('INSERT INTO blocks (user_id, target_id) VALUES (?, ?)', (user_id, target_id))
+        blocked = True
+        # Remove follows both ways when blocking
+        c.execute('DELETE FROM follows WHERE (follower_id = ? AND following_id = ?) OR (follower_id = ? AND following_id = ?)',
+                  (user_id, target_id, target_id, user_id))
+    conn.commit()
+    conn.close()
+    return jsonify({'blocked': blocked})
+
+
 # POST /api/me/avatar — upload a new avatar image for the current user
 @bp.route('/api/me/avatar', methods=['POST'])
 def upload_avatar():

@@ -230,7 +230,7 @@ function submitRegistration() {
 function showTimeline(fromPopstate) {
     var timeline = document.getElementById('top');
 
-    // Remove profile, notification, search, tweet-detail, and bookmarks views
+    // Remove profile, notification, search, tweet-detail, bookmarks, and dm views
     var profileView = timeline.querySelector('.profile-view');
     if (profileView) profileView.remove();
     var notifView = timeline.querySelector('.notif-view');
@@ -241,6 +241,8 @@ function showTimeline(fromPopstate) {
     if (detailView) detailView.remove();
     var bookmarksView = timeline.querySelector('.bookmarks-view');
     if (bookmarksView) bookmarksView.remove();
+    var dmView = timeline.querySelector('.dm-view');
+    if (dmView) dmView.remove();
 
     // Show tabs, compose box and feed
     var tabs = document.getElementById('timeline-tabs');
@@ -321,6 +323,8 @@ window.addEventListener('popstate', function(e) {
         showTweetDetail(state.params, true);
     } else if (state.view === 'bookmarks') {
         showBookmarks(true);
+    } else if (state.view === 'dm') {
+        showDM(true);
     } else {
         showTimeline(true);
     }
@@ -423,4 +427,5 @@ initApp();
 setInterval(function() {
     pollNewTweets();
     pollNotifications();
+    pollDMUnread();
 }, 10000);

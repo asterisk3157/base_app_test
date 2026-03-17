@@ -34,6 +34,7 @@ def _tweet_row_to_dict(row, liked: bool, reposted: bool = False, bookmarked: boo
         'id': row['id'],
         'content': row['content'],
         'created_at': row['created_at'],
+        'edited_at': row['edited_at'] if 'edited_at' in row.keys() else None,
         'reply_to_id': row['reply_to_id'],
         'quote_of_id': row['quote_of_id'],
         'impressions': row['impressions'],
@@ -159,15 +160,17 @@ def init_db():
 
     # Migration: add reply_to_id and impressions columns if they don't exist (for existing DBs)
     c.execute("PRAGMA table_info(tweets)")
-    existing_cols = {row[1] for row in c.fetchall()}
-    if 'reply_to_id' not in existing_cols:
+    tweet_columns = {row[1] for row in c.fetchall()}
+    if 'reply_to_id' not in tweet_columns:
         c.execute('ALTER TABLE tweets ADD COLUMN reply_to_id INTEGER REFERENCES tweets(id)')
-    if 'impressions' not in existing_cols:
+    if 'impressions' not in tweet_columns:
         c.execute("ALTER TABLE tweets ADD COLUMN impressions INTEGER NOT NULL DEFAULT 0")
-    if 'quote_of_id' not in existing_cols:
+    if 'quote_of_id' not in tweet_columns:
         c.execute("ALTER TABLE tweets ADD COLUMN quote_of_id INTEGER REFERENCES tweets(id)")
-    if 'image_url' not in existing_cols:
+    if 'image_url' not in tweet_columns:
         c.execute("ALTER TABLE tweets ADD COLUMN image_url TEXT DEFAULT ''")
+    if 'edited_at' not in tweet_columns:
+        c.execute("ALTER TABLE tweets ADD COLUMN edited_at TIMESTAMP DEFAULT NULL")
 
     # likes table
     c.execute('''
@@ -228,6 +231,79 @@ def init_db():
             tweet_id INTEGER NOT NULL REFERENCES tweets(id),
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(user_id, tweet_id)
+        )''')
+
+    # DM conversations table
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='dm_conversations'")
+    if not c.fetchone():
+        c.execute('''CREATE TABLE dm_conversations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user1_id INTEGER NOT NULL REFERENCES users(id),
+            user2_id INTEGER NOT NULL REFERENCES users(id),
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user1_id, user2_id)
+        )''')
+
+    # DM messages table
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='dm_messages'")
+    if not c.fetchone():
+        c.execute('''CREATE TABLE dm_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id INTEGER NOT NULL REFERENCES dm_conversations(id),
+            sender_id INTEGER NOT NULL REFERENCES users(id),
+            content TEXT NOT NULL,
+            read INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )''')
+
+    # Mutes table
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='mutes'")
+    if not c.fetchone():
+        c.execute('''CREATE TABLE mutes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            target_id INTEGER NOT NULL REFERENCES users(id),
+            UNIQUE(user_id, target_id)
+        )''')
+
+    # Blocks table
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='blocks'")
+    if not c.fetchone():
+        c.execute('''CREATE TABLE blocks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            target_id INTEGER NOT NULL REFERENCES users(id),
+            UNIQUE(user_id, target_id)
+        )''')
+
+    # Polls table
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='polls'")
+    if not c.fetchone():
+        c.execute('''CREATE TABLE polls (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tweet_id INTEGER NOT NULL REFERENCES tweets(id),
+            ends_at TIMESTAMP
+        )''')
+
+    # Poll options table
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='poll_options'")
+    if not c.fetchone():
+        c.execute('''CREATE TABLE poll_options (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            poll_id INTEGER NOT NULL REFERENCES polls(id),
+            text TEXT NOT NULL,
+            position INTEGER NOT NULL DEFAULT 0
+        )''')
+
+    # Poll votes table
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='poll_votes'")
+    if not c.fetchone():
+        c.execute('''CREATE TABLE poll_votes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            poll_id INTEGER NOT NULL REFERENCES polls(id),
+            option_id INTEGER NOT NULL REFERENCES poll_options(id),
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            UNIQUE(poll_id, user_id)
         )''')
 
     # Migration: add created_at column to users if missing (for existing DBs)

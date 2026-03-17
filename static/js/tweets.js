@@ -51,6 +51,14 @@ function buildTweetCard(tweet) {
     metaEl.appendChild(handleEl);
     metaEl.appendChild(timeEl);
 
+    // Show "(編集済み)" label if tweet was edited
+    if (tweet.edited_at) {
+        var editedEl = document.createElement('span');
+        editedEl.className = 'tweet-edited';
+        editedEl.textContent = '(編集済み)';
+        metaEl.appendChild(editedEl);
+    }
+
     // "···" more button — shown on all tweets, but delete menu only for own tweets
     var moreBtn = document.createElement('button');
     moreBtn.className = 'tweet-more-btn';
@@ -78,6 +86,17 @@ function buildTweetCard(tweet) {
                     .then(function() { loadTweets(); });
             }
         };
+
+        // Edit tweet option — only for own tweets
+        var editItem = document.createElement('div');
+        editItem.className = 'tweet-context-item';
+        editItem.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> 編集';
+        editItem.onclick = function(e) {
+            e.stopPropagation();
+            menu.remove();
+            showEditTweet(tweet);
+        };
+        menu.appendChild(editItem);
 
         // Pin tweet option — only for own tweets
         var pinItem = document.createElement('div');
@@ -347,6 +366,61 @@ function buildTweetCard(tweet) {
                     wrap.innerHTML = '<div style="color:var(--text-secondary);font-size:0.85rem">ツイートを読み込めませんでした</div>';
                 });
         })(quoteWrap, tweet.quote_of_id);
+    }
+
+    // Poll rendering
+    if (tweet.poll) {
+        var pollDiv = document.createElement('div');
+        pollDiv.className = 'tweet-poll';
+
+        var totalVotes = tweet.poll.options.reduce(function(sum, o) { return sum + (o.votes || 0); }, 0);
+
+        tweet.poll.options.forEach(function(option) {
+            var optionDiv = document.createElement('div');
+            optionDiv.className = 'poll-option' + (option.voted ? ' voted' : '');
+
+            var pct = totalVotes > 0 ? Math.round((option.votes || 0) / totalVotes * 100) : 0;
+
+            if (tweet.poll.voted) {
+                // Show results
+                var barEl = document.createElement('div');
+                barEl.className = 'poll-bar';
+                barEl.style.width = pct + '%';
+                var textEl = document.createElement('span');
+                textEl.className = 'poll-text';
+                textEl.textContent = option.text;
+                var pctEl = document.createElement('span');
+                pctEl.className = 'poll-pct';
+                pctEl.textContent = pct + '%';
+                optionDiv.appendChild(barEl);
+                optionDiv.appendChild(textEl);
+                optionDiv.appendChild(pctEl);
+            } else {
+                // Show clickable options
+                var textEl2 = document.createElement('span');
+                textEl2.className = 'poll-text';
+                textEl2.textContent = option.text;
+                optionDiv.appendChild(textEl2);
+                (function(opt) {
+                    optionDiv.onclick = function() {
+                        fetch('/api/polls/' + tweet.poll.id + '/vote', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ option_id: opt.id })
+                        }).then(function() { loadTweets(); });
+                    };
+                })(option);
+            }
+
+            pollDiv.appendChild(optionDiv);
+        });
+
+        var voteCount = document.createElement('div');
+        voteCount.className = 'poll-total';
+        voteCount.textContent = totalVotes + '票';
+        pollDiv.appendChild(voteCount);
+
+        bodyEl.insertBefore(pollDiv, actionsEl);
     }
 
     bodyEl.appendChild(actionsEl);
@@ -961,6 +1035,45 @@ function submitReply(tweetId, content) {
 }
 
 // ------------------------------------------------------------------
+// Edit tweet modal
+// ------------------------------------------------------------------
+function showEditTweet(tweet) {
+    var modal = document.getElementById('edit-tweet-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'edit-tweet-modal';
+        modal.onclick = function(e) { if (e.target === modal) modal.style.display = 'none'; };
+
+        var card = document.createElement('div');
+        card.className = 'modal-card';
+        card.innerHTML = '<h2 class="modal-title">ツイートを編集</h2>'
+            + '<textarea class="modal-input" id="edit-tweet-textarea" rows="4" maxlength="280" style="resize:vertical;font-family:Inter,sans-serif"></textarea>'
+            + '<button class="modal-submit" id="edit-tweet-submit">保存</button>'
+            + '<button class="modal-cancel" onclick="document.getElementById(\'edit-tweet-modal\').style.display=\'none\'">キャンセル</button>';
+        modal.appendChild(card);
+        document.body.appendChild(modal);
+    }
+
+    document.getElementById('edit-tweet-textarea').value = tweet.content;
+    document.getElementById('edit-tweet-submit').onclick = function() {
+        var newContent = document.getElementById('edit-tweet-textarea').value.trim();
+        if (!newContent) return;
+        fetch('/api/tweets/' + tweet.id + '/edit', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: newContent })
+        }).then(function() {
+            modal.style.display = 'none';
+            loadTweets();
+        });
+    };
+
+    modal.style.display = 'flex';
+    document.getElementById('edit-tweet-textarea').focus();
+}
+
+// ------------------------------------------------------------------
 // Tweet detail view — show a single tweet with replies
 // ------------------------------------------------------------------
 function showTweetDetail(tweetId, fromPopstate) {
@@ -977,7 +1090,7 @@ function showTweetDetail(tweetId, fromPopstate) {
     if (tabs) tabs.style.display = 'none';
 
     // Remove other views
-    ['profile-view', 'notif-view', 'search-view', 'tweet-detail-view', 'bookmarks-view'].forEach(function(cls) {
+    ['profile-view', 'notif-view', 'search-view', 'tweet-detail-view', 'bookmarks-view', 'dm-view'].forEach(function(cls) {
         var el = timeline.querySelector('.' + cls);
         if (el) el.remove();
     });
@@ -1190,7 +1303,7 @@ function showBookmarks(fromPopstate) {
     if (composeBox) composeBox.style.display = 'none';
     if (feed) feed.style.display = 'none';
     if (tabs) tabs.style.display = 'none';
-    ['profile-view', 'notif-view', 'search-view', 'tweet-detail-view', 'bookmarks-view'].forEach(function(cls) {
+    ['profile-view', 'notif-view', 'search-view', 'tweet-detail-view', 'bookmarks-view', 'dm-view'].forEach(function(cls) {
         var el = timeline.querySelector('.' + cls);
         if (el) el.remove();
     });

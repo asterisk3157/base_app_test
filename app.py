@@ -5,11 +5,12 @@ from models import init_db
 app = Flask(__name__)
 
 # Register blueprints
-from routes import tweets_bp, users_bp, notifications_bp, bots_bp
+from routes import tweets_bp, users_bp, notifications_bp, bots_bp, dm_bp
 app.register_blueprint(tweets_bp)
 app.register_blueprint(users_bp)
 app.register_blueprint(notifications_bp)
 app.register_blueprint(bots_bp)
+app.register_blueprint(dm_bp)
 
 
 @app.route('/')

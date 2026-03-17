@@ -15,7 +15,7 @@ function showNotifications(fromPopstate) {
     if (feed) feed.style.display = 'none';
 
     // Remove existing views
-    ['profile-view', 'notif-view', 'search-view', 'tweet-detail-view', 'bookmarks-view'].forEach(function(cls) {
+    ['profile-view', 'notif-view', 'search-view', 'tweet-detail-view', 'bookmarks-view', 'dm-view'].forEach(function(cls) {
         var el = timeline.querySelector('.' + cls);
         if (el) el.remove();
     });

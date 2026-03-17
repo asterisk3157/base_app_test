@@ -701,10 +701,9 @@ textarea {
 }
 
 .tweet-replies {
-    border-left: none;
     margin-left: 0;
     padding-left: 0;
-    background: var(--bg-card);
+    background: transparent;
 }
 
 .tweet-replies .reply-card {
@@ -1486,4 +1485,101 @@ textarea {
     .tweet-images-4 .tweet-image-item {
         height: 140px;
     }
+}
+
+/* ---------------------------------------------------------- */
+/* Tweet edited label                                          */
+/* ---------------------------------------------------------- */
+.tweet-edited {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------- */
+/* Poll UI                                                     */
+/* ---------------------------------------------------------- */
+.tweet-poll {
+    margin: 8px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.poll-option {
+    position: relative;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+    overflow: hidden;
+}
+
+.poll-option:hover { background: var(--bg-hover); }
+
+.poll-option.voted { cursor: default; }
+
+.poll-bar {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: rgba(29, 155, 240, 0.15);
+    border-radius: 8px;
+    transition: width 0.3s;
+}
+
+.poll-text { position: relative; z-index: 1; font-size: 0.95rem; }
+.poll-pct { position: relative; z-index: 1; float: right; font-weight: 700; font-size: 0.9rem; }
+.poll-total { font-size: 0.85rem; color: var(--text-secondary); padding: 4px 0; }
+
+/* ---------------------------------------------------------- */
+/* DM (Direct Messages) view                                   */
+/* ---------------------------------------------------------- */
+.dm-view { min-height: 50vh; }
+
+.dm-conversation-item {
+    display: flex;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.dm-conversation-item:hover { background: var(--bg-hover); }
+
+.dm-message {
+    max-width: 70%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    margin-bottom: 4px;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.dm-message.sent {
+    background: var(--accent);
+    color: #fff;
+    margin-left: auto;
+    border-bottom-right-radius: 4px;
+}
+
+.dm-message.received {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+}
+
+.dm-input-bar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    gap: 8px;
+    padding: 12px 20px;
+    background: var(--bg-main);
+    border-top: 1px solid var(--border);
+}
+
+@media (max-width: 375px) {
+    .dm-message { max-width: 85%; }
+    .dm-conversation-item { padding: 12px 14px; }
 }

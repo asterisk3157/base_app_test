@@ -56,6 +56,15 @@
                 <span>ブックマーク</span>
             </button>
 
+            <button class="nav-item" id="dm-nav" aria-label="メッセージ" onclick="showDM()">
+                <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" fill="none" stroke="currentColor" stroke-width="2"/>
+                    <polyline points="22,6 12,13 2,6" fill="none" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <span>メッセージ</span>
+                <span class="notif-badge" id="dm-badge" style="display:none"></span>
+            </button>
+
             <button class="nav-item" aria-label="プロフィール" onclick="if(currentUser) showProfile(currentUser.handle); else showRegistrationModal();">
                 <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
@@ -282,6 +291,7 @@
     <script src="/static/js/tweets.js"></script>
     <script src="/static/js/profile.js"></script>
     <script src="/static/js/notifications.js"></script>
+    <script src="/static/js/dm.js"></script>
     <script src="/static/js/search.js"></script>
     <script src="/static/js/app.js"></script>
 </body>

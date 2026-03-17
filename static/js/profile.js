@@ -29,7 +29,7 @@ function renderProfileView(user, tweets, repostedTweets) {
     if (composeBox) composeBox.style.display = 'none';
     if (feed) feed.style.display = 'none';
 
-    ['profile-view', 'notif-view', 'search-view', 'tweet-detail-view', 'bookmarks-view'].forEach(function(cls) {
+    ['profile-view', 'notif-view', 'search-view', 'tweet-detail-view', 'bookmarks-view', 'dm-view'].forEach(function(cls) {
         var el = timeline.querySelector('.' + cls);
         if (el) el.remove();
     });
@@ -115,6 +115,31 @@ function renderProfileView(user, tweets, repostedTweets) {
                 });
         };
         actions.appendChild(followBtn);
+
+        // DM button
+        var dmBtn = document.createElement('button');
+        dmBtn.className = 'profile-settings-btn';
+        dmBtn.style.marginLeft = '8px';
+        dmBtn.title = 'メッセージを送る';
+        dmBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>';
+        (function(u) {
+            dmBtn.onclick = function() { startDM(u.id, u.display_name, u.avatar_url, u.handle); };
+        })(user);
+        actions.appendChild(dmBtn);
+
+        // Mute button
+        var muteBtn = document.createElement('button');
+        muteBtn.className = 'profile-settings-btn';
+        muteBtn.style.marginLeft = '8px';
+        muteBtn.textContent = 'ミュート';
+        (function(u, btn) {
+            btn.onclick = function() {
+                fetch('/api/users/' + u.id + '/mute', { method: 'POST' })
+                    .then(function(r) { return r.json(); })
+                    .then(function(d) { btn.textContent = d.muted ? 'ミュート解除' : 'ミュート'; });
+            };
+        })(user, muteBtn);
+        actions.appendChild(muteBtn);
     }
 
     // Top row: avatar on the left, action button on the right

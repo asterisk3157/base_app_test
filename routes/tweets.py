@@ -9,6 +9,38 @@ from bot_engine import trigger_bot_reactions
 from config import UPLOAD_FOLDER
 
 
+def _get_poll_data(c, tweet_id, current_user_id=None):
+    """Return poll data dict for a tweet, or None if the tweet has no poll."""
+    c.execute('SELECT id, ends_at FROM polls WHERE tweet_id = ?', (tweet_id,))
+    poll_row = c.fetchone()
+    if not poll_row:
+        return None
+    poll_id = poll_row['id']
+    c.execute('''
+        SELECT po.id, po.text, po.position,
+               COUNT(pv.id) AS vote_count
+        FROM poll_options po
+        LEFT JOIN poll_votes pv ON pv.option_id = po.id
+        WHERE po.poll_id = ?
+        GROUP BY po.id
+        ORDER BY po.position
+    ''', (poll_id,))
+    options = [dict(r) for r in c.fetchall()]
+    voted_option_id = None
+    if current_user_id:
+        c.execute('SELECT option_id FROM poll_votes WHERE poll_id = ? AND user_id = ?',
+                  (poll_id, current_user_id))
+        voted_row = c.fetchone()
+        if voted_row:
+            voted_option_id = voted_row['option_id']
+    return {
+        'id': poll_id,
+        'ends_at': poll_row['ends_at'],
+        'options': options,
+        'voted_option_id': voted_option_id,
+    }
+
+
 def _create_mention_notifications(content, tweet_id, author_id):
     """Scan tweet content for @mentions and create notifications.
     Security note: handles are extracted with regex and looked up via parameterized
@@ -51,11 +83,23 @@ def get_tweets():
 
     current_user_id = get_current_user_id()
 
+    # Collect muted and blocked user IDs to exclude from timeline
+    muted_ids = set()
+    blocked_ids = set()
+    if current_user_id:
+        c.execute('SELECT target_id FROM mutes WHERE user_id = ?', (current_user_id,))
+        muted_ids = {r['target_id'] for r in c.fetchall()}
+        c.execute('SELECT target_id FROM blocks WHERE user_id = ?', (current_user_id,))
+        blocked_ids = {r['target_id'] for r in c.fetchall()}
+    hidden_ids = muted_ids | blocked_ids
+
     if filter_mode == 'following' and current_user_id is not None:
         # Get IDs of users the current user follows
         c.execute('SELECT following_id FROM follows WHERE follower_id = ?', (current_user_id,))
         following_ids = {r['following_id'] for r in c.fetchall()}
         following_ids.add(current_user_id)  # include own tweets
+        # Remove muted/blocked from following feed
+        following_ids -= hidden_ids
 
         if not following_ids:
             conn.close()
@@ -68,6 +112,7 @@ def get_tweets():
                 t.id,
                 t.content,
                 t.created_at,
+                t.edited_at,
                 t.reply_to_id,
                 t.quote_of_id,
                 t.impressions,
@@ -88,30 +133,59 @@ def get_tweets():
             LIMIT ? OFFSET ?
         ''', list(following_ids) + [limit, offset])
     else:
-        # Default: all tweets
-        c.execute('''
-            SELECT
-                t.id,
-                t.content,
-                t.created_at,
-                t.reply_to_id,
-                t.quote_of_id,
-                t.impressions,
-                t.image_url,
-                u.id   AS user_id,
-                u.display_name,
-                u.handle,
-                u.avatar_url,
-                u.is_bot,
-                COUNT(DISTINCT l.id) AS like_count,
-                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count
-            FROM tweets t
-            JOIN  users u ON u.id = t.user_id
-            LEFT JOIN likes l ON l.tweet_id = t.id
-            GROUP BY t.id
-            ORDER BY t.created_at DESC
-            LIMIT ? OFFSET ?
-        ''', (limit, offset))
+        # Default: all tweets, excluding muted/blocked authors
+        if hidden_ids:
+            hide_placeholders = ','.join('?' * len(hidden_ids))
+            c.execute(f'''
+                SELECT
+                    t.id,
+                    t.content,
+                    t.created_at,
+                    t.edited_at,
+                    t.reply_to_id,
+                    t.quote_of_id,
+                    t.impressions,
+                    t.image_url,
+                    u.id   AS user_id,
+                    u.display_name,
+                    u.handle,
+                    u.avatar_url,
+                    u.is_bot,
+                    COUNT(DISTINCT l.id) AS like_count,
+                    (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count
+                FROM tweets t
+                JOIN  users u ON u.id = t.user_id
+                LEFT JOIN likes l ON l.tweet_id = t.id
+                WHERE t.user_id NOT IN ({hide_placeholders})
+                GROUP BY t.id
+                ORDER BY t.created_at DESC
+                LIMIT ? OFFSET ?
+            ''', list(hidden_ids) + [limit, offset])
+        else:
+            c.execute('''
+                SELECT
+                    t.id,
+                    t.content,
+                    t.created_at,
+                    t.edited_at,
+                    t.reply_to_id,
+                    t.quote_of_id,
+                    t.impressions,
+                    t.image_url,
+                    u.id   AS user_id,
+                    u.display_name,
+                    u.handle,
+                    u.avatar_url,
+                    u.is_bot,
+                    COUNT(DISTINCT l.id) AS like_count,
+                    (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count
+                FROM tweets t
+                JOIN  users u ON u.id = t.user_id
+                LEFT JOIN likes l ON l.tweet_id = t.id
+                GROUP BY t.id
+                ORDER BY t.created_at DESC
+                LIMIT ? OFFSET ?
+            ''', (limit, offset))
 
     rows = c.fetchall()
 
@@ -134,10 +208,14 @@ def get_tweets():
         c.execute('SELECT tweet_id FROM bookmarks WHERE user_id = ?', (current_user_id,))
         bookmarked_ids = {r['tweet_id'] for r in c.fetchall()}
 
-    conn.close()
+    tweets = []
+    for row in rows:
+        t = _tweet_row_to_dict(row, row['id'] in liked_ids, row['id'] in reposted_ids, row['id'] in bookmarked_ids)
+        t['poll'] = _get_poll_data(c, row['id'], current_user_id)
+        tweets.append(t)
 
-    tweets = [_tweet_row_to_dict(row, row['id'] in liked_ids, row['id'] in reposted_ids, row['id'] in bookmarked_ids) for row in rows]
-    return jsonify({'tweets': tweets, 'page': page, 'has_more': len(tweets) == limit})
+    conn.close()
+    return jsonify({'tweets': tweets, 'page': page, 'has_more': len(rows) == limit})
 
 
 # POST /api/tweets — create a new tweet
@@ -149,6 +227,8 @@ def create_tweet():
         return jsonify({'error': 'authentication required'}), 401
 
     # Support both JSON and multipart form data
+    poll_options = []
+    poll_duration_hours = None
     if request.content_type and 'multipart' in request.content_type:
         content = (request.form.get('content') or '').strip()
         reply_to_id = request.form.get('reply_to_id')
@@ -158,6 +238,8 @@ def create_tweet():
         content = (data.get('content') or '').strip()
         reply_to_id = data.get('reply_to_id')
         quote_of_id = data.get('quote_of_id')
+        poll_options = data.get('poll_options') or []
+        poll_duration_hours = data.get('poll_duration_hours')
 
     # Handle multiple image uploads (up to 4 images)
     # Accepts file fields: image, image0, image1, image2, image3
@@ -194,6 +276,25 @@ def create_tweet():
         (user_id, content, reply_to_id, quote_of_id, image_url)
     )
     tweet_id = c.lastrowid
+
+    # Create poll if poll_options provided (2-4 options required)
+    if poll_options and isinstance(poll_options, list) and 2 <= len(poll_options) <= 4:
+        ends_at = None
+        if poll_duration_hours:
+            try:
+                hours = float(poll_duration_hours)
+                c.execute("SELECT datetime('now', ? || ' hours') AS ends_at", (str(hours),))
+                ends_at = c.fetchone()['ends_at']
+            except (ValueError, TypeError):
+                pass
+        c.execute('INSERT INTO polls (tweet_id, ends_at) VALUES (?, ?)', (tweet_id, ends_at))
+        poll_id = c.lastrowid
+        for i, opt_text in enumerate(poll_options):
+            opt_text = str(opt_text).strip()
+            if opt_text:
+                c.execute('INSERT INTO poll_options (poll_id, text, position) VALUES (?, ?, ?)',
+                          (poll_id, opt_text, i))
+
     conn.commit()
 
     # Fetch the full tweet row to return
@@ -202,6 +303,7 @@ def create_tweet():
             t.id,
             t.content,
             t.created_at,
+            t.edited_at,
             t.reply_to_id,
             t.quote_of_id,
             t.image_url,
@@ -219,6 +321,10 @@ def create_tweet():
     ''', (tweet_id,))
     row = c.fetchone()
 
+    # Build tweet dict including poll data
+    tweet_dict = _tweet_row_to_dict(row, False)
+    tweet_dict['poll'] = _get_poll_data(c, tweet_id, user_id)
+
     # Check if poster is human (not a bot) — only trigger reactions for human posts
     c.execute('SELECT is_bot FROM users WHERE id = ?', (user_id,))
     user_row = c.fetchone()
@@ -231,16 +337,17 @@ def create_tweet():
     if content:
         _create_mention_notifications(content, tweet_id, user_id)
 
-    return jsonify({'tweet': _tweet_row_to_dict(row, False)}), 201
+    return jsonify({'tweet': tweet_dict}), 201
 
 
 # GET /api/tweets/<id> — fetch a single tweet by ID
 @bp.route('/api/tweets/<int:tweet_id>')
 def get_single_tweet(tweet_id):
+    current_user_id = get_current_user_id()
     conn = get_db()
     c = conn.cursor()
     c.execute('''
-        SELECT t.id, t.content, t.created_at, t.reply_to_id, t.quote_of_id, t.image_url,
+        SELECT t.id, t.content, t.created_at, t.edited_at, t.reply_to_id, t.quote_of_id, t.image_url,
                u.id AS user_id, u.display_name, u.handle, u.avatar_url, u.is_bot,
                COUNT(DISTINCT l.id) AS like_count,
                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count,
@@ -252,10 +359,13 @@ def get_single_tweet(tweet_id):
         GROUP BY t.id
     ''', (tweet_id,))
     row = c.fetchone()
-    conn.close()
     if not row:
+        conn.close()
         return jsonify({'error': 'tweet not found'}), 404
-    return jsonify({'tweet': _tweet_row_to_dict(row, False)})
+    t = _tweet_row_to_dict(row, False)
+    t['poll'] = _get_poll_data(c, tweet_id, current_user_id)
+    conn.close()
+    return jsonify({'tweet': t})
 
 
 # DELETE /api/tweets/<id> — delete a tweet owned by the current cookie user
@@ -393,7 +503,7 @@ def get_bookmarks():
     conn = get_db()
     c = conn.cursor()
     c.execute('''
-        SELECT t.id, t.content, t.created_at, t.reply_to_id, t.quote_of_id, t.image_url,
+        SELECT t.id, t.content, t.created_at, t.edited_at, t.reply_to_id, t.quote_of_id, t.image_url,
                u.id AS user_id, u.display_name, u.handle, u.avatar_url, u.is_bot,
                COUNT(DISTINCT l.id) AS like_count,
                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count,
@@ -430,7 +540,7 @@ def search_tweets():
     c = conn.cursor()
     search_term = f'%{q}%'
     c.execute('''
-        SELECT t.id, t.content, t.created_at, t.reply_to_id, t.quote_of_id, t.image_url,
+        SELECT t.id, t.content, t.created_at, t.edited_at, t.reply_to_id, t.quote_of_id, t.image_url,
                u.id AS user_id, u.display_name, u.handle, u.avatar_url, u.is_bot,
                COUNT(DISTINCT l.id) AS like_count,
                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count,
@@ -532,6 +642,94 @@ def pin_tweet(tweet_id):
     conn.commit()
     conn.close()
     return jsonify({'pinned': pinned})
+
+
+# PUT /api/tweets/<id>/edit — edit the content of a tweet owned by the current user
+@bp.route('/api/tweets/<int:tweet_id>/edit', methods=['PUT'])
+def edit_tweet(tweet_id):
+    user_id = get_current_user_id()
+    if not user_id:
+        return jsonify({'error': 'auth required'}), 401
+
+    data = request.get_json(force=True, silent=True) or {}
+    content = (data.get('content') or '').strip()
+    if not content:
+        return jsonify({'error': 'content required'}), 400
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('SELECT user_id FROM tweets WHERE id = ?', (tweet_id,))
+    tweet = c.fetchone()
+    if not tweet or tweet['user_id'] != user_id:
+        conn.close()
+        return jsonify({'error': 'forbidden'}), 403
+
+    c.execute('UPDATE tweets SET content = ?, edited_at = CURRENT_TIMESTAMP WHERE id = ?', (content, tweet_id))
+    conn.commit()
+    conn.close()
+    return jsonify({'ok': True})
+
+
+# POST /api/polls/<id>/vote — cast or change a vote on a poll
+@bp.route('/api/polls/<int:poll_id>/vote', methods=['POST'])
+def vote_poll(poll_id):
+    user_id = get_current_user_id()
+    if not user_id:
+        return jsonify({'error': 'auth required'}), 401
+
+    data = request.get_json(force=True, silent=True) or {}
+    option_id = data.get('option_id')
+    if not option_id:
+        return jsonify({'error': 'option_id required'}), 400
+
+    conn = get_db()
+    c = conn.cursor()
+
+    # Verify poll exists and option belongs to it
+    c.execute('SELECT id, ends_at FROM polls WHERE id = ?', (poll_id,))
+    poll = c.fetchone()
+    if not poll:
+        conn.close()
+        return jsonify({'error': 'poll not found'}), 404
+
+    # Check poll has not ended
+    if poll['ends_at']:
+        c.execute("SELECT ? > ?", (poll['ends_at'], 'now'))
+        # Simple approach: compare via SQL
+        c.execute("SELECT CURRENT_TIMESTAMP > ? AS expired", (poll['ends_at'],))
+        if c.fetchone()['expired']:
+            conn.close()
+            return jsonify({'error': 'poll has ended'}), 400
+
+    c.execute('SELECT id FROM poll_options WHERE id = ? AND poll_id = ?', (option_id, poll_id))
+    if not c.fetchone():
+        conn.close()
+        return jsonify({'error': 'invalid option'}), 400
+
+    # Insert or replace vote (user can change their vote)
+    c.execute('INSERT OR REPLACE INTO poll_votes (poll_id, option_id, user_id) VALUES (?, ?, ?)',
+              (poll_id, option_id, user_id))
+    conn.commit()
+
+    # Return updated vote counts per option
+    c.execute('''
+        SELECT po.id, po.text, po.position,
+               COUNT(pv.id) AS vote_count
+        FROM poll_options po
+        LEFT JOIN poll_votes pv ON pv.option_id = po.id
+        WHERE po.poll_id = ?
+        GROUP BY po.id
+        ORDER BY po.position
+    ''', (poll_id,))
+    options = [dict(r) for r in c.fetchall()]
+
+    # Find what this user voted for
+    c.execute('SELECT option_id FROM poll_votes WHERE poll_id = ? AND user_id = ?', (poll_id, user_id))
+    voted_row = c.fetchone()
+    voted_option_id = voted_row['option_id'] if voted_row else None
+
+    conn.close()
+    return jsonify({'options': options, 'voted_option_id': voted_option_id})
 
 
 # ---------------------------------------------------------------------------
