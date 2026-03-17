@@ -6,7 +6,7 @@ import random
 from flask import request, jsonify, make_response
 from routes import users_bp as bp
 from models import get_db, get_current_user_id, _tweet_row_to_dict, allowed_file
-from bot_engine import _bot_follow_back
+from bot_engine import _bot_follow_back, trigger_new_user_bot_follows
 from config import UPLOAD_FOLDER
 
 
@@ -50,6 +50,9 @@ def register():
     c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at, pinned_tweet_id FROM users WHERE id = ?', (new_id,))
     user = dict(c.fetchone())
     conn.close()
+
+    # Trigger 3-5 bots to follow the new user in the background
+    trigger_new_user_bot_follows(new_id)
 
     resp = make_response(jsonify({'user': user}), 201)
     resp.set_cookie('user_id', str(new_id), max_age=30 * 24 * 60 * 60, httponly=False, samesite='Lax')
@@ -137,6 +140,119 @@ def get_users():
     return jsonify({'users': users})
 
 
+# GET /api/users/recommended — return up to 5 suggested users to follow
+# Algorithm:
+#   1. Exclude current user and already-followed users.
+#   2. Score remaining users by number of common follows (users also followed
+#      by people the current user follows).
+#   3. Order by score DESC, fallback to random for zero-score candidates.
+@bp.route('/api/users/recommended')
+def get_recommended_users():
+    current_user_id = get_current_user_id()
+    conn = get_db()
+    c = conn.cursor()
+
+    if current_user_id is None:
+        # No session: return 5 random non-bot users
+        c.execute('''
+            SELECT id, display_name, handle, avatar_url
+            FROM users
+            ORDER BY RANDOM()
+            LIMIT 5
+        ''')
+        users_list = [dict(r) for r in c.fetchall()]
+        conn.close()
+        return jsonify({'users': users_list})
+
+    # Users the current user already follows
+    c.execute('SELECT following_id FROM follows WHERE follower_id = ?', (current_user_id,))
+    already_following = {r['following_id'] for r in c.fetchall()}
+    already_following.add(current_user_id)  # exclude self
+
+    if not already_following - {current_user_id}:
+        # Current user follows nobody — score all by common followers is 0; return random
+        excl_ph = ','.join('?' * len(already_following))
+        c.execute(f'''
+            SELECT id, display_name, handle, avatar_url
+            FROM users
+            WHERE id NOT IN ({excl_ph})
+            ORDER BY RANDOM()
+            LIMIT 5
+        ''', list(already_following))
+        users_list = [dict(r) for r in c.fetchall()]
+        conn.close()
+        return jsonify({'users': users_list})
+
+    # Find users followed by the people the current user follows ("friends of friends")
+    # Common-follow score = number of mutual followees who also follow candidate
+    followed_by_friends_sql = '''
+        SELECT f2.following_id AS candidate_id, COUNT(*) AS score
+        FROM follows f1
+        JOIN follows f2 ON f2.follower_id = f1.following_id
+        WHERE f1.follower_id = ?
+        GROUP BY f2.following_id
+    '''
+    c.execute(followed_by_friends_sql, (current_user_id,))
+    scored = {r['candidate_id']: r['score'] for r in c.fetchall()}
+
+    # Remove already-followed and self from candidates
+    scored = {uid: s for uid, s in scored.items() if uid not in already_following}
+
+    if scored:
+        # Sort by score descending; within same score, humans first (is_bot=0 < is_bot=1)
+        top_ids = sorted(scored, key=lambda x: scored[x], reverse=True)[:10]
+        ph = ','.join('?' * len(top_ids))
+        c.execute(f'''
+            SELECT id, display_name, handle, avatar_url, is_bot
+            FROM users WHERE id IN ({ph})
+        ''', top_ids)
+        rows = {r['id']: dict(r) for r in c.fetchall()}
+        # Re-sort: humans first at same score level, then by score
+        top_ids_sorted = sorted(top_ids, key=lambda x: (-scored[x], rows.get(x, {}).get('is_bot', 1)))
+        users_list = [rows[uid] for uid in top_ids_sorted[:5] if uid in rows]
+        # Remove is_bot from response
+        for u in users_list:
+            u.pop('is_bot', None)
+    else:
+        # Fallback: humans first, then bots, randomized within each group
+        excl_ph = ','.join('?' * len(already_following))
+        c.execute(f'''
+            SELECT id, display_name, handle, avatar_url
+            FROM users
+            WHERE id NOT IN ({excl_ph})
+            ORDER BY is_bot ASC, RANDOM()
+            LIMIT 5
+        ''', list(already_following))
+        users_list = [dict(r) for r in c.fetchall()]
+
+    conn.close()
+    return jsonify({'users': users_list})
+
+
+# GET /api/users/search/mentions?q=<prefix> — autocomplete @mention suggestions
+# Returns up to 5 users whose handle or username starts with the given prefix.
+# Used by the tweet composer to suggest completions as the user types "@...".
+@bp.route('/api/users/search/mentions')
+def search_mentions():
+    q = (request.args.get('q') or '').strip().lstrip('@')
+    if not q:
+        return jsonify({'users': []})
+
+    prefix = q + '%'
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('''
+        SELECT id, display_name, handle, avatar_url
+        FROM users
+        WHERE handle LIKE ? OR username LIKE ?
+        ORDER BY display_name
+        LIMIT 5
+    ''', ('@' + prefix, prefix))
+    users_list = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return jsonify({'users': users_list})
+
+
 # GET /api/users/search — search users by display_name, handle, or username
 @bp.route('/api/users/search')
 def search_users():
@@ -221,7 +337,8 @@ def get_user_profile(handle):
             t.id, t.content, t.created_at, t.reply_to_id, t.quote_of_id, t.impressions, t.image_url,
             u.id AS user_id, u.display_name, u.handle, u.avatar_url, u.is_bot,
             COUNT(DISTINCT l.id) AS like_count,
-            (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count
+            (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count,
+            (SELECT COUNT(*) FROM tweets r WHERE r.reply_to_id = t.id) AS reply_count
         FROM tweets t
         JOIN users u ON u.id = t.user_id
         LEFT JOIN likes l ON l.tweet_id = t.id
@@ -262,6 +379,7 @@ def get_user_profile(handle):
                u.id AS user_id, u.display_name, u.handle, u.avatar_url, u.is_bot,
                COUNT(DISTINCT l.id) AS like_count,
                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count,
+               (SELECT COUNT(*) FROM tweets r WHERE r.reply_to_id = t.id) AS reply_count,
                t.impressions
         FROM reposts rp
         JOIN tweets t ON t.id = rp.tweet_id

@@ -52,7 +52,7 @@ function showDM(fromPopstate) {
                 var item = document.createElement('div');
                 item.className = 'dm-conversation-item';
 
-                var av = buildAvatar({ id: conv.other_user_id, display_name: conv.other_name, avatar_url: conv.other_avatar, handle: conv.other_handle }, 44);
+                var av = buildAvatar({ id: conv.other_id, display_name: conv.other_name, avatar_url: conv.other_avatar, handle: conv.other_handle }, 44);
 
                 var info = document.createElement('div');
                 info.style.flex = '1';
@@ -67,7 +67,7 @@ function showDM(fromPopstate) {
 
                 var timeEl = document.createElement('span');
                 timeEl.style.cssText = 'font-size:0.8rem;color:var(--text-secondary);flex-shrink:0;margin-left:8px';
-                timeEl.textContent = conv.last_message_at ? timeAgo(conv.last_message_at) : '';
+                timeEl.textContent = conv.updated_at ? timeAgo(conv.updated_at) : '';
 
                 nameRow.appendChild(nameEl);
                 nameRow.appendChild(timeEl);
@@ -90,7 +90,7 @@ function showDM(fromPopstate) {
                 }
 
                 (function(c) {
-                    item.onclick = function() { showConversation(c.id, c.other_name, c.other_avatar, c.other_handle, c.other_user_id); };
+                    item.onclick = function() { showConversation(c.id, c.other_name, c.other_avatar, c.other_handle, c.other_id); };
                 })(conv);
 
                 view.appendChild(item);
@@ -102,7 +102,105 @@ function showDM(fromPopstate) {
         });
 }
 
+// Track the active conversation polling interval so we can clear it on exit
+var _dmPollInterval = null;
+var _dmLastMsgId = 0;
+
+function _stopDMPolling() {
+    if (_dmPollInterval) {
+        clearInterval(_dmPollInterval);
+        _dmPollInterval = null;
+    }
+}
+
+function _renderMessageBubble(msg, messagesEl) {
+    var wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column';
+    wrap.dataset.msgId = msg.id;
+
+    var bubble = document.createElement('div');
+    var isSent = currentUser && msg.sender_id === currentUser.id;
+    bubble.className = 'dm-message ' + (isSent ? 'sent' : 'received');
+    bubble.textContent = msg.content;
+
+    var timeEl = document.createElement('div');
+    timeEl.style.cssText = 'font-size:0.75rem;color:var(--text-secondary);margin-top:2px;' + (isSent ? 'text-align:right' : '');
+    timeEl.textContent = msg.created_at ? timeAgo(msg.created_at) : 'たった今';
+
+    wrap.appendChild(bubble);
+    wrap.appendChild(timeEl);
+    messagesEl.appendChild(wrap);
+}
+
+function _startDMPolling(convId, messagesEl) {
+    _stopDMPolling();
+    _dmPollInterval = setInterval(function() {
+        // Only poll if we're still viewing this conversation
+        if (currentView !== 'dm' || !document.querySelector('.dm-messages')) {
+            _stopDMPolling();
+            return;
+        }
+
+        // Poll messages
+        fetch('/api/dm/conversations/' + convId + '/messages')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.messages || data.messages.length === 0) return;
+
+                var existingIds = new Set();
+                messagesEl.querySelectorAll('[data-msg-id]').forEach(function(el) {
+                    existingIds.add(parseInt(el.dataset.msgId));
+                });
+
+                var hasNew = false;
+                data.messages.forEach(function(msg) {
+                    if (!existingIds.has(msg.id)) {
+                        var placeholder = messagesEl.querySelector('[style*="text-align:center"]');
+                        if (placeholder) placeholder.remove();
+                        // Remove typing indicator before adding new message
+                        var typingEl = messagesEl.querySelector('.dm-typing');
+                        if (typingEl) typingEl.remove();
+                        _renderMessageBubble(msg, messagesEl);
+                        hasNew = true;
+                    }
+                });
+
+                if (hasNew) {
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                    window.scrollTo(0, document.body.scrollHeight + 200);
+                }
+            })
+            .catch(function() {});
+
+        // Poll typing indicator
+        fetch('/api/dm/conversations/' + convId + '/typing')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var typingEl = messagesEl.querySelector('.dm-typing');
+                var otherTyping = data.typing && data.typing.length > 0 &&
+                    !(data.typing.length === 1 && currentUser && data.typing[0] === currentUser.id);
+
+                if (otherTyping) {
+                    if (!typingEl) {
+                        typingEl = document.createElement('div');
+                        typingEl.className = 'dm-typing';
+                        typingEl.innerHTML = '<span class="dm-typing-dots"><span></span><span></span><span></span></span> 入力中...';
+                        messagesEl.appendChild(typingEl);
+                    }
+                    // Always scroll when typing indicator is visible
+                    messagesEl.scrollTop = messagesEl.scrollHeight;
+                    window.scrollTo(0, document.body.scrollHeight + 200);
+                } else {
+                    if (typingEl) typingEl.remove();
+                }
+            })
+            .catch(function() {});
+    }, 1000);
+}
+
 function showConversation(convId, otherName, otherAvatar, otherHandle, otherUserId) {
+    _stopDMPolling();
+
     var timeline = document.getElementById('top');
     var view = timeline.querySelector('.dm-view');
     if (!view) return;
@@ -120,7 +218,7 @@ function showConversation(convId, otherName, otherAvatar, otherHandle, otherUser
             // Back button row
             var backRow = document.createElement('div');
             backRow.style.cssText = 'display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);cursor:pointer';
-            backRow.onclick = function() { showDM(false); };
+            backRow.onclick = function() { _stopDMPolling(); showDM(false); };
 
             var backSvg = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>';
             backRow.innerHTML = backSvg + '<span style="font-weight:700;font-size:0.95rem">' + otherName + '</span>';
@@ -135,28 +233,21 @@ function showConversation(convId, otherName, otherAvatar, otherHandle, otherUser
                 messagesEl.innerHTML = '<div style="padding:40px 20px;text-align:center;color:var(--text-secondary)">まだメッセージはありません。最初のメッセージを送りましょう。</div>';
             } else {
                 data.messages.forEach(function(msg) {
-                    var wrap = document.createElement('div');
-                    wrap.style.cssText = 'display:flex;flex-direction:column';
-
-                    var bubble = document.createElement('div');
-                    var isSent = currentUser && msg.sender_id === currentUser.id;
-                    bubble.className = 'dm-message ' + (isSent ? 'sent' : 'received');
-                    bubble.textContent = msg.content;
-
-                    var timeEl = document.createElement('div');
-                    timeEl.style.cssText = 'font-size:0.75rem;color:var(--text-secondary);margin-top:2px;' + (isSent ? 'text-align:right' : '');
-                    timeEl.textContent = timeAgo(msg.created_at);
-
-                    wrap.appendChild(bubble);
-                    wrap.appendChild(timeEl);
-                    messagesEl.appendChild(wrap);
+                    _renderMessageBubble(msg, messagesEl);
                 });
             }
 
             view.appendChild(messagesEl);
 
-            // Scroll to bottom
-            messagesEl.scrollTop = messagesEl.scrollHeight;
+            // Scroll to bottom — both the messages container and the window
+            function scrollToBottom() {
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+                window.scrollTo(0, document.body.scrollHeight + 200);
+            }
+            setTimeout(scrollToBottom, 50);
+
+            // Start polling for new messages every 1 second
+            _startDMPolling(convId, messagesEl);
 
             // Input bar
             var inputBar = document.createElement('div');
@@ -186,6 +277,16 @@ function showConversation(convId, otherName, otherAvatar, otherHandle, otherUser
                 if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { doSend(); }
             });
 
+            // Send typing indicator on input (debounced, every 3 seconds max)
+            var _lastTypingSent = 0;
+            textarea.addEventListener('input', function() {
+                var now = Date.now();
+                if (now - _lastTypingSent > 3000 && textarea.value.trim()) {
+                    _lastTypingSent = now;
+                    fetch('/api/dm/conversations/' + convId + '/typing', { method: 'POST' }).catch(function() {});
+                }
+            });
+
             inputBar.appendChild(textarea);
             inputBar.appendChild(sendBtn);
             view.appendChild(inputBar);
@@ -209,8 +310,13 @@ function sendDMMessage(convId, content, otherUserId, messagesEl) {
         if (!data || data.error) return;
         if (!messagesEl) return;
 
+        // Remove "no messages" placeholder
+        var placeholder = messagesEl.querySelector('[style*="text-align:center"]');
+        if (placeholder) placeholder.remove();
+
         var wrap = document.createElement('div');
         wrap.style.cssText = 'display:flex;flex-direction:column';
+        wrap.dataset.msgId = data.message_id;
 
         var bubble = document.createElement('div');
         bubble.className = 'dm-message sent';
@@ -224,6 +330,7 @@ function sendDMMessage(convId, content, otherUserId, messagesEl) {
         wrap.appendChild(timeEl);
         messagesEl.appendChild(wrap);
         messagesEl.scrollTop = messagesEl.scrollHeight;
+        window.scrollTo(0, document.body.scrollHeight + 200);
     })
     .catch(function(err) {
         console.error('Failed to send DM:', err);
@@ -264,16 +371,35 @@ function startDM(userId, otherName, otherAvatar, otherHandle) {
 // ------------------------------------------------------------------
 function pollDMUnread() {
     if (!currentUser) return;
+    // Don't show unread badge while viewing a conversation (messages are auto-read)
+    if (_dmPollInterval) {
+        ['dm-badge', 'mobile-dm-badge'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        });
+        return;
+    }
     fetch('/api/dm/unread')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             var badge = document.getElementById('dm-badge');
-            if (!badge) return;
-            if (data.count > 0) {
-                badge.textContent = data.count;
-                badge.style.display = 'inline';
-            } else {
-                badge.style.display = 'none';
+            if (badge) {
+                if (data.count > 0) {
+                    badge.textContent = data.count;
+                    badge.style.display = 'inline';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+            // Feature 5: sync mobile DM badge
+            var mobileBadge = document.getElementById('mobile-dm-badge');
+            if (mobileBadge) {
+                if (data.count > 0) {
+                    mobileBadge.textContent = data.count;
+                    mobileBadge.style.display = 'flex';
+                } else {
+                    mobileBadge.style.display = 'none';
+                }
             }
         })
         .catch(function() {});

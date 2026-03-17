@@ -1,3 +1,22 @@
+import json
+import os
+
+# ---------------------------------------------------------------------------
+# Load bot persona JSON — personalities, reply templates, topics, self_replies
+# Falls back gracefully if the file is missing.
+# ---------------------------------------------------------------------------
+_PERSONAS_FILE = os.path.join(os.path.dirname(__file__), 'bot_personas.json')
+
+def _load_bot_personas():
+    """Load bot personas from bot_personas.json. Returns empty dict on failure."""
+    try:
+        with open(_PERSONAS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+BOT_PERSONAS = _load_bot_personas()
+
 # ---------------------------------------------------------------------------
 # Fallback tweets used when GEMINI_API_KEY is not set
 # ---------------------------------------------------------------------------
@@ -683,3 +702,19 @@ BOT_FALLBACK_REPLIES = {
         "課金してください🔓",
     ],
 }
+
+# ---------------------------------------------------------------------------
+# Merge JSON persona data into BOT_PERSONALITIES and BOT_FALLBACK_REPLIES
+# Entries from the JSON file override/augment the hardcoded dicts above.
+# ---------------------------------------------------------------------------
+for _username, _persona in BOT_PERSONAS.items():
+    # Update personality prompts from JSON (only if the JSON entry has one)
+    if _persona.get('personality') and _username not in BOT_PERSONALITIES:
+        BOT_PERSONALITIES[_username] = _persona['personality']
+    elif _persona.get('personality'):
+        # JSON overrides hardcoded personality
+        BOT_PERSONALITIES[_username] = _persona['personality']
+
+    # Update fallback replies from JSON reply_templates
+    if _persona.get('reply_templates') and _username not in BOT_FALLBACK_REPLIES:
+        BOT_FALLBACK_REPLIES[_username] = _persona['reply_templates']

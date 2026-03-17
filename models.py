@@ -52,6 +52,7 @@ def _tweet_row_to_dict(row, liked: bool, reposted: bool = False, bookmarked: boo
         'reposts': row['repost_count'],
         'reposted': reposted,
         'bookmarked': bookmarked,
+        'reply_count': row['reply_count'] if 'reply_count' in row.keys() else 0,
     }
 
 
@@ -305,6 +306,62 @@ def init_db():
             user_id INTEGER NOT NULL REFERENCES users(id),
             UNIQUE(poll_id, user_id)
         )''')
+
+    # hidden_tweets table (migration guard for existing DBs)
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='hidden_tweets'")
+    if not c.fetchone():
+        c.execute('''CREATE TABLE hidden_tweets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            tweet_id INTEGER NOT NULL REFERENCES tweets(id),
+            UNIQUE(user_id, tweet_id)
+        )''')
+
+    # lists table (migration guard for existing DBs)
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='lists'")
+    if not c.fetchone():
+        c.execute('''CREATE TABLE lists (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            name TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )''')
+
+    # list_members table (migration guard for existing DBs)
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='list_members'")
+    if not c.fetchone():
+        c.execute('''CREATE TABLE list_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            list_id INTEGER NOT NULL REFERENCES lists(id),
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            UNIQUE(list_id, user_id)
+        )''')
+
+    # scheduled_tweets table — lazy scheduler: checked on each GET /api/tweets call
+    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='scheduled_tweets'")
+    if not c.fetchone():
+        c.execute('''CREATE TABLE scheduled_tweets (
+            id                INTEGER   PRIMARY KEY AUTOINCREMENT,
+            user_id           INTEGER   NOT NULL REFERENCES users(id),
+            content           TEXT      NOT NULL,
+            image_url         TEXT      NOT NULL DEFAULT '',
+            poll_options_json TEXT,
+            scheduled_at      TIMESTAMP NOT NULL,
+            posted            INTEGER   NOT NULL DEFAULT 0,
+            created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )''')
+
+    # Performance indexes — safe to run multiple times due to IF NOT EXISTS
+    c.execute('CREATE INDEX IF NOT EXISTS idx_tweets_created_at ON tweets(created_at DESC)')
+    c.execute('CREATE INDEX IF NOT EXISTS idx_tweets_user_id ON tweets(user_id)')
+    c.execute('CREATE INDEX IF NOT EXISTS idx_tweets_reply_to ON tweets(reply_to_id)')
+    c.execute('CREATE INDEX IF NOT EXISTS idx_likes_tweet_id ON likes(tweet_id)')
+    c.execute('CREATE INDEX IF NOT EXISTS idx_likes_user_id ON likes(user_id)')
+    c.execute('CREATE INDEX IF NOT EXISTS idx_follows_follower ON follows(follower_id)')
+    c.execute('CREATE INDEX IF NOT EXISTS idx_follows_following ON follows(following_id)')
+    c.execute('CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id)')
+    c.execute('CREATE INDEX IF NOT EXISTS idx_bookmarks_user ON bookmarks(user_id)')
 
     # Migration: add created_at column to users if missing (for existing DBs)
     # Note: SQLite ALTER TABLE does not allow CURRENT_TIMESTAMP as default; use NULL then backfill.

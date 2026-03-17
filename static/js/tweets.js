@@ -66,52 +66,70 @@ function buildTweetCard(tweet) {
     moreBtn.setAttribute('aria-label', 'その他のオプション');
     moreBtn.onclick = function(e) {
         e.stopPropagation();
-        // Only show delete for own tweets
-        if (!currentUser || tweet.user.id !== currentUser.id) return;
+        if (!currentUser) return;
 
         var existing = document.querySelector('.tweet-context-menu');
         if (existing) existing.remove();
 
         var menu = document.createElement('div');
         menu.className = 'tweet-context-menu';
+        var isOwn = tweet.user.id === currentUser.id;
 
-        var deleteItem = document.createElement('div');
-        deleteItem.className = 'tweet-context-item delete';
-        deleteItem.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> 削除';
-        deleteItem.onclick = function(e) {
-            e.stopPropagation();
-            menu.remove();
-            if (confirm('このツイートを削除しますか？')) {
-                fetch('/api/tweets/' + tweet.id, { method: 'DELETE' })
+        if (isOwn) {
+            // Edit tweet option — only for own tweets
+            var editItem = document.createElement('div');
+            editItem.className = 'tweet-context-item';
+            editItem.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> 編集';
+            editItem.onclick = function(e) {
+                e.stopPropagation();
+                menu.remove();
+                showEditTweet(tweet);
+            };
+            menu.appendChild(editItem);
+
+            // Pin tweet option — only for own tweets
+            var pinItem = document.createElement('div');
+            pinItem.className = 'tweet-context-item';
+            pinItem.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17v5M5 17h14l-1.5-6.5L14 8V4h-4v4L6.5 10.5z"/></svg> ' + (tweet.pinned ? 'ピン留めを解除' : 'プロフィールにピン留め');
+            pinItem.onclick = function(e) {
+                e.stopPropagation();
+                menu.remove();
+                fetch('/api/tweets/' + tweet.id + '/pin', { method: 'POST' })
+                    .then(function(r) { return r.json(); })
                     .then(function() { loadTweets(); });
-            }
-        };
+            };
+            menu.appendChild(pinItem);
 
-        // Edit tweet option — only for own tweets
-        var editItem = document.createElement('div');
-        editItem.className = 'tweet-context-item';
-        editItem.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> 編集';
-        editItem.onclick = function(e) {
-            e.stopPropagation();
-            menu.remove();
-            showEditTweet(tweet);
-        };
-        menu.appendChild(editItem);
-
-        // Pin tweet option — only for own tweets
-        var pinItem = document.createElement('div');
-        pinItem.className = 'tweet-context-item';
-        pinItem.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17v5M5 17h14l-1.5-6.5L14 8V4h-4v4L6.5 10.5z"/></svg> ' + (tweet.pinned ? 'ピン留めを解除' : 'プロフィールにピン留め');
-        pinItem.onclick = function(e) {
-            e.stopPropagation();
-            menu.remove();
-            fetch('/api/tweets/' + tweet.id + '/pin', { method: 'POST' })
-                .then(function(r) { return r.json(); })
-                .then(function() { loadTweets(); });
-        };
-        menu.appendChild(pinItem);
-
-        menu.appendChild(deleteItem);
+            var deleteItem = document.createElement('div');
+            deleteItem.className = 'tweet-context-item delete';
+            deleteItem.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> 削除';
+            deleteItem.onclick = function(e) {
+                e.stopPropagation();
+                menu.remove();
+                if (confirm('このツイートを削除しますか？')) {
+                    fetch('/api/tweets/' + tweet.id, { method: 'DELETE' })
+                        .then(function() { loadTweets(); });
+                }
+            };
+            menu.appendChild(deleteItem);
+        } else {
+            // Feature 10: "興味がない" for other users' tweets
+            var hideItem = document.createElement('div');
+            hideItem.className = 'tweet-context-item';
+            hideItem.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg> 興味がない';
+            hideItem.style.color = 'var(--text-secondary)';
+            (function(tweetData, cardEl) {
+                hideItem.onclick = function(e) {
+                    e.stopPropagation();
+                    menu.remove();
+                    fetch('/api/tweets/' + tweetData.id + '/hide', { method: 'POST' })
+                        .catch(function() {});
+                    // Remove card from DOM regardless of API response
+                    if (cardEl && cardEl.parentNode) cardEl.parentNode.removeChild(cardEl);
+                };
+            })(tweet, card);
+            menu.appendChild(hideItem);
+        }
 
         var rect = moreBtn.getBoundingClientRect();
         menu.style.position = 'fixed';
@@ -137,6 +155,11 @@ function buildTweetCard(tweet) {
     contentEl.innerHTML = contentEl.innerHTML.replace(/#([^\s<]+)/g, '<a href="javascript:void(0)" onclick="searchHashtag(\'$1\')" style="color:var(--accent);text-decoration:none">#$1</a>');
     // Wrap @mentions in clickable profile links
     contentEl.innerHTML = contentEl.innerHTML.replace(/@([a-zA-Z0-9_]+)/g, '<a href="javascript:void(0)" onclick="showProfile(\'@$1\')" style="color:var(--accent);text-decoration:none">@$1</a>');
+    // Wrap URLs in clickable links (applied last so it doesn't break hashtag/mention replacements)
+    contentEl.innerHTML = contentEl.innerHTML.replace(/(https?:\/\/[^\s<"']+)/g, function(url) {
+        var display = url.length > 30 ? url.slice(0, 30) + '…' : url;
+        return '<a href="' + url + '" target="_blank" rel="noopener" class="tweet-url-link">' + display + '</a>';
+    });
     contentEl.style.cursor = 'pointer';
     contentEl.onclick = function(e) {
         // Don't trigger if clicking a link inside
@@ -305,6 +328,32 @@ function buildTweetCard(tweet) {
     })(bookmarkBtn, bookmarkSvg, tweet);
     actionsEl.appendChild(bookmarkBtn);
 
+    // Feature 6: Share / copy URL button
+    var shareBtn = document.createElement('button');
+    shareBtn.className = 'share-btn';
+    shareBtn.setAttribute('aria-label', 'URLをコピー');
+    shareBtn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+    (function(tweetData) {
+        shareBtn.onclick = function(e) {
+            e.stopPropagation();
+            var url = window.location.origin + '/#tweet/' + tweetData.id;
+            navigator.clipboard.writeText(url).then(function() {
+                showCopyToast('コピーしました');
+            }).catch(function() {
+                // Fallback for browsers without clipboard API
+                var ta = document.createElement('textarea');
+                ta.value = url;
+                ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); } catch(ex) {}
+                document.body.removeChild(ta);
+                showCopyToast('コピーしました');
+            });
+        };
+    })(tweet);
+    actionsEl.appendChild(shareBtn);
+
     bodyEl.appendChild(metaEl);
     bodyEl.appendChild(contentEl);
 
@@ -313,15 +362,16 @@ function buildTweetCard(tweet) {
         var imgContainer = document.createElement('div');
         imgContainer.className = 'tweet-images tweet-images-' + Math.min(tweet.image_urls.length, 4);
 
+        var allImgUrls = tweet.image_urls.slice(0, 4);
         tweet.image_urls.forEach(function(url, idx) {
             if (idx >= 4) return;
             var img = document.createElement('img');
             img.src = url;
             img.className = 'tweet-image-item';
             img.alt = '';
-            (function(u) {
-                img.onclick = function(e) { e.stopPropagation(); showImageModal(u); };
-            })(url);
+            (function(u, allUrls) {
+                img.onclick = function(e) { e.stopPropagation(); showImageModal(u, allUrls); };
+            })(url, allImgUrls);
             imgContainer.appendChild(img);
         });
 
@@ -335,18 +385,19 @@ function buildTweetCard(tweet) {
         img.className = 'tweet-image-item';
         img.alt = '';
         (function(u) {
-            img.onclick = function(e) { e.stopPropagation(); showImageModal(u); };
+            img.onclick = function(e) { e.stopPropagation(); showImageModal(u, [u]); };
         })(tweet.image_url);
         imgContainer.appendChild(img);
         bodyEl.appendChild(imgContainer);
     }
 
-    // Quoted tweet embed — fetch and show if this is a quote retweet
+    // Feature 8: Improved quoted tweet embed
     if (tweet.quote_of_id) {
         var quoteWrap = document.createElement('div');
         quoteWrap.className = 'quote-embed';
         quoteWrap.style.cursor = 'pointer';
-        quoteWrap.innerHTML = '<div style="color:var(--text-secondary);font-size:0.85rem">読み込み中...</div>';
+        // Skeleton placeholder while loading
+        quoteWrap.innerHTML = '<div style="color:var(--text-secondary);font-size:0.85rem;padding:4px 0">読み込み中...</div>';
         bodyEl.appendChild(quoteWrap);
 
         (function(wrap, qid) {
@@ -355,11 +406,49 @@ function buildTweetCard(tweet) {
                 .then(function(d) {
                     if (d.tweet) {
                         var qt = d.tweet;
-                        // Intentionally using innerHTML to match XSS pattern
-                        wrap.innerHTML = '<div class="quote-embed-name">' + qt.user.display_name
-                            + ' <span style="color:var(--text-secondary);font-weight:400">' + qt.user.handle + '</span></div>'
-                            + '<div class="quote-embed-content">' + qt.content + '</div>';
-                        wrap.onclick = function() { showProfile(qt.user.handle); };
+                        wrap.innerHTML = '';
+
+                        // Header: small avatar + name + handle + time
+                        var header = document.createElement('div');
+                        header.className = 'quote-embed-header';
+                        var qav = buildAvatar(qt.user, 20);
+                        var qname = document.createElement('span');
+                        qname.style.cssText = 'font-weight:700;font-size:0.88rem;color:var(--text-primary)';
+                        qname.textContent = qt.user.display_name;
+                        var qhandle = document.createElement('span');
+                        qhandle.style.cssText = 'font-size:0.82rem;color:var(--text-secondary)';
+                        qhandle.textContent = qt.user.handle;
+                        var qtime = document.createElement('span');
+                        qtime.style.cssText = 'font-size:0.78rem;color:var(--text-secondary);margin-left:auto';
+                        qtime.textContent = timeAgo(qt.created_at);
+                        header.appendChild(qav);
+                        header.appendChild(qname);
+                        header.appendChild(qhandle);
+                        header.appendChild(qtime);
+                        wrap.appendChild(header);
+
+                        // Content — 3-line clamp
+                        var qcontent = document.createElement('div');
+                        qcontent.className = 'quote-embed-content';
+                        // Intentionally using innerHTML to match the XSS pattern in this codebase
+                        qcontent.innerHTML = qt.content;
+                        wrap.appendChild(qcontent);
+
+                        // Thumbnail if the quoted tweet has images
+                        var firstImg = (qt.image_urls && qt.image_urls[0]) || qt.image_url;
+                        if (firstImg) {
+                            var qthumb = document.createElement('img');
+                            qthumb.src = firstImg;
+                            qthumb.className = 'quote-embed-thumb';
+                            qthumb.alt = '';
+                            wrap.appendChild(qthumb);
+                        }
+
+                        // Click navigates to quoted tweet detail
+                        wrap.onclick = function(e) {
+                            e.stopPropagation();
+                            showTweetDetail(qt.id);
+                        };
                     }
                 })
                 .catch(function() {
@@ -373,15 +462,17 @@ function buildTweetCard(tweet) {
         var pollDiv = document.createElement('div');
         pollDiv.className = 'tweet-poll';
 
-        var totalVotes = tweet.poll.options.reduce(function(sum, o) { return sum + (o.votes || 0); }, 0);
+        var hasVoted = tweet.poll.voted_option_id !== null && tweet.poll.voted_option_id !== undefined;
+        var totalVotes = tweet.poll.options.reduce(function(sum, o) { return sum + (o.vote_count || 0); }, 0);
 
         tweet.poll.options.forEach(function(option) {
+            var isVotedOption = hasVoted && tweet.poll.voted_option_id === option.id;
             var optionDiv = document.createElement('div');
-            optionDiv.className = 'poll-option' + (option.voted ? ' voted' : '');
+            optionDiv.className = 'poll-option' + (isVotedOption ? ' voted' : '');
 
-            var pct = totalVotes > 0 ? Math.round((option.votes || 0) / totalVotes * 100) : 0;
+            var pct = totalVotes > 0 ? Math.round((option.vote_count || 0) / totalVotes * 100) : 0;
 
-            if (tweet.poll.voted) {
+            if (hasVoted) {
                 // Show results
                 var barEl = document.createElement('div');
                 barEl.className = 'poll-bar';
@@ -420,13 +511,22 @@ function buildTweetCard(tweet) {
         voteCount.textContent = totalVotes + '票';
         pollDiv.appendChild(voteCount);
 
-        bodyEl.insertBefore(pollDiv, actionsEl);
+        bodyEl.appendChild(pollDiv);
     }
 
     bodyEl.appendChild(actionsEl);
 
     card.appendChild(avatarEl);
     card.appendChild(bodyEl);
+
+    // Click on tweet card navigates to detail (like X/Twitter)
+    card.style.cursor = 'pointer';
+    (function(tweetId) {
+        card.onclick = function(e) {
+            if (e.target.closest('button, a, .like-btn, .repost-btn, .reply-btn, .bookmark-btn, .impression-count, .tweet-more-btn, .poll-option, .tweet-images, textarea')) return;
+            showTweetDetail(tweetId);
+        };
+    })(tweet.id);
 
     return card;
 }
@@ -483,6 +583,11 @@ function buildReplyCard(tweet) {
     contentEl.innerHTML = contentEl.innerHTML.replace(/#([^\s<]+)/g, '<a href="javascript:void(0)" onclick="searchHashtag(\'$1\')" style="color:var(--accent);text-decoration:none">#$1</a>');
     // Wrap @mentions in clickable profile links
     contentEl.innerHTML = contentEl.innerHTML.replace(/@([a-zA-Z0-9_]+)/g, '<a href="javascript:void(0)" onclick="showProfile(\'@$1\')" style="color:var(--accent);text-decoration:none">@$1</a>');
+    // Wrap URLs in clickable links
+    contentEl.innerHTML = contentEl.innerHTML.replace(/(https?:\/\/[^\s<"']+)/g, function(url) {
+        var display = url.length > 30 ? url.slice(0, 30) + '…' : url;
+        return '<a href="' + url + '" target="_blank" rel="noopener" class="tweet-url-link">' + display + '</a>';
+    });
 
     // Action bar — full set: reply, repost, like
     const actionsEl = document.createElement('div');
@@ -607,12 +712,45 @@ function buildReplyCard(tweet) {
     card.appendChild(avatarEl);
     card.appendChild(bodyEl);
 
+    // Click on reply card navigates to its detail (same as tweet cards)
+    card.style.cursor = 'pointer';
+    (function(tweetId) {
+        card.onclick = function(e) {
+            if (e.target.closest('button, a, .like-btn, .repost-btn, .reply-btn, .bookmark-btn, .impression-count, .tweet-more-btn, .poll-option, .tweet-images, textarea')) return;
+            showTweetDetail(tweetId);
+        };
+    })(tweet.id);
+
     return card;
 }
 
 // ------------------------------------------------------------------
 // Load tweets with pagination / infinite scroll
 // ------------------------------------------------------------------
+// ------------------------------------------------------------------
+// Build a skeleton loading card (Feature 2)
+// ------------------------------------------------------------------
+function buildSkeletonCard() {
+    var card = document.createElement('div');
+    card.className = 'skeleton-card';
+    var av = document.createElement('div');
+    av.className = 'skeleton skeleton-avatar';
+    var body = document.createElement('div');
+    body.className = 'skeleton-body';
+    var line1 = document.createElement('div');
+    line1.className = 'skeleton skeleton-line short';
+    var line2 = document.createElement('div');
+    line2.className = 'skeleton skeleton-line long';
+    var line3 = document.createElement('div');
+    line3.className = 'skeleton skeleton-line medium';
+    body.appendChild(line1);
+    body.appendChild(line2);
+    body.appendChild(line3);
+    card.appendChild(av);
+    card.appendChild(body);
+    return card;
+}
+
 function loadTweets(append) {
     if (isLoadingMore) return;
     if (append && !hasMoreTweets) return;
@@ -622,6 +760,17 @@ function loadTweets(append) {
     if (currentTab === 'following') tweetsUrl += '&filter=following';
 
     if (append) isLoadingMore = true;
+
+    // Feature 2: show skeleton cards on fresh load
+    if (!append) {
+        var feed = document.getElementById('tweet-feed');
+        if (feed) {
+            feed.innerHTML = '';
+            for (var s = 0; s < 4; s++) {
+                feed.appendChild(buildSkeletonCard());
+            }
+        }
+    }
 
     fetch(tweetsUrl)
         .then(function(res) { return res.json(); })
@@ -655,26 +804,6 @@ function loadTweets(append) {
                 }
             });
 
-            // Recursive function to render replies and their sub-replies
-            function renderReplies(parentId, container, depth) {
-                var replies = repliesMap[parentId];
-                if (!replies) return;
-                replies.sort(function(a, b) { return a.id - b.id; });
-                var repliesContainer = document.createElement('div');
-                repliesContainer.className = 'tweet-replies';
-                if (depth > 1) repliesContainer.style.marginLeft = '20px';
-                replies.forEach(function(reply) {
-                    if (knownTweetIds.has(reply.id)) return;
-                    repliesContainer.appendChild(buildReplyCard(reply));
-                    knownTweetIds.add(reply.id);
-                    // Recursively render sub-replies (max depth 5)
-                    if (depth < 5 && repliesMap[reply.id]) {
-                        renderReplies(reply.id, repliesContainer, depth + 1);
-                    }
-                });
-                container.appendChild(repliesContainer);
-            }
-
             // Remove existing loading indicator before appending new content
             var existingLoader = feed.querySelector('.load-more-indicator');
             if (existingLoader) existingLoader.remove();
@@ -685,12 +814,6 @@ function loadTweets(append) {
                 var card = buildTweetCard(tweet);
                 feed.appendChild(card);
                 knownTweetIds.add(tweet.id);
-
-                // Attach replies recursively
-                if (repliesMap[tweet.id]) {
-                    card.classList.add('has-replies');
-                    renderReplies(tweet.id, feed, 1);
-                }
             });
 
             // Track the newest tweet id for the "new tweets" polling bar
@@ -726,9 +849,63 @@ function loadTweets(append) {
 // ------------------------------------------------------------------
 // Post a new tweet
 // ------------------------------------------------------------------
+// ------------------------------------------------------------------
+// Poll compose — toggle / add option / clear
+// ------------------------------------------------------------------
+function togglePollCompose() {
+    var pollBox = document.getElementById('compose-poll');
+    if (pollBox.style.display === 'none') {
+        pollBox.style.display = 'block';
+        // Clear and reset to 2 options
+        var container = document.getElementById('compose-poll-options');
+        container.innerHTML = '';
+        for (var i = 0; i < 2; i++) {
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'modal-input';
+            input.placeholder = '選択肢 ' + (i + 1);
+            input.maxLength = 25;
+            input.style.marginBottom = '8px';
+            container.appendChild(input);
+        }
+    } else {
+        pollBox.style.display = 'none';
+    }
+}
+
+function addPollOption() {
+    var container = document.getElementById('compose-poll-options');
+    var inputs = container.querySelectorAll('input');
+    if (inputs.length >= 4) return;
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'modal-input';
+    input.placeholder = '選択肢 ' + (inputs.length + 1);
+    input.maxLength = 25;
+    input.style.marginBottom = '8px';
+    container.appendChild(input);
+}
+
+function clearPoll() {
+    document.getElementById('compose-poll').style.display = 'none';
+}
+
+function getPollOptions() {
+    var pollBox = document.getElementById('compose-poll');
+    if (pollBox.style.display === 'none') return [];
+    var inputs = document.getElementById('compose-poll-options').querySelectorAll('input');
+    var options = [];
+    inputs.forEach(function(input) {
+        var val = input.value.trim();
+        if (val) options.push(val);
+    });
+    return options.length >= 2 ? options : [];
+}
+
 function postTweet() {
     var textarea = document.getElementById('compose-input');
     var content = textarea.value.trim();
+    var pollOptions = getPollOptions();
     if (!content && composeImageFiles.length === 0) return;
 
     var submitBtn = document.getElementById('compose-submit');
@@ -743,10 +920,14 @@ function postTweet() {
         });
         fetchOptions = { method: 'POST', body: formData };
     } else {
+        var body = { content: content };
+        if (pollOptions.length >= 2) {
+            body.poll_options = pollOptions;
+        }
         fetchOptions = {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ content: content })
+            body: JSON.stringify(body)
         };
     }
 
@@ -762,7 +943,10 @@ function postTweet() {
         if (!data) return;
         textarea.value = '';
         clearComposeImage();
+        clearPoll();
         updateCharCounter();
+        if (typeof clearDraft === 'function') clearDraft();
+        autoResizeTextarea(textarea);
         loadTweets();
     })
     .catch(function(err) {
@@ -787,24 +971,23 @@ function likeTweet(tweetId) {
         })
         .then(function(data) {
             if (!data) return;
-            const feed = document.getElementById('tweet-feed');
-            const card = feed.querySelector('[data-tweet-id="' + tweetId + '"]');
-            if (!card) return;
+            document.querySelectorAll('[data-tweet-id="' + tweetId + '"]').forEach(function(card) {
+                var likeBtn = card.querySelector('.like-btn');
+                if (!likeBtn) return;
+                var likeCount = likeBtn.querySelector('span');
+                var svg = likeBtn.querySelector('svg');
 
-            const likeBtn = card.querySelector('.like-btn');
-            const likeCount = likeBtn.querySelector('span');
-            const svg = likeBtn.querySelector('svg');
-
-            if (data.liked) {
-                likeBtn.classList.add('liked');
-                likeBtn.setAttribute('aria-pressed', 'true');
-                if (svg) { svg.style.fill = 'var(--like-color)'; svg.style.stroke = 'var(--like-color)'; }
-            } else {
-                likeBtn.classList.remove('liked');
-                likeBtn.setAttribute('aria-pressed', 'false');
-                if (svg) { svg.style.fill = 'none'; svg.style.stroke = 'currentColor'; }
-            }
-            if (likeCount) likeCount.textContent = data.likes > 0 ? data.likes : '';
+                if (data.liked) {
+                    likeBtn.classList.add('liked');
+                    likeBtn.setAttribute('aria-pressed', 'true');
+                    if (svg) { svg.style.fill = 'var(--like-color)'; svg.style.stroke = 'var(--like-color)'; }
+                } else {
+                    likeBtn.classList.remove('liked');
+                    likeBtn.setAttribute('aria-pressed', 'false');
+                    if (svg) { svg.style.fill = 'none'; svg.style.stroke = 'currentColor'; }
+                }
+                if (likeCount) likeCount.textContent = data.likes > 0 ? data.likes : '';
+            });
         })
         .catch(function(err) {
             console.error('Failed to like tweet:', err);
@@ -941,20 +1124,20 @@ function toggleRepost(tweetId) {
         })
         .then(function(data) {
             if (!data) return;
-            var feed = document.getElementById('tweet-feed');
-            var card = feed.querySelector('[data-tweet-id="' + tweetId + '"]');
-            if (!card) return;
-            var repostBtn = card.querySelector('.repost-btn');
-            var repostCount = repostBtn.querySelector('span');
-            var svg = repostBtn.querySelector('svg');
-            if (data.reposted) {
-                repostBtn.classList.add('reposted');
-                if (svg) svg.style.stroke = '#00ba7c';
-            } else {
-                repostBtn.classList.remove('reposted');
-                if (svg) svg.style.stroke = 'currentColor';
-            }
-            if (repostCount) repostCount.textContent = data.reposts > 0 ? data.reposts : '';
+            document.querySelectorAll('[data-tweet-id="' + tweetId + '"]').forEach(function(card) {
+                var repostBtn = card.querySelector('.repost-btn');
+                if (!repostBtn) return;
+                var repostCount = repostBtn.querySelector('span');
+                var svg = repostBtn.querySelector('svg');
+                if (data.reposted) {
+                    repostBtn.classList.add('reposted');
+                    if (svg) svg.style.stroke = '#00ba7c';
+                } else {
+                    repostBtn.classList.remove('reposted');
+                    if (svg) svg.style.stroke = 'currentColor';
+                }
+                if (repostCount) repostCount.textContent = data.reposts > 0 ? data.reposts : '';
+            });
         })
         .catch(function(err) {
             console.error('Failed to repost tweet:', err);
@@ -997,6 +1180,11 @@ function toggleReplyBox(tweetId) {
             submitReply(tweetId, textarea.value);
         }
     });
+
+    // Feature 1: apply auto-resize to reply textarea
+    if (typeof applyAutoResize === 'function') applyAutoResize(textarea);
+    // Feature 9: apply mention autocomplete to reply textarea
+    if (typeof attachMentionAutocomplete === 'function') attachMentionAutocomplete(textarea);
 
     replyBox.appendChild(textarea);
     replyBox.appendChild(submitBtn);
@@ -1171,6 +1359,62 @@ function showTweetDetail(tweetId, fromPopstate) {
                 card.appendChild(img);
             }
 
+            // Poll in detail view
+            if (tweet.poll) {
+                var pollDiv = document.createElement('div');
+                pollDiv.className = 'tweet-poll';
+                pollDiv.style.margin = '12px 0';
+
+                var hasVoted = tweet.poll.voted_option_id !== null && tweet.poll.voted_option_id !== undefined;
+                var totalVotes = tweet.poll.options.reduce(function(sum, o) { return sum + (o.vote_count || 0); }, 0);
+
+                tweet.poll.options.forEach(function(option) {
+                    var isVotedOption = hasVoted && tweet.poll.voted_option_id === option.id;
+                    var optionDiv = document.createElement('div');
+                    optionDiv.className = 'poll-option' + (isVotedOption ? ' voted' : '');
+
+                    var pct = totalVotes > 0 ? Math.round((option.vote_count || 0) / totalVotes * 100) : 0;
+
+                    if (hasVoted) {
+                        var barEl = document.createElement('div');
+                        barEl.className = 'poll-bar';
+                        barEl.style.width = pct + '%';
+                        var textEl = document.createElement('span');
+                        textEl.className = 'poll-text';
+                        textEl.textContent = option.text;
+                        var pctEl = document.createElement('span');
+                        pctEl.className = 'poll-pct';
+                        pctEl.textContent = pct + '%';
+                        optionDiv.appendChild(barEl);
+                        optionDiv.appendChild(textEl);
+                        optionDiv.appendChild(pctEl);
+                    } else {
+                        var textEl2 = document.createElement('span');
+                        textEl2.className = 'poll-text';
+                        textEl2.textContent = option.text;
+                        optionDiv.appendChild(textEl2);
+                        (function(opt, tid) {
+                            optionDiv.onclick = function() {
+                                fetch('/api/polls/' + tweet.poll.id + '/vote', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ option_id: opt.id })
+                                }).then(function() { showTweetDetail(tid); });
+                            };
+                        })(option, tweet.id);
+                    }
+
+                    pollDiv.appendChild(optionDiv);
+                });
+
+                var voteCount = document.createElement('div');
+                voteCount.className = 'poll-total';
+                voteCount.textContent = totalVotes + '票';
+                pollDiv.appendChild(voteCount);
+
+                card.appendChild(pollDiv);
+            }
+
             // Timestamp (full format)
             var timeEl = document.createElement('div');
             timeEl.className = 'tweet-detail-time';
@@ -1241,6 +1485,8 @@ function showTweetDetail(tweetId, fromPopstate) {
                 });
             };
 
+            if (typeof applyAutoResize === 'function') applyAutoResize(replyTextarea);
+            if (typeof attachMentionAutocomplete === 'function') attachMentionAutocomplete(replyTextarea);
             detailReplyBox.appendChild(replyAvatar);
             detailReplyBox.appendChild(replyTextarea);
             detailReplyBox.appendChild(replySubmit);
@@ -1249,12 +1495,14 @@ function showTweetDetail(tweetId, fromPopstate) {
             view.appendChild(card);
 
             // Show replies to this tweet below
-            fetch('/api/tweets')
+            fetch('/api/tweets/' + tweet.id + '/replies')
                 .then(function(r) { return r.json(); })
-                .then(function(allData) {
+                .then(function(replyData) {
+                    if (!replyData.tweets || replyData.tweets.length === 0) return;
+
                     // Build a replies map for recursive rendering
                     var repliesMap = {};
-                    allData.tweets.forEach(function(t) {
+                    replyData.tweets.forEach(function(t) {
                         if (t.reply_to_id) {
                             if (!repliesMap[t.reply_to_id]) repliesMap[t.reply_to_id] = [];
                             repliesMap[t.reply_to_id].push(t);
@@ -1271,17 +1519,6 @@ function showTweetDetail(tweetId, fromPopstate) {
                         directReplies.sort(function(a, b) { return a.id - b.id; });
                         directReplies.forEach(function(reply) {
                             view.appendChild(buildTweetCard(reply));
-
-                            // Also render sub-replies recursively
-                            if (repliesMap[reply.id]) {
-                                var subContainer = document.createElement('div');
-                                subContainer.className = 'tweet-replies';
-                                repliesMap[reply.id].sort(function(a, b) { return a.id - b.id; });
-                                repliesMap[reply.id].forEach(function(subReply) {
-                                    subContainer.appendChild(buildReplyCard(subReply));
-                                });
-                                view.appendChild(subContainer);
-                            }
                         });
                     }
                 });
@@ -1488,4 +1725,113 @@ function showFollowList(userId, userName, type) {
                 content.appendChild(item);
             });
         });
+}
+
+// ------------------------------------------------------------------
+// Feature 6: Copy toast notification
+// ------------------------------------------------------------------
+function showCopyToast(message) {
+    var existing = document.querySelector('.copy-toast');
+    if (existing) existing.remove();
+    var toast = document.createElement('div');
+    toast.className = 'copy-toast';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(function() {
+        toast.style.transition = 'opacity 0.3s';
+        toast.style.opacity = '0';
+        setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+    }, 1800);
+}
+
+// ------------------------------------------------------------------
+// Feature 3: Image lightbox (replaces basic image-modal)
+// ------------------------------------------------------------------
+function showImageModal(url, allUrls) {
+    // Remove any existing lightbox
+    var existing = document.getElementById('lightbox-overlay');
+    if (existing) existing.remove();
+
+    var urls = allUrls || [url];
+    var currentIndex = urls.indexOf(url);
+    if (currentIndex < 0) currentIndex = 0;
+
+    var overlay = document.createElement('div');
+    overlay.className = 'lightbox-overlay';
+    overlay.id = 'lightbox-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', '画像ビューア');
+
+    var img = document.createElement('img');
+    img.className = 'lightbox-img';
+    img.src = urls[currentIndex];
+    img.alt = '';
+    overlay.appendChild(img);
+
+    // Close button
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'lightbox-close';
+    closeBtn.innerHTML = '&times;';
+    closeBtn.setAttribute('aria-label', '閉じる');
+    closeBtn.onclick = function(e) { e.stopPropagation(); overlay.remove(); };
+    overlay.appendChild(closeBtn);
+
+    // goTo is always defined; nav controls shown only for multiple images
+    var counterEl = null;
+    function goTo(index) {
+        currentIndex = (index + urls.length) % urls.length;
+        img.style.opacity = '0';
+        setTimeout(function() {
+            img.src = urls[currentIndex];
+            img.style.opacity = '1';
+            if (counterEl) counterEl.textContent = (currentIndex + 1) + ' / ' + urls.length;
+        }, 150);
+    }
+
+    if (urls.length > 1) {
+        var prevBtn = document.createElement('button');
+        prevBtn.className = 'lightbox-nav prev';
+        prevBtn.innerHTML = '&#8249;';
+        prevBtn.setAttribute('aria-label', '前の画像');
+
+        var nextBtn = document.createElement('button');
+        nextBtn.className = 'lightbox-nav next';
+        nextBtn.innerHTML = '&#8250;';
+        nextBtn.setAttribute('aria-label', '次の画像');
+
+        counterEl = document.createElement('div');
+        counterEl.className = 'lightbox-counter';
+        counterEl.textContent = (currentIndex + 1) + ' / ' + urls.length;
+
+        prevBtn.onclick = function(e) { e.stopPropagation(); goTo(currentIndex - 1); };
+        nextBtn.onclick = function(e) { e.stopPropagation(); goTo(currentIndex + 1); };
+
+        overlay.appendChild(prevBtn);
+        overlay.appendChild(nextBtn);
+        overlay.appendChild(counterEl);
+    }
+
+    // Close on background click
+    overlay.onclick = function(e) {
+        if (e.target === overlay) overlay.remove();
+    };
+
+    // ESC key closes the lightbox
+    function handleKey(e) {
+        if (e.key === 'Escape') {
+            overlay.remove();
+            document.removeEventListener('keydown', handleKey);
+        } else if (e.key === 'ArrowLeft' && urls.length > 1) {
+            goTo(currentIndex - 1);
+        } else if (e.key === 'ArrowRight' && urls.length > 1) {
+            goTo(currentIndex + 1);
+        }
+    }
+    document.addEventListener('keydown', handleKey);
+    overlay.addEventListener('remove', function() {
+        document.removeEventListener('keydown', handleKey);
+    });
+
+    document.body.appendChild(overlay);
 }

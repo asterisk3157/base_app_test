@@ -254,6 +254,22 @@ function renderProfileView(user, tweets, repostedTweets) {
                     var pinLabel = document.createElement('div');
                     pinLabel.style.cssText = 'padding:8px 20px;font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:center;gap:6px';
                     pinLabel.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 17v5M5 17h14l-1.5-6.5L14 8V4h-4v4L6.5 10.5z"/></svg> ピン留めツイート';
+                    // Show unpin button on own profile
+                    if (currentUser && currentUser.id === user.id) {
+                        var unpinBtn = document.createElement('button');
+                        unpinBtn.style.cssText = 'margin-left:auto;background:none;border:none;color:var(--text-secondary);font-size:0.8rem;cursor:pointer;padding:4px 8px;border-radius:9999px;transition:background 0.2s,color 0.2s';
+                        unpinBtn.textContent = 'ピン留めを解除';
+                        unpinBtn.onmouseover = function() { this.style.background = 'var(--bg-hover)'; this.style.color = 'var(--like-color)'; };
+                        unpinBtn.onmouseout = function() { this.style.background = 'none'; this.style.color = 'var(--text-secondary)'; };
+                        (function(tweetId, handle) {
+                            unpinBtn.onclick = function(e) {
+                                e.stopPropagation();
+                                fetch('/api/tweets/' + tweetId + '/pin', { method: 'POST' })
+                                    .then(function() { showProfile(handle); });
+                            };
+                        })(pinnedTweet.id, user.handle);
+                        pinLabel.appendChild(unpinBtn);
+                    }
                     container.appendChild(pinLabel);
                     var pinnedCard = buildTweetCard(pinnedTweet);
                     container.appendChild(pinnedCard);
@@ -352,6 +368,13 @@ function showProfileModal() {
     document.getElementById('profile-birthday').value = currentUser.birthday || '';
     document.getElementById('profile-handle-display').textContent = currentUser.handle;
     document.getElementById('profile-error').textContent = '';
+    // Reset file inputs and labels
+    document.getElementById('profile-avatar-file').value = '';
+    document.getElementById('profile-banner-file').value = '';
+    var avatarName = document.getElementById('avatar-file-name');
+    var bannerName = document.getElementById('banner-file-name');
+    if (avatarName) avatarName.textContent = '選択されていません';
+    if (bannerName) bannerName.textContent = '選択されていません';
     document.getElementById('profile-modal').style.display = 'flex';
 }
 
@@ -406,6 +429,7 @@ function saveProfile() {
     .then(function(data) {
         currentUser = data.user;
         updateComposeAvatar();
+        if (typeof updateSidebarProfile === 'function') updateSidebarProfile();
         hideProfileModal();
         // Clear file inputs
         document.getElementById('profile-avatar-file').value = '';

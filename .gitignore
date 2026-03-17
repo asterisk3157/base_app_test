@@ -7,6 +7,11 @@ __pycache__/
 # Database (auto-generated)
 database.db
 
+# User uploads (generated at runtime)
+static/uploads/*.png
+static/uploads/*.jpg
+static/uploads/*.gif
+
 # OS
 .DS_Store
 Thumbs.db

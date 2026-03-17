@@ -125,11 +125,23 @@ function showNotifications(fromPopstate) {
 
 function updateNotifBadge(count) {
     var badge = document.getElementById('notif-badge');
-    if (count > 0) {
-        badge.textContent = count;
-        badge.style.display = 'inline';
-    } else {
-        badge.style.display = 'none';
+    if (badge) {
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'inline';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
+    // Feature 5: also sync mobile nav badge
+    var mobileBadge = document.getElementById('mobile-notif-badge');
+    if (mobileBadge) {
+        if (count > 0) {
+            mobileBadge.textContent = count;
+            mobileBadge.style.display = 'flex';
+        } else {
+            mobileBadge.style.display = 'none';
+        }
     }
 }
 

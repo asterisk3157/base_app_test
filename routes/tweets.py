@@ -2,11 +2,43 @@ import os
 import uuid
 import json
 import re
-from flask import request, jsonify
-from routes import tweets_bp as bp
+import secrets
+from collections import Counter
+from flask import request, jsonify, session
+from routes import tweets_bp as bp, rate_limit
 from models import get_db, get_current_user_id, _tweet_row_to_dict, allowed_file
-from bot_engine import trigger_bot_reactions
+from bot_engine import trigger_bot_reactions, maybe_generate_bot_tweet
 from config import UPLOAD_FOLDER
+
+
+# ---------------------------------------------------------------------------
+# CSRF token helpers
+# Simple per-session CSRF token stored in the Flask session (signed cookie).
+# The token is optional — requests without X-CSRF-Token header pass through.
+# Security note: this is a simplified demo for lecture use. Production apps
+# should enforce CSRF strictly and use SameSite=Strict or server-side sessions.
+# ---------------------------------------------------------------------------
+def _get_or_create_csrf_token():
+    """Return the current session's CSRF token, creating one if absent."""
+    if 'csrf_token' not in session:
+        session['csrf_token'] = secrets.token_hex(32)
+    return session['csrf_token']
+
+
+def _validate_csrf():
+    """
+    Validate the X-CSRF-Token header against the session token.
+    Returns (valid: bool, error_response | None).
+    Validation is OPTIONAL — if the header is absent the request passes through.
+    """
+    header_token = request.headers.get('X-CSRF-Token')
+    if not header_token:
+        # No header present — skip validation (optional mode)
+        return True, None
+    expected = session.get('csrf_token')
+    if not expected or not secrets.compare_digest(header_token, expected):
+        return False, (jsonify({'error': 'invalid CSRF token'}), 403)
+    return True, None
 
 
 def _get_poll_data(c, tweet_id, current_user_id=None):
@@ -68,11 +100,68 @@ def _create_mention_notifications(content, tweet_id, author_id):
     conn.close()
 
 
+# ---------------------------------------------------------------------------
+# Lazy scheduler helper — called at the start of get_tweets() on every load.
+# Finds any scheduled tweets whose scheduled_at <= now and posts them as real tweets.
+# ---------------------------------------------------------------------------
+def _flush_scheduled_tweets():
+    """Post any pending scheduled tweets whose scheduled_at has passed."""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        c.execute(
+            "SELECT id, user_id, content, image_url, poll_options_json "
+            "FROM scheduled_tweets WHERE scheduled_at <= CURRENT_TIMESTAMP AND posted = 0"
+        )
+        pending = c.fetchall()
+        if not pending:
+            conn.close()
+            return
+
+        for row in pending:
+            c.execute(
+                'INSERT INTO tweets (user_id, content, image_url) VALUES (?, ?, ?)',
+                (row['user_id'], row['content'], row['image_url'] or '')
+            )
+            tweet_id = c.lastrowid
+
+            # Create poll if poll_options_json is set
+            if row['poll_options_json']:
+                try:
+                    poll_options = json.loads(row['poll_options_json'])
+                    if isinstance(poll_options, list) and 2 <= len(poll_options) <= 4:
+                        c.execute('INSERT INTO polls (tweet_id, ends_at) VALUES (?, NULL)', (tweet_id,))
+                        poll_id = c.lastrowid
+                        for i, opt_text in enumerate(poll_options):
+                            opt_text = str(opt_text).strip()
+                            if opt_text:
+                                c.execute(
+                                    'INSERT INTO poll_options (poll_id, text, position) VALUES (?, ?, ?)',
+                                    (poll_id, opt_text, i)
+                                )
+                except (json.JSONDecodeError, TypeError):
+                    pass
+
+            # Mark scheduled tweet as posted
+            c.execute('UPDATE scheduled_tweets SET posted = 1 WHERE id = ?', (row['id'],))
+
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+
 # GET /api/tweets — list all tweets with user info and like counts
 # Accepts optional ?filter=following to show only tweets from followed users + self
 # Accepts optional ?page=1&limit=30 for pagination (backward compatible)
 @bp.route('/api/tweets')
 def get_tweets():
+    # Lazy scheduler: post any scheduled tweets whose time has come
+    _flush_scheduled_tweets()
+    # Gemini bot: only trigger on polling requests (no_impression=1), not page loads
+    if request.args.get('no_impression'):
+        maybe_generate_bot_tweet()
+
     filter_mode = request.args.get('filter', 'all')  # 'all' or 'following'
     page = int(request.args.get('page', 1))
     limit = int(request.args.get('limit', 30))
@@ -86,11 +175,14 @@ def get_tweets():
     # Collect muted and blocked user IDs to exclude from timeline
     muted_ids = set()
     blocked_ids = set()
+    hidden_tweet_ids = set()
     if current_user_id:
         c.execute('SELECT target_id FROM mutes WHERE user_id = ?', (current_user_id,))
         muted_ids = {r['target_id'] for r in c.fetchall()}
         c.execute('SELECT target_id FROM blocks WHERE user_id = ?', (current_user_id,))
         blocked_ids = {r['target_id'] for r in c.fetchall()}
+        c.execute('SELECT tweet_id FROM hidden_tweets WHERE user_id = ?', (current_user_id,))
+        hidden_tweet_ids = {r['tweet_id'] for r in c.fetchall()}
     hidden_ids = muted_ids | blocked_ids
 
     if filter_mode == 'following' and current_user_id is not None:
@@ -105,8 +197,15 @@ def get_tweets():
             conn.close()
             return jsonify({'tweets': [], 'page': page, 'has_more': False})
 
-        # following_ids contains only integer PKs from the DB — safe to interpolate
+        # following_ids and hidden_tweet_ids contain only integer PKs — safe to interpolate
         placeholders = ','.join('?' * len(following_ids))
+        params = list(following_ids)
+        hidden_clause = ''
+        if hidden_tweet_ids:
+            hidden_ph = ','.join('?' * len(hidden_tweet_ids))
+            hidden_clause = f'AND t.id NOT IN ({hidden_ph})'
+            params += list(hidden_tweet_ids)
+        params += [limit, offset]
         c.execute(f'''
             SELECT
                 t.id,
@@ -123,74 +222,63 @@ def get_tweets():
                 u.avatar_url,
                 u.is_bot,
                 COUNT(DISTINCT l.id) AS like_count,
-                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count
+                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count,
+                (SELECT COUNT(*) FROM tweets r WHERE r.reply_to_id = t.id) AS reply_count
             FROM tweets t
             JOIN  users u ON u.id = t.user_id
             LEFT JOIN likes l ON l.tweet_id = t.id
-            WHERE t.user_id IN ({placeholders})
+            WHERE t.user_id IN ({placeholders}) {hidden_clause}
             GROUP BY t.id
             ORDER BY t.created_at DESC
             LIMIT ? OFFSET ?
-        ''', list(following_ids) + [limit, offset])
+        ''', params)
     else:
-        # Default: all tweets, excluding muted/blocked authors
+        # Default: all tweets, excluding muted/blocked authors and hidden tweets
+        where_clauses = []
+        params = []
         if hidden_ids:
             hide_placeholders = ','.join('?' * len(hidden_ids))
-            c.execute(f'''
-                SELECT
-                    t.id,
-                    t.content,
-                    t.created_at,
-                    t.edited_at,
-                    t.reply_to_id,
-                    t.quote_of_id,
-                    t.impressions,
-                    t.image_url,
-                    u.id   AS user_id,
-                    u.display_name,
-                    u.handle,
-                    u.avatar_url,
-                    u.is_bot,
-                    COUNT(DISTINCT l.id) AS like_count,
-                    (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count
-                FROM tweets t
-                JOIN  users u ON u.id = t.user_id
-                LEFT JOIN likes l ON l.tweet_id = t.id
-                WHERE t.user_id NOT IN ({hide_placeholders})
-                GROUP BY t.id
-                ORDER BY t.created_at DESC
-                LIMIT ? OFFSET ?
-            ''', list(hidden_ids) + [limit, offset])
-        else:
-            c.execute('''
-                SELECT
-                    t.id,
-                    t.content,
-                    t.created_at,
-                    t.edited_at,
-                    t.reply_to_id,
-                    t.quote_of_id,
-                    t.impressions,
-                    t.image_url,
-                    u.id   AS user_id,
-                    u.display_name,
-                    u.handle,
-                    u.avatar_url,
-                    u.is_bot,
-                    COUNT(DISTINCT l.id) AS like_count,
-                    (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count
-                FROM tweets t
-                JOIN  users u ON u.id = t.user_id
-                LEFT JOIN likes l ON l.tweet_id = t.id
-                GROUP BY t.id
-                ORDER BY t.created_at DESC
-                LIMIT ? OFFSET ?
-            ''', (limit, offset))
+            where_clauses.append(f't.user_id NOT IN ({hide_placeholders})')
+            params.extend(list(hidden_ids))
+        if hidden_tweet_ids:
+            ht_ph = ','.join('?' * len(hidden_tweet_ids))
+            where_clauses.append(f't.id NOT IN ({ht_ph})')
+            params.extend(list(hidden_tweet_ids))
+
+        where_sql = ('WHERE ' + ' AND '.join(where_clauses)) if where_clauses else ''
+        params += [limit, offset]
+        c.execute(f'''
+            SELECT
+                t.id,
+                t.content,
+                t.created_at,
+                t.edited_at,
+                t.reply_to_id,
+                t.quote_of_id,
+                t.impressions,
+                t.image_url,
+                u.id   AS user_id,
+                u.display_name,
+                u.handle,
+                u.avatar_url,
+                u.is_bot,
+                COUNT(DISTINCT l.id) AS like_count,
+                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count,
+                (SELECT COUNT(*) FROM tweets r WHERE r.reply_to_id = t.id) AS reply_count
+            FROM tweets t
+            JOIN  users u ON u.id = t.user_id
+            LEFT JOIN likes l ON l.tweet_id = t.id
+            {where_sql}
+            GROUP BY t.id
+            ORDER BY t.created_at DESC
+            LIMIT ? OFFSET ?
+        ''', params)
 
     rows = c.fetchall()
 
-    # Increment impressions for all visible tweets
-    if rows:
+    # Increment impressions for all visible tweets (skip when polling for new tweets)
+    no_impression = request.args.get('no_impression')
+    if rows and not no_impression:
         tweet_ids = [row['id'] for row in rows]
         imp_placeholders = ','.join('?' * len(tweet_ids))
         c.execute(f'UPDATE tweets SET impressions = impressions + 1 WHERE id IN ({imp_placeholders})', tweet_ids)
@@ -221,7 +309,11 @@ def get_tweets():
 # POST /api/tweets — create a new tweet
 # Supports both JSON and multipart/form-data (for image uploads)
 @bp.route('/api/tweets', methods=['POST'])
+@rate_limit
 def create_tweet():
+    valid, err = _validate_csrf()
+    if not valid:
+        return err
     user_id = get_current_user_id()
     if user_id is None:
         return jsonify({'error': 'authentication required'}), 401
@@ -314,7 +406,8 @@ def create_tweet():
             u.is_bot,
             0 AS like_count,
             0 AS repost_count,
-            0 AS impressions
+            0 AS impressions,
+            0 AS reply_count
         FROM tweets t
         JOIN users u ON u.id = t.user_id
         WHERE t.id = ?
@@ -351,6 +444,7 @@ def get_single_tweet(tweet_id):
                u.id AS user_id, u.display_name, u.handle, u.avatar_url, u.is_bot,
                COUNT(DISTINCT l.id) AS like_count,
                (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count,
+               (SELECT COUNT(*) FROM tweets r WHERE r.reply_to_id = t.id) AS reply_count,
                t.impressions
         FROM tweets t
         JOIN users u ON u.id = t.user_id
@@ -366,6 +460,61 @@ def get_single_tweet(tweet_id):
     t['poll'] = _get_poll_data(c, tweet_id, current_user_id)
     conn.close()
     return jsonify({'tweet': t})
+
+
+# GET /api/tweets/<id>/replies — fetch all replies to a tweet (recursive)
+@bp.route('/api/tweets/<int:tweet_id>/replies')
+def get_tweet_replies(tweet_id):
+    current_user_id = get_current_user_id()
+    conn = get_db()
+    c = conn.cursor()
+
+    # Recursively fetch all descendant replies (up to 5 levels)
+    all_replies = []
+    queue = [tweet_id]
+    for _ in range(5):
+        if not queue:
+            break
+        placeholders = ','.join('?' * len(queue))
+        c.execute(f'''
+            SELECT t.id, t.content, t.created_at, t.edited_at, t.reply_to_id, t.quote_of_id, t.image_url,
+                   u.id AS user_id, u.display_name, u.handle, u.avatar_url, u.is_bot,
+                   COUNT(DISTINCT l.id) AS like_count,
+                   (SELECT COUNT(*) FROM reposts r WHERE r.tweet_id = t.id) + (SELECT COUNT(*) FROM tweets qt WHERE qt.quote_of_id = t.id) AS repost_count,
+                   (SELECT COUNT(*) FROM tweets r WHERE r.reply_to_id = t.id) AS reply_count,
+                   t.impressions
+            FROM tweets t
+            JOIN users u ON u.id = t.user_id
+            LEFT JOIN likes l ON l.tweet_id = t.id
+            WHERE t.reply_to_id IN ({placeholders})
+            GROUP BY t.id
+            ORDER BY t.created_at ASC
+        ''', queue)
+        rows = c.fetchall()
+        queue = []
+        for row in rows:
+            all_replies.append(row)
+            queue.append(row['id'])
+
+    liked_ids = set()
+    reposted_ids = set()
+    bookmarked_ids = set()
+    if current_user_id:
+        c.execute('SELECT tweet_id FROM likes WHERE user_id = ?', (current_user_id,))
+        liked_ids = {r['tweet_id'] for r in c.fetchall()}
+        c.execute('SELECT tweet_id FROM reposts WHERE user_id = ?', (current_user_id,))
+        reposted_ids = {r['tweet_id'] for r in c.fetchall()}
+        c.execute('SELECT tweet_id FROM bookmarks WHERE user_id = ?', (current_user_id,))
+        bookmarked_ids = {r['tweet_id'] for r in c.fetchall()}
+
+    tweets = []
+    for row in all_replies:
+        t = _tweet_row_to_dict(row, row['id'] in liked_ids, row['id'] in reposted_ids, row['id'] in bookmarked_ids)
+        t['poll'] = _get_poll_data(c, row['id'], current_user_id)
+        tweets.append(t)
+
+    conn.close()
+    return jsonify({'tweets': tweets})
 
 
 # DELETE /api/tweets/<id> — delete a tweet owned by the current cookie user
@@ -394,8 +543,23 @@ def delete_tweet(tweet_id):
     c.execute('DELETE FROM likes WHERE tweet_id = ?', (tweet_id,))
     c.execute('DELETE FROM reposts WHERE tweet_id = ?', (tweet_id,))
     c.execute('DELETE FROM notifications WHERE tweet_id = ?', (tweet_id,))
-    # Delete replies to this tweet (and their likes)
-    c.execute('DELETE FROM likes WHERE tweet_id IN (SELECT id FROM tweets WHERE reply_to_id = ?)', (tweet_id,))
+    c.execute('DELETE FROM bookmarks WHERE tweet_id = ?', (tweet_id,))
+    # Delete poll data
+    c.execute('SELECT id FROM polls WHERE tweet_id = ?', (tweet_id,))
+    poll_row = c.fetchone()
+    if poll_row:
+        c.execute('DELETE FROM poll_votes WHERE poll_id = ?', (poll_row['id'],))
+        c.execute('DELETE FROM poll_options WHERE poll_id = ?', (poll_row['id'],))
+        c.execute('DELETE FROM polls WHERE id = ?', (poll_row['id'],))
+    # Delete replies to this tweet (and their related data)
+    c.execute('SELECT id FROM tweets WHERE reply_to_id = ?', (tweet_id,))
+    reply_ids = [r['id'] for r in c.fetchall()]
+    if reply_ids:
+        rp = ','.join('?' * len(reply_ids))
+        c.execute(f'DELETE FROM likes WHERE tweet_id IN ({rp})', reply_ids)
+        c.execute(f'DELETE FROM reposts WHERE tweet_id IN ({rp})', reply_ids)
+        c.execute(f'DELETE FROM notifications WHERE tweet_id IN ({rp})', reply_ids)
+        c.execute(f'DELETE FROM bookmarks WHERE tweet_id IN ({rp})', reply_ids)
     c.execute('DELETE FROM tweets WHERE reply_to_id = ?', (tweet_id,))
     # Delete the tweet itself
     c.execute('DELETE FROM tweets WHERE id = ?', (tweet_id,))
@@ -407,6 +571,7 @@ def delete_tweet(tweet_id):
 
 # POST /api/tweets/<id>/like — toggle like for the current cookie user
 @bp.route('/api/tweets/<int:tweet_id>/like', methods=['POST'])
+@rate_limit
 def toggle_like(tweet_id):
     user_id = get_current_user_id()
     if user_id is None:
@@ -449,6 +614,7 @@ def toggle_like(tweet_id):
 
 # POST /api/tweets/<id>/repost — toggle repost for the current cookie user
 @bp.route('/api/tweets/<int:tweet_id>/repost', methods=['POST'])
+@rate_limit
 def toggle_repost(tweet_id):
     user_id = get_current_user_id()
     if user_id is None:
@@ -732,6 +898,60 @@ def vote_poll(poll_id):
     return jsonify({'options': options, 'voted_option_id': voted_option_id})
 
 
+# GET /api/csrf-token — return (and create) the CSRF token for the current session
+# The token is stored in the signed Flask session cookie.
+# Frontend should read this token and include it as X-CSRF-Token on mutating requests.
+@bp.route('/api/csrf-token')
+def get_csrf_token():
+    token = _get_or_create_csrf_token()
+    return jsonify({'csrf_token': token})
+
+
+# GET /api/trends — return top 5 hashtags from tweets in the last 7 days
+# Scans tweet content with a regex and counts occurrences of #hashtags.
+@bp.route('/api/trends')
+def get_trends():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        "SELECT content FROM tweets WHERE created_at >= datetime('now', '-7 days')"
+    )
+    rows = c.fetchall()
+    conn.close()
+
+    tag_counts = Counter()
+    hashtag_re = re.compile(r'#([a-zA-Z0-9_\u3040-\u30FF\u4E00-\u9FFF]+)', re.UNICODE)
+    for row in rows:
+        for tag in hashtag_re.findall(row['content'] or ''):
+            tag_counts['#' + tag] += 1
+
+    top5 = tag_counts.most_common(5)
+    trends = [{'tag': tag, 'count': count} for tag, count in top5]
+    return jsonify({'trends': trends})
+
+
+# POST /api/tweets/<id>/hide — hide a tweet for the current user ("Not Interested")
+@bp.route('/api/tweets/<int:tweet_id>/hide', methods=['POST'])
+def hide_tweet(tweet_id):
+    user_id = get_current_user_id()
+    if user_id is None:
+        return jsonify({'error': 'authentication required'}), 401
+
+    conn = get_db()
+    c = conn.cursor()
+    # Verify tweet exists
+    c.execute('SELECT id FROM tweets WHERE id = ?', (tweet_id,))
+    if not c.fetchone():
+        conn.close()
+        return jsonify({'error': 'tweet not found'}), 404
+
+    c.execute('INSERT OR IGNORE INTO hidden_tweets (user_id, tweet_id) VALUES (?, ?)',
+              (user_id, tweet_id))
+    conn.commit()
+    conn.close()
+    return jsonify({'hidden': True})
+
+
 # ---------------------------------------------------------------------------
 # Backward-compat alias: old /api/posts endpoint
 # ---------------------------------------------------------------------------
@@ -739,3 +959,98 @@ def vote_poll(poll_id):
 def get_posts_compat():
     """Alias for /api/tweets kept for backward compatibility."""
     return get_tweets()
+
+
+# ---------------------------------------------------------------------------
+# Scheduled Tweets endpoints
+# ---------------------------------------------------------------------------
+
+# POST /api/tweets/schedule — schedule a tweet for future posting
+# Body: { content, scheduled_at (ISO 8601), poll_options (optional array) }
+@bp.route('/api/tweets/schedule', methods=['POST'])
+def schedule_tweet():
+    user_id = get_current_user_id()
+    if user_id is None:
+        return jsonify({'error': 'authentication required'}), 401
+
+    data = request.get_json(force=True, silent=True) or {}
+    content = (data.get('content') or '').strip()
+    scheduled_at = (data.get('scheduled_at') or '').strip()
+    poll_options = data.get('poll_options')
+
+    if not content:
+        return jsonify({'error': 'content is required'}), 400
+    if not scheduled_at:
+        return jsonify({'error': 'scheduled_at is required (ISO 8601 string)'}), 400
+
+    # Validate that scheduled_at is in the future
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('SELECT ? > CURRENT_TIMESTAMP AS is_future', (scheduled_at,))
+    row = c.fetchone()
+    if not row or not row['is_future']:
+        conn.close()
+        return jsonify({'error': 'scheduled_at must be a future timestamp'}), 400
+
+    poll_options_json = None
+    if poll_options and isinstance(poll_options, list) and 2 <= len(poll_options) <= 4:
+        poll_options_json = json.dumps([str(o).strip() for o in poll_options if str(o).strip()])
+
+    c.execute(
+        'INSERT INTO scheduled_tweets (user_id, content, poll_options_json, scheduled_at) VALUES (?, ?, ?, ?)',
+        (user_id, content, poll_options_json, scheduled_at)
+    )
+    new_id = c.lastrowid
+    conn.commit()
+
+    c.execute('SELECT id, user_id, content, poll_options_json, scheduled_at, posted, created_at FROM scheduled_tweets WHERE id = ?', (new_id,))
+    st = dict(c.fetchone())
+    conn.close()
+
+    return jsonify({'scheduled_tweet': st}), 201
+
+
+# GET /api/tweets/scheduled — list pending scheduled tweets for the current user
+@bp.route('/api/tweets/scheduled')
+def get_scheduled_tweets():
+    user_id = get_current_user_id()
+    if user_id is None:
+        return jsonify({'error': 'authentication required'}), 401
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute(
+        'SELECT id, user_id, content, poll_options_json, scheduled_at, posted, created_at '
+        'FROM scheduled_tweets WHERE user_id = ? AND posted = 0 ORDER BY scheduled_at ASC',
+        (user_id,)
+    )
+    rows = [dict(r) for r in c.fetchall()]
+    conn.close()
+    return jsonify({'scheduled_tweets': rows})
+
+
+# DELETE /api/tweets/scheduled/<id> — cancel a pending scheduled tweet
+@bp.route('/api/tweets/scheduled/<int:scheduled_id>', methods=['DELETE'])
+def cancel_scheduled_tweet(scheduled_id):
+    user_id = get_current_user_id()
+    if user_id is None:
+        return jsonify({'error': 'authentication required'}), 401
+
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('SELECT id, user_id, posted FROM scheduled_tweets WHERE id = ?', (scheduled_id,))
+    row = c.fetchone()
+    if not row:
+        conn.close()
+        return jsonify({'error': 'scheduled tweet not found'}), 404
+    if row['user_id'] != user_id:
+        conn.close()
+        return jsonify({'error': 'not your scheduled tweet'}), 403
+    if row['posted']:
+        conn.close()
+        return jsonify({'error': 'tweet has already been posted'}), 400
+
+    c.execute('DELETE FROM scheduled_tweets WHERE id = ?', (scheduled_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'ok': True})

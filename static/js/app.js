@@ -209,6 +209,7 @@ function submitRegistration() {
             currentUser = result.data.user;
             hideRegistrationModal();
             updateComposeAvatar();
+            updateSidebarProfile();
             loadTweets();
             loadBotAccounts();
         } else {
@@ -230,19 +231,11 @@ function submitRegistration() {
 function showTimeline(fromPopstate) {
     var timeline = document.getElementById('top');
 
-    // Remove profile, notification, search, tweet-detail, bookmarks, and dm views
-    var profileView = timeline.querySelector('.profile-view');
-    if (profileView) profileView.remove();
-    var notifView = timeline.querySelector('.notif-view');
-    if (notifView) notifView.remove();
-    var searchView = timeline.querySelector('.search-view');
-    if (searchView) searchView.remove();
-    var detailView = timeline.querySelector('.tweet-detail-view');
-    if (detailView) detailView.remove();
-    var bookmarksView = timeline.querySelector('.bookmarks-view');
-    if (bookmarksView) bookmarksView.remove();
-    var dmView = timeline.querySelector('.dm-view');
-    if (dmView) dmView.remove();
+    // Remove all auxiliary views
+    ['profile-view', 'notif-view', 'search-view', 'tweet-detail-view', 'bookmarks-view', 'dm-view', 'lists-view', 'scheduled-view'].forEach(function(cls) {
+        var el = timeline.querySelector('.' + cls);
+        if (el) el.remove();
+    });
 
     // Show tabs, compose box and feed
     var tabs = document.getElementById('timeline-tabs');
@@ -281,7 +274,7 @@ function showTimeline(fromPopstate) {
 // ------------------------------------------------------------------
 function pollNewTweets() {
     if (currentView !== 'timeline') return;
-    fetch('/api/tweets?page=1&limit=1')
+    fetch('/api/tweets?page=1&limit=1&no_impression=1')
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (data.tweets && data.tweets.length > 0
@@ -325,6 +318,10 @@ window.addEventListener('popstate', function(e) {
         showBookmarks(true);
     } else if (state.view === 'dm') {
         showDM(true);
+    } else if (state.view === 'lists') {
+        showLists(true);
+    } else if (state.view === 'scheduled') {
+        if (typeof showScheduledTweets === 'function') showScheduledTweets();
     } else {
         showTimeline(true);
     }
@@ -340,11 +337,13 @@ function initApp() {
             if (data.user) {
                 currentUser = data.user;
                 updateComposeAvatar();
+                updateSidebarProfile();
                 loadTweets();
                 loadBotAccounts();
                 pollNotifications();
             } else {
                 showRegistrationModal();
+                updateSidebarProfile();
                 // Still load tweets and bots in the background so they
                 // are ready when the modal closes
                 loadTweets();
@@ -357,6 +356,9 @@ function initApp() {
             loadTweets();
             loadBotAccounts();
         });
+
+    // Feature 11: load dynamic trends
+    loadTrends();
 }
 
 // ------------------------------------------------------------------
@@ -373,11 +375,183 @@ window.addEventListener('scroll', function() {
 });
 
 // ------------------------------------------------------------------
+// Feature 1: Textarea auto-resize
+// ------------------------------------------------------------------
+function autoResizeTextarea(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 300) + 'px';
+    if (el.scrollHeight > 300) {
+        el.style.overflowY = 'scroll';
+    } else {
+        el.style.overflowY = 'hidden';
+    }
+}
+
+// Apply auto-resize to the main compose textarea on input
+// Also exported so reply textareas can use it when created
+function applyAutoResize(textarea) {
+    textarea.style.overflowY = 'hidden';
+    textarea.addEventListener('input', function() {
+        autoResizeTextarea(textarea);
+    });
+    // Set initial height
+    autoResizeTextarea(textarea);
+}
+
+// ------------------------------------------------------------------
+// Feature 7: Draft save to localStorage (debounced 500ms)
+// ------------------------------------------------------------------
+var draftSaveTimer = null;
+
+function saveDraft(value) {
+    clearTimeout(draftSaveTimer);
+    draftSaveTimer = setTimeout(function() {
+        localStorage.setItem('tweet_draft', value);
+    }, 500);
+}
+
+function clearDraft() {
+    clearTimeout(draftSaveTimer);
+    localStorage.removeItem('tweet_draft');
+}
+
+// ------------------------------------------------------------------
+// Feature 11: Dynamic trends
+// ------------------------------------------------------------------
+function loadTrends() {
+    fetch('/api/trends')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.trends || data.trends.length === 0) return;
+            var panel = document.querySelector('.panel:nth-child(2)');
+            if (!panel) return;
+            // Keep the header
+            var header = panel.querySelector('.panel-header');
+            panel.innerHTML = '';
+            if (header) panel.appendChild(header);
+
+            var showMore = document.createElement('span');
+            showMore.className = 'show-more-link';
+            showMore.id = 'trend-show-more';
+
+            var trendExpanded = false;
+            var extras = [];
+
+            data.trends.forEach(function(trend, i) {
+                var item = document.createElement('div');
+                item.className = 'trending-item' + (i >= 4 ? ' trending-extra' : '');
+                if (i >= 4) item.style.display = 'none';
+                item.innerHTML = '<div class="trending-label">' + (trend.category || 'トレンド') + '</div>'
+                    + '<div class="trending-tag">' + (trend.tag || trend.name || '') + '</div>'
+                    + '<div class="trending-count">' + (trend.count || trend.tweet_count || 0) + '件のポスト</div>';
+                (function(t) {
+                    item.style.cursor = 'pointer';
+                    item.onclick = function() {
+                        var tag = (t.tag || t.name || '').replace(/^#/, '');
+                        searchHashtag(tag);
+                    };
+                })(trend);
+                if (i >= 4) extras.push(item);
+                panel.appendChild(item);
+            });
+
+            if (data.trends.length > 4) {
+                showMore.textContent = 'さらに表示';
+                showMore.onclick = function() {
+                    if (!trendExpanded) {
+                        extras.forEach(function(el) { el.style.display = ''; });
+                        showMore.textContent = '閉じる';
+                        trendExpanded = true;
+                    } else {
+                        extras.forEach(function(el) { el.style.display = 'none'; });
+                        showMore.textContent = 'さらに表示';
+                        trendExpanded = false;
+                    }
+                };
+                panel.appendChild(showMore);
+            }
+        })
+        .catch(function() {
+            // API not available — keep static trends, re-attach show-more listener
+            var showMoreEl = document.getElementById('trend-show-more');
+            if (showMoreEl && !showMoreEl._bound) {
+                showMoreEl._bound = true;
+                var trendExpanded = false;
+                showMoreEl.addEventListener('click', function() {
+                    var panelEl = showMoreEl.closest('.panel');
+                    var extrasEl = panelEl ? panelEl.querySelectorAll('.trending-extra') : [];
+                    if (!trendExpanded) {
+                        extrasEl.forEach(function(el) { el.style.display = ''; });
+                        showMoreEl.textContent = '閉じる';
+                        trendExpanded = true;
+                    } else {
+                        extrasEl.forEach(function(el) { el.style.display = 'none'; });
+                        showMoreEl.textContent = 'さらに表示';
+                        trendExpanded = false;
+                    }
+                });
+            }
+        });
+}
+
+// ------------------------------------------------------------------
+// Feature 4: Sidebar mini profile — populate after login
+// ------------------------------------------------------------------
+function updateSidebarProfile() {
+    var container = document.getElementById('sidebar-profile');
+    if (!container) return;
+    if (!currentUser) {
+        container.style.display = 'none';
+        return;
+    }
+    container.style.display = 'flex';
+    // Build avatar
+    container.innerHTML = '';
+    var av = buildAvatar(currentUser, 36);
+    var info = document.createElement('div');
+    info.className = 'sidebar-profile-info';
+    var nameEl = document.createElement('div');
+    nameEl.className = 'sidebar-profile-name';
+    nameEl.textContent = currentUser.display_name;
+    var handleEl = document.createElement('div');
+    handleEl.className = 'sidebar-profile-handle';
+    handleEl.textContent = currentUser.handle;
+    info.appendChild(nameEl);
+    info.appendChild(handleEl);
+    container.appendChild(av);
+    container.appendChild(info);
+    container.onclick = function() { showProfile(currentUser.handle); };
+}
+
+// ------------------------------------------------------------------
 // Event listeners set up after DOM is ready
 // ------------------------------------------------------------------
 document.getElementById('compose-input').addEventListener('input', updateCharCounter);
+document.getElementById('compose-input').addEventListener('input', function() {
+    saveDraft(this.value);
+});
 // Initialize the ring on page load
 updateCharCounter();
+
+// Feature 1: Apply auto-resize to the main compose textarea
+applyAutoResize(document.getElementById('compose-input'));
+
+// Feature 9: Apply mention autocomplete to compose textarea
+// (mention.js is loaded before app.js, so attachMentionAutocomplete is available)
+if (typeof attachMentionAutocomplete === 'function') {
+    attachMentionAutocomplete(document.getElementById('compose-input'));
+}
+
+// Feature 7: Restore draft on page load
+(function restoreDraft() {
+    var draft = localStorage.getItem('tweet_draft');
+    if (draft) {
+        var ta = document.getElementById('compose-input');
+        ta.value = draft;
+        updateCharCounter();
+        autoResizeTextarea(ta);
+    }
+})();
 
 // Allow Ctrl+Enter / Cmd+Enter to submit
 document.getElementById('compose-input').addEventListener('keydown', function(e) {
@@ -394,21 +568,28 @@ document.getElementById('reg-handle').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') { submitRegistration(); }
 });
 
-// "さらに表示" link in the trending panel — toggles 4 hidden extra items
-var trendExpanded = false;
-document.getElementById('trend-show-more').addEventListener('click', function() {
-    var panel = this.closest('.panel');
-    var extras = panel.querySelectorAll('.trending-extra');
-    if (!trendExpanded) {
-        extras.forEach(function(el) { el.style.display = ''; });
-        this.textContent = '閉じる';
-        trendExpanded = true;
-    } else {
-        extras.forEach(function(el) { el.style.display = 'none'; });
-        this.textContent = 'さらに表示';
-        trendExpanded = false;
+// ESC key closes modals
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        var regModal = document.getElementById('registration-modal');
+        if (regModal && regModal.style.display !== 'none') { hideRegistrationModal(); }
+        var profileModal = document.getElementById('profile-modal');
+        if (profileModal && profileModal.style.display !== 'none') { hideProfileModal(); }
     }
 });
+
+// Profile modal file input — show selected file name
+document.getElementById('profile-avatar-file').addEventListener('change', function() {
+    var name = document.getElementById('avatar-file-name');
+    if (name) name.textContent = this.files.length > 0 ? this.files[0].name : '選択されていません';
+});
+document.getElementById('profile-banner-file').addEventListener('change', function() {
+    var name = document.getElementById('banner-file-name');
+    if (name) name.textContent = this.files.length > 0 ? this.files[0].name : '選択されていません';
+});
+
+// "さらに表示" link in the trending panel is now handled by loadTrends()
+// (falls back to static HTML management if the API is unavailable)
 
 // Close users-list modal when clicking the overlay background
 document.getElementById('users-list-modal').addEventListener('click', function(e) {
