@@ -47,7 +47,7 @@ def register():
     new_id = c.lastrowid
     conn.commit()
 
-    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at FROM users WHERE id = ?', (new_id,))
+    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at, pinned_tweet_id FROM users WHERE id = ?', (new_id,))
     user = dict(c.fetchone())
     conn.close()
 
@@ -65,7 +65,7 @@ def get_me():
 
     conn = get_db()
     c = conn.cursor()
-    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at FROM users WHERE id = ?', (user_id,))
+    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at, pinned_tweet_id FROM users WHERE id = ?', (user_id,))
     row = c.fetchone()
     conn.close()
 
@@ -107,7 +107,7 @@ def update_me():
     )
     conn.commit()
 
-    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at FROM users WHERE id = ?', (user_id,))
+    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at, pinned_tweet_id FROM users WHERE id = ?', (user_id,))
     user = dict(c.fetchone())
     conn.close()
 
@@ -126,7 +126,7 @@ def get_users():
         c.execute('SELECT following_id FROM follows WHERE follower_id = ?', (current_user_id,))
         following_ids = {r['following_id'] for r in c.fetchall()}
 
-    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at FROM users')
+    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at, pinned_tweet_id FROM users')
     users = []
     for row in c.fetchall():
         u = dict(row)
@@ -180,7 +180,7 @@ def get_user_profile(handle):
     conn = get_db()
     c = conn.cursor()
 
-    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at FROM users WHERE handle = ?', (handle,))
+    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at, pinned_tweet_id FROM users WHERE handle = ?', (handle,))
     user = c.fetchone()
     if not user:
         conn.close()
@@ -249,7 +249,12 @@ def get_user_profile(handle):
         c.execute('SELECT tweet_id FROM bookmarks WHERE user_id = ?', (current_user_id,))
         bookmarked_ids = {r['tweet_id'] for r in c.fetchall()}
 
-    tweets = [_tweet_row_to_dict(row, row['id'] in liked_ids, row['id'] in reposted_ids, row['id'] in bookmarked_ids) for row in rows]
+    pinned_tweet_id = user_dict.get('pinned_tweet_id')
+    tweets = []
+    for row in rows:
+        t = _tweet_row_to_dict(row, row['id'] in liked_ids, row['id'] in reposted_ids, row['id'] in bookmarked_ids)
+        t['is_pinned'] = (pinned_tweet_id is not None and row['id'] == pinned_tweet_id)
+        tweets.append(t)
 
     # Fetch tweets this user reposted
     c.execute('''
@@ -424,7 +429,7 @@ def upload_avatar():
     c = conn.cursor()
     c.execute('UPDATE users SET avatar_url = ? WHERE id = ?', (avatar_url, user_id))
     conn.commit()
-    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at FROM users WHERE id = ?', (user_id,))
+    c.execute('SELECT id, username, display_name, handle, avatar_url, banner_url, bio, location, birthday, is_bot, created_at, pinned_tweet_id FROM users WHERE id = ?', (user_id,))
     user = dict(c.fetchone())
     conn.close()
 

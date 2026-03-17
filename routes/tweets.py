@@ -1,10 +1,39 @@
 import os
 import uuid
+import json
+import re
 from flask import request, jsonify
 from routes import tweets_bp as bp
 from models import get_db, get_current_user_id, _tweet_row_to_dict, allowed_file
 from bot_engine import trigger_bot_reactions
 from config import UPLOAD_FOLDER
+
+
+def _create_mention_notifications(content, tweet_id, author_id):
+    """Scan tweet content for @mentions and create notifications.
+    Security note: handles are extracted with regex and looked up via parameterized
+    query — no injection risk. However, any user can mention any other user, which
+    could be used for notification spam (intentional for lecture demo purposes).
+    """
+    handles = re.findall(r'@([a-zA-Z0-9_]+)', content)
+    if not handles:
+        return
+
+    conn = get_db()
+    c = conn.cursor()
+    for handle_name in set(handles):
+        c.execute(
+            'SELECT id FROM users WHERE username = ? OR handle = ?',
+            (handle_name, '@' + handle_name)
+        )
+        user = c.fetchone()
+        if user and user['id'] != author_id:
+            c.execute(
+                'INSERT INTO notifications (user_id, type, actor_id, tweet_id) VALUES (?, ?, ?, ?)',
+                (user['id'], 'mention', author_id, tweet_id)
+            )
+    conn.commit()
+    conn.close()
 
 
 # GET /api/tweets — list all tweets with user info and like counts
@@ -124,24 +153,32 @@ def create_tweet():
         content = (request.form.get('content') or '').strip()
         reply_to_id = request.form.get('reply_to_id')
         quote_of_id = request.form.get('quote_of_id')
-        image_file = request.files.get('image')
     else:
         data = request.get_json(force=True, silent=True) or {}
         content = (data.get('content') or '').strip()
         reply_to_id = data.get('reply_to_id')
         quote_of_id = data.get('quote_of_id')
-        image_file = None
 
-    if not content and not image_file:
+    # Handle multiple image uploads (up to 4 images)
+    # Accepts file fields: image, image0, image1, image2, image3
+    image_urls = []
+    if request.content_type and 'multipart' in request.content_type:
+        for key in ['image', 'image0', 'image1', 'image2', 'image3']:
+            f = request.files.get(key)
+            if f and allowed_file(f.filename):
+                ext = f.filename.rsplit('.', 1)[1].lower()
+                filename = f'tweet_{user_id}_{uuid.uuid4().hex[:8]}.{ext}'
+                filepath = os.path.join(UPLOAD_FOLDER, filename)
+                f.save(filepath)
+                image_urls.append(f'/static/uploads/{filename}')
+        if len(image_urls) > 4:
+            image_urls = image_urls[:4]
+
+    if not content and not image_urls:
         return jsonify({'error': 'content or image required'}), 400
 
-    image_url = ''
-    if image_file and allowed_file(image_file.filename):
-        ext = image_file.filename.rsplit('.', 1)[1].lower()
-        filename = f'tweet_{user_id}_{uuid.uuid4().hex[:8]}.{ext}'
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
-        image_file.save(filepath)
-        image_url = f'/static/uploads/{filename}'
+    # Store as JSON array if multiple images, single string preserved for backward compat
+    image_url = json.dumps(image_urls) if image_urls else ''
 
     conn = get_db()
     c = conn.cursor()
@@ -189,6 +226,10 @@ def create_tweet():
 
     if user_row and not user_row['is_bot']:
         trigger_bot_reactions(tweet_id, content, user_id)
+
+    # Detect @mentions in tweet content and notify mentioned users
+    if content:
+        _create_mention_notifications(content, tweet_id, user_id)
 
     return jsonify({'tweet': _tweet_row_to_dict(row, False)}), 201
 
@@ -451,6 +492,46 @@ def get_tweet_reposts(tweet_id):
     users = [dict(row) for row in c.fetchall()]
     conn.close()
     return jsonify({'users': users})
+
+
+# POST /api/tweets/<id>/pin — pin or unpin a tweet on the current user's profile
+# Pinning a different tweet replaces the existing pin. Pinning the already-pinned
+# tweet unpins it. Only the tweet owner can pin their own tweets.
+@bp.route('/api/tweets/<int:tweet_id>/pin', methods=['POST'])
+def pin_tweet(tweet_id):
+    user_id = get_current_user_id()
+    if user_id is None:
+        return jsonify({'error': 'authentication required'}), 401
+
+    conn = get_db()
+    c = conn.cursor()
+
+    # Verify tweet belongs to the requesting user
+    c.execute('SELECT user_id FROM tweets WHERE id = ?', (tweet_id,))
+    tweet = c.fetchone()
+    if not tweet:
+        conn.close()
+        return jsonify({'error': 'tweet not found'}), 404
+    if tweet['user_id'] != user_id:
+        conn.close()
+        return jsonify({'error': 'not your tweet'}), 403
+
+    # Check current pin status
+    c.execute('SELECT pinned_tweet_id FROM users WHERE id = ?', (user_id,))
+    current = c.fetchone()
+
+    if current and current['pinned_tweet_id'] == tweet_id:
+        # Already pinned — unpin
+        c.execute('UPDATE users SET pinned_tweet_id = NULL WHERE id = ?', (user_id,))
+        pinned = False
+    else:
+        # Pin this tweet (replaces any existing pin)
+        c.execute('UPDATE users SET pinned_tweet_id = ? WHERE id = ?', (tweet_id, user_id))
+        pinned = True
+
+    conn.commit()
+    conn.close()
+    return jsonify({'pinned': pinned})
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 import sqlite3
 import random
+import json
 from flask import request
 from config import DB_NAME, ALLOWED_EXTENSIONS
 from bot_data import BOT_SELF_REPLIES
@@ -17,6 +18,18 @@ def allowed_file(filename):
 
 
 def _tweet_row_to_dict(row, liked: bool, reposted: bool = False, bookmarked: bool = False) -> dict:
+    raw_image = row['image_url'] if 'image_url' in row.keys() else ''
+    # Parse as JSON array if possible, otherwise treat as single URL (backward compat)
+    if raw_image and raw_image.startswith('['):
+        try:
+            image_urls = json.loads(raw_image)
+        except Exception:
+            image_urls = [raw_image] if raw_image else []
+    elif raw_image:
+        image_urls = [raw_image]
+    else:
+        image_urls = []
+
     return {
         'id': row['id'],
         'content': row['content'],
@@ -24,7 +37,8 @@ def _tweet_row_to_dict(row, liked: bool, reposted: bool = False, bookmarked: boo
         'reply_to_id': row['reply_to_id'],
         'quote_of_id': row['quote_of_id'],
         'impressions': row['impressions'],
-        'image_url': row['image_url'] if 'image_url' in row.keys() else '',
+        'image_url': image_urls[0] if len(image_urls) == 1 else '',  # backward compat: single URL
+        'image_urls': image_urls,  # new field: always an array (0–4 elements)
         'user': {
             'id':           row['user_id'],
             'display_name': row['display_name'],
@@ -129,6 +143,8 @@ def init_db():
         c.execute("ALTER TABLE users ADD COLUMN location TEXT DEFAULT ''")
     if 'birthday' not in columns:
         c.execute("ALTER TABLE users ADD COLUMN birthday TEXT DEFAULT ''")
+    if 'pinned_tweet_id' not in columns:
+        c.execute("ALTER TABLE users ADD COLUMN pinned_tweet_id INTEGER DEFAULT NULL")
 
     # tweets table (replaces old posts table)
     c.execute('''

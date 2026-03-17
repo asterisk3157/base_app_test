@@ -221,10 +221,25 @@ function renderProfileView(user, tweets, repostedTweets) {
         var filtered;
         if (filter === 'ツイート') {
             filtered = allTweets.filter(function(t) { return !t.reply_to_id || t._reposted_by; });
+
+            // Show pinned tweet first if this is the ツイート tab
+            if (user.pinned_tweet_id) {
+                var pinnedTweet = allTweets.find(function(t) { return t.id === user.pinned_tweet_id; });
+                if (pinnedTweet && !pinnedTweet.reply_to_id) {
+                    var pinLabel = document.createElement('div');
+                    pinLabel.style.cssText = 'padding:8px 20px;font-size:0.8rem;color:var(--text-secondary);display:flex;align-items:center;gap:6px';
+                    pinLabel.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 17v5M5 17h14l-1.5-6.5L14 8V4h-4v4L6.5 10.5z"/></svg> ピン留めツイート';
+                    container.appendChild(pinLabel);
+                    var pinnedCard = buildTweetCard(pinnedTweet);
+                    container.appendChild(pinnedCard);
+                    // Remove the pinned tweet from the regular list to avoid duplication
+                    filtered = filtered.filter(function(t) { return t.id !== user.pinned_tweet_id; });
+                }
+            }
         } else if (filter === '返信') {
             filtered = allTweets.filter(function(t) { return t.reply_to_id && !t._reposted_by; });
         } else if (filter === 'メディア') {
-            filtered = allTweets.filter(function(t) { return t.image_url; });
+            filtered = allTweets.filter(function(t) { return t.image_url || (t.image_urls && t.image_urls.length > 0); });
         } else if (filter === 'いいね') {
             container.innerHTML = '<div class="feed-placeholder">いいねしたツイートはここに表示されます</div>';
             return;
@@ -233,7 +248,10 @@ function renderProfileView(user, tweets, repostedTweets) {
         }
 
         if (!filtered || filtered.length === 0) {
-            container.innerHTML = '<div class="feed-placeholder">まだありません</div>';
+            // If we already rendered a pinned tweet above, don't overwrite with placeholder
+            if (container.children.length === 0) {
+                container.innerHTML = '<div class="feed-placeholder">まだありません</div>';
+            }
             return;
         }
 

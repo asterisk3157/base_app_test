@@ -79,6 +79,19 @@ function buildTweetCard(tweet) {
             }
         };
 
+        // Pin tweet option — only for own tweets
+        var pinItem = document.createElement('div');
+        pinItem.className = 'tweet-context-item';
+        pinItem.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17v5M5 17h14l-1.5-6.5L14 8V4h-4v4L6.5 10.5z"/></svg> ' + (tweet.pinned ? 'ピン留めを解除' : 'プロフィールにピン留め');
+        pinItem.onclick = function(e) {
+            e.stopPropagation();
+            menu.remove();
+            fetch('/api/tweets/' + tweet.id + '/pin', { method: 'POST' })
+                .then(function(r) { return r.json(); })
+                .then(function() { loadTweets(); });
+        };
+        menu.appendChild(pinItem);
+
         menu.appendChild(deleteItem);
 
         var rect = moreBtn.getBoundingClientRect();
@@ -103,6 +116,8 @@ function buildTweetCard(tweet) {
     contentEl.innerHTML = tweet.content.replace(/\n/g, '<br>');
     // After setting innerHTML, wrap hashtags in clickable links
     contentEl.innerHTML = contentEl.innerHTML.replace(/#([^\s<]+)/g, '<a href="javascript:void(0)" onclick="searchHashtag(\'$1\')" style="color:var(--accent);text-decoration:none">#$1</a>');
+    // Wrap @mentions in clickable profile links
+    contentEl.innerHTML = contentEl.innerHTML.replace(/@([a-zA-Z0-9_]+)/g, '<a href="javascript:void(0)" onclick="showProfile(\'@$1\')" style="color:var(--accent);text-decoration:none">@$1</a>');
     contentEl.style.cursor = 'pointer';
     contentEl.onclick = function(e) {
         // Don't trigger if clicking a link inside
@@ -274,18 +289,36 @@ function buildTweetCard(tweet) {
     bodyEl.appendChild(metaEl);
     bodyEl.appendChild(contentEl);
 
-    // Tweet image display
-    if (tweet.image_url) {
+    // Tweet image display — supports image_urls array (multi-image) and legacy image_url
+    if (tweet.image_urls && tweet.image_urls.length > 0) {
         var imgContainer = document.createElement('div');
-        imgContainer.style.cssText = 'margin-top:8px;border-radius:16px;overflow:hidden;border:1px solid var(--border)';
-        var tweetImg = document.createElement('img');
-        tweetImg.src = tweet.image_url;
-        tweetImg.style.cssText = 'width:100%;max-height:400px;object-fit:cover;display:block;cursor:pointer';
-        tweetImg.alt = '';
-        (function(url) {
-            tweetImg.onclick = function(e) { e.stopPropagation(); showImageModal(url); };
+        imgContainer.className = 'tweet-images tweet-images-' + Math.min(tweet.image_urls.length, 4);
+
+        tweet.image_urls.forEach(function(url, idx) {
+            if (idx >= 4) return;
+            var img = document.createElement('img');
+            img.src = url;
+            img.className = 'tweet-image-item';
+            img.alt = '';
+            (function(u) {
+                img.onclick = function(e) { e.stopPropagation(); showImageModal(u); };
+            })(url);
+            imgContainer.appendChild(img);
+        });
+
+        bodyEl.appendChild(imgContainer);
+    } else if (tweet.image_url) {
+        // Backward compatibility — single image
+        var imgContainer = document.createElement('div');
+        imgContainer.className = 'tweet-images tweet-images-1';
+        var img = document.createElement('img');
+        img.src = tweet.image_url;
+        img.className = 'tweet-image-item';
+        img.alt = '';
+        (function(u) {
+            img.onclick = function(e) { e.stopPropagation(); showImageModal(u); };
         })(tweet.image_url);
-        imgContainer.appendChild(tweetImg);
+        imgContainer.appendChild(img);
         bodyEl.appendChild(imgContainer);
     }
 
@@ -374,6 +407,8 @@ function buildReplyCard(tweet) {
     contentEl.innerHTML = tweet.content.replace(/\n/g, '<br>');
     // Wrap hashtags in clickable links
     contentEl.innerHTML = contentEl.innerHTML.replace(/#([^\s<]+)/g, '<a href="javascript:void(0)" onclick="searchHashtag(\'$1\')" style="color:var(--accent);text-decoration:none">#$1</a>');
+    // Wrap @mentions in clickable profile links
+    contentEl.innerHTML = contentEl.innerHTML.replace(/@([a-zA-Z0-9_]+)/g, '<a href="javascript:void(0)" onclick="showProfile(\'@$1\')" style="color:var(--accent);text-decoration:none">@$1</a>');
 
     // Action bar — full set: reply, repost, like
     const actionsEl = document.createElement('div');
@@ -463,13 +498,28 @@ function buildReplyCard(tweet) {
     bodyEl.appendChild(metaEl);
     bodyEl.appendChild(contentEl);
 
-    // Reply card image display
-    if (tweet.image_url) {
+    // Reply card image display — supports image_urls array and legacy image_url
+    if (tweet.image_urls && tweet.image_urls.length > 0) {
         var replyImgContainer = document.createElement('div');
-        replyImgContainer.style.cssText = 'margin-top:8px;border-radius:12px;overflow:hidden;border:1px solid var(--border)';
+        replyImgContainer.className = 'tweet-images tweet-images-' + Math.min(tweet.image_urls.length, 4);
+        tweet.image_urls.forEach(function(url, idx) {
+            if (idx >= 4) return;
+            var replyImg = document.createElement('img');
+            replyImg.src = url;
+            replyImg.className = 'tweet-image-item';
+            replyImg.alt = '';
+            (function(u) {
+                replyImg.onclick = function(e) { e.stopPropagation(); showImageModal(u); };
+            })(url);
+            replyImgContainer.appendChild(replyImg);
+        });
+        bodyEl.appendChild(replyImgContainer);
+    } else if (tweet.image_url) {
+        var replyImgContainer = document.createElement('div');
+        replyImgContainer.className = 'tweet-images tweet-images-1';
         var replyImg = document.createElement('img');
         replyImg.src = tweet.image_url;
-        replyImg.style.cssText = 'width:100%;max-height:280px;object-fit:cover;display:block;cursor:pointer';
+        replyImg.className = 'tweet-image-item';
         replyImg.alt = '';
         (function(url) {
             replyImg.onclick = function(e) { e.stopPropagation(); showImageModal(url); };
@@ -605,16 +655,18 @@ function loadTweets(append) {
 function postTweet() {
     var textarea = document.getElementById('compose-input');
     var content = textarea.value.trim();
-    if (!content && !composeImageFile) return;
+    if (!content && composeImageFiles.length === 0) return;
 
     var submitBtn = document.getElementById('compose-submit');
     submitBtn.disabled = true;
 
     var fetchOptions;
-    if (composeImageFile) {
+    if (composeImageFiles.length > 0) {
         var formData = new FormData();
         formData.append('content', content);
-        formData.append('image', composeImageFile);
+        composeImageFiles.forEach(function(f, i) {
+            formData.append('image' + i, f);
+        });
         fetchOptions = { method: 'POST', body: formData };
     } else {
         fetchOptions = {
@@ -982,6 +1034,29 @@ function showTweetDetail(tweetId, fromPopstate) {
             // Intentionally using innerHTML for XSS lecture
             contentEl.innerHTML = tweet.content.replace(/\n/g, '<br>');
             card.appendChild(contentEl);
+
+            // Images — displayed vertically in detail view
+            if (tweet.image_urls && tweet.image_urls.length > 0) {
+                tweet.image_urls.forEach(function(url) {
+                    var img = document.createElement('img');
+                    img.src = url;
+                    img.alt = '';
+                    img.style.cssText = 'width:100%;border-radius:12px;margin-bottom:8px;cursor:pointer;display:block';
+                    (function(u) {
+                        img.onclick = function() { showImageModal(u); };
+                    })(url);
+                    card.appendChild(img);
+                });
+            } else if (tweet.image_url) {
+                var img = document.createElement('img');
+                img.src = tweet.image_url;
+                img.alt = '';
+                img.style.cssText = 'width:100%;border-radius:12px;margin-bottom:8px;cursor:pointer;display:block';
+                (function(u) {
+                    img.onclick = function() { showImageModal(u); };
+                })(tweet.image_url);
+                card.appendChild(img);
+            }
 
             // Timestamp (full format)
             var timeEl = document.createElement('div');

@@ -14,28 +14,54 @@ var currentView = 'timeline';
 var currentTab = 'all';
 
 // ------------------------------------------------------------------
-// Image upload for compose box
+// Image upload for compose box — supports multiple files (up to 4)
 // ------------------------------------------------------------------
-var composeImageFile = null;
+var composeImageFiles = [];
 
 function previewComposeImage(input) {
-    if (input.files && input.files[0]) {
-        composeImageFile = input.files[0];
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('compose-image-thumb').src = e.target.result;
-            document.getElementById('compose-image-preview').style.display = 'block';
-        };
-        reader.readAsDataURL(input.files[0]);
-        // Update submit button state since an image is now attached
+    if (input.files && input.files.length > 0) {
+        var files = Array.from(input.files).slice(0, 4); // max 4
+        composeImageFiles = files;
+
+        var preview = document.getElementById('compose-image-preview');
+        var thumb = document.getElementById('compose-image-thumb');
+
+        // Remove any previous count label
+        var existing = preview.querySelector('.compose-image-count');
+        if (existing) existing.remove();
+
+        if (files.length === 1) {
+            var reader = new FileReader();
+            reader.onload = function(e) { thumb.src = e.target.result; };
+            reader.readAsDataURL(files[0]);
+            thumb.style.display = '';
+            preview.style.display = 'block';
+        } else {
+            thumb.src = '';
+            thumb.style.display = 'none';
+            var countLabel = document.createElement('div');
+            countLabel.className = 'compose-image-count';
+            countLabel.style.cssText = 'padding:12px;color:var(--text-secondary);font-size:0.9rem';
+            countLabel.textContent = files.length + '枚の画像を選択中';
+            preview.insertBefore(countLabel, preview.querySelector('button'));
+            preview.style.display = 'block';
+        }
+
+        // Update submit button state since images are now attached
         updateCharCounter();
     }
 }
 
 function clearComposeImage() {
-    composeImageFile = null;
+    composeImageFiles = [];
     document.getElementById('compose-image-input').value = '';
-    document.getElementById('compose-image-preview').style.display = 'none';
+    var preview = document.getElementById('compose-image-preview');
+    preview.style.display = 'none';
+    var countLabel = preview.querySelector('.compose-image-count');
+    if (countLabel) countLabel.remove();
+    var thumb = document.getElementById('compose-image-thumb');
+    thumb.style.display = '';
+    thumb.src = '';
     updateCharCounter();
 }
 
@@ -64,7 +90,7 @@ function updateCharCounter() {
         + (remaining <= 20 ? '<text x="12" y="16" text-anchor="middle" font-size="8" fill="' + color + '">' + remaining + '</text>' : '')
         + '</svg>';
 
-    submitBtn.disabled = remaining < 0 || (textarea.value.trim().length === 0 && !composeImageFile);
+    submitBtn.disabled = remaining < 0 || (textarea.value.trim().length === 0 && composeImageFiles.length === 0);
 }
 
 // ------------------------------------------------------------------
