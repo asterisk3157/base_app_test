@@ -8,7 +8,7 @@
 - [x] タイムスタンプ表示修正
 - [x] 「新しいツイート」バー（Twitter風pull-to-refresh）
 - [x] 無限スクロール
-- [ ] モジュール化（app.py分割 + index.html分割） ← NEXT
+- [x] モジュール化（app.py 2500→24行 / index.html 4200→289行 / 18ファイルに分割）
 
 ## 実装済み
 

@@ -1080,7 +1080,12 @@ def pick_time(bot_username, base_date):
     minute = random.randint(0, 59)
     second = random.randint(0, 59)
 
-    return base_date.replace(hour=hour, minute=minute, second=second)
+    result = base_date.replace(hour=hour, minute=minute, second=second)
+    # Ensure we never generate future timestamps
+    now_utc = datetime.utcnow()
+    if result > now_utc:
+        result = now_utc - timedelta(minutes=random.randint(10, 1440))
+    return result
 
 
 def main():
