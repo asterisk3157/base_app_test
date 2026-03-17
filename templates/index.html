@@ -43,39 +43,42 @@
             flex-direction: row;
         }
 
-        /* === LEFT PANEL: YouTube Live Style Comment Feed === */
+        /* === LEFT PANEL: YouTube Live Style Comment Feed (Floating) === */
         .comment-feed {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
             width: 320px;
-            min-width: 280px;
-            height: 100vh;
+            max-height: 60vh;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
-            padding: 20px 15px 20px 15px;
-            background: linear-gradient(to right, rgba(5, 5, 15, 0.75) 0%, rgba(5, 5, 15, 0.4) 80%, transparent 100%);
-            position: relative;
+            padding: 15px;
+            background: rgba(5, 5, 15, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
             z-index: 10;
         }
 
         .feed-title {
-            position: absolute;
-            top: 20px;
-            left: 15px;
             font-family: 'Cinzel', serif;
-            font-size: 1.1rem;
+            font-size: 1rem;
             color: var(--primary-glow);
             letter-spacing: 2px;
             text-shadow: 0 0 10px rgba(230, 200, 117, 0.4);
+            margin-bottom: 10px;
+            flex-shrink: 0;
         }
 
         .feed-container {
             flex: 1;
-            overflow-y: scroll;
+            overflow-y: auto;
             overflow-x: hidden;
             display: flex;
             flex-direction: column;
             gap: 2px;
-            margin-top: 50px;
             padding-right: 5px;
             /* Thin scrollbar for clean look */
             scrollbar-width: thin;
@@ -507,9 +510,10 @@
             }
 
             .comment-feed {
-                width: 100%;
-                height: 50vh;
-                background: rgba(5, 5, 15, 0.7);
+                width: calc(100% - 40px);
+                max-height: 40vh;
+                left: 10px;
+                bottom: 10px;
             }
 
             .center-space {
