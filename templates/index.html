@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>✨ 星に願いを ✨</title>
+    <!-- Content Security Policy: Prevent XSS from running unauthorized scripts -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';">
+    
     <!-- Google Fonts for a magical/fantasy feel -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -557,6 +560,8 @@
         <div class="panel-title">💫 願いを紡ぐ</div>
         <div class="star-status" id="starStatus">🌙 流れ星を待て...</div>
         <form id="postForm" enctype="multipart/form-data">
+            <!-- CSRF Token -->
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <div class="input-box" id="inputBox">
                 <!-- Comment area: hidden when stars aren't flowing -->
                 <div class="comment-input-area" id="commentArea">
@@ -628,25 +633,34 @@
             // Handle media
             if (post.file_path) {
                 const ext = post.file_path.split('.').pop().toLowerCase();
+                
                 if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext)) {
                     const img = document.createElement('img');
                     img.src = post.file_path;
                     img.className = 'comment-media';
                     img.alt = '魔法の欠片';
                     div.appendChild(img);
-                } else if (ext === 'pdf') {
-                    div.insertAdjacentHTML('beforeend',
-                        `<a href="${post.file_path}" class="comment-file-link" target="_blank" rel="noopener noreferrer">📄 PDF を開く</a>`);
-                } else if (['doc', 'docx'].includes(ext)) {
-                    div.insertAdjacentHTML('beforeend',
-                        `<a href="${post.file_path}" class="comment-file-link" download>📝 Word をダウンロード</a>`);
                 } else {
-                    div.insertAdjacentHTML('beforeend',
-                        `<a href="${post.file_path}" class="comment-file-link" download>📎 ファイルを保存</a>`);
+                    const fileLink = document.createElement('a');
+                    fileLink.href = post.file_path;
+                    fileLink.className = 'comment-file-link';
+                    
+                    if (ext === 'pdf') {
+                        fileLink.target = '_blank';
+                        fileLink.rel = 'noopener noreferrer';
+                        fileLink.textContent = '📄 PDF を開く';
+                    } else if (['doc', 'docx'].includes(ext)) {
+                        fileLink.setAttribute('download', '');
+                        fileLink.textContent = '📝 Word をダウンロード';
+                    } else {
+                        fileLink.setAttribute('download', '');
+                        fileLink.textContent = '📎 ファイルを保存';
+                    }
+                    div.appendChild(fileLink);
                 }
             }
 
-            // Always append to the bottom (YouTube Live style: newest at the bottom)
+            // Always append to the bottom (YouTube Live style)
             container.appendChild(div);
         }
 

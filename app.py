@@ -3,10 +3,15 @@ import sqlite3
 import os
 import hashlib
 import base64
+import uuid
+import time
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 DB_NAME = 'database.db'
+# Simple CSRF Secret
+CSRF_SECRET = "frieren_magical_secret_key_2026"
+CSRF_TOKEN = hashlib.sha256(CSRF_SECRET.encode()).hexdigest()
 
 # Configure upload folder
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__name__)), 'static', 'uploads')
@@ -46,7 +51,7 @@ def init_db():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', csrf_token=CSRF_TOKEN)
 
 @app.route('/api/posts')
 def get_posts():
@@ -76,16 +81,36 @@ def generate_tripcode(name_input):
             
     return name_input
 
+# In-memory rate limiting: {ip: last_post_timestamp}
+last_post_times = {}
+
 def contains_dark_magic(text):
     if not text:
         return False
-    # List of forbidden keywords for basic XSS & SQLi
-    forbidden_words = ['<script>', 'javascript:', 'drop table', 'select ', 'union select', 'onload=', 'onerror=']
+    # List of forbidden signatures for XSS, SQLi, and Command Injection
+    forbidden_words = [
+        '<script', 'javascript:', 'drop table', 'select ', 'union select', 
+        'onload=', 'onerror=', 'eval(', 'alert(', 'confirm(', 
+        'prompt(', 'document.cookie', 'document.domain', 
+        'window.location', 'src=', 'href=', '..', '.php', '.exe', '.sh'
+    ]
     text_lower = text.lower()
     return any(word in text_lower for word in forbidden_words)
 
 @app.route('/post', methods=['POST'])
 def post():
+    # Verify CSRF Token
+    client_token = request.form.get('csrf_token')
+    if client_token != CSRF_TOKEN:
+        return jsonify({'success': False, 'error': '結界拒絶：CSRFトークンが無効です。'}), 403
+
+    # Basic Rate Limiting
+    user_ip = request.remote_addr
+    now = time.time()
+    if user_ip in last_post_times:
+        if now - last_post_times[user_ip] < 3: # 3 second cooldown
+            return jsonify({'success': False, 'error': '魔力が回復していません。3秒ほどお待ちください。'}), 429
+    
     content = request.form.get('content')
     raw_name = request.form.get('name', '').strip()
     file = request.files.get('file')
@@ -93,37 +118,36 @@ def post():
     # Process tripcode
     processed_name = generate_tripcode(raw_name)
     
-    # Lv.3 Defense: Backend Magical Barrier (WAF) applied to BOTH content and name
-    if contains_dark_magic(content) or contains_dark_magic(raw_name):
+    # Lv.3 Defense: Backend Magical Barrier (WAF)
+    # Check content, name, AND the original filename
+    if contains_dark_magic(content) or contains_dark_magic(raw_name) or (file and contains_dark_magic(file.filename)):
         return jsonify({'success': False, 'error': '結界発動：不正な魔法（ハッキング詠唱）を検知しました！'}), 400
         
     file_path = None
     if file and file.filename != '':
         if not allowed_file(file.filename):
-            # Return an error JSON if the file type is not supported
             return jsonify({'success': False, 'error': 'この魔導書（ファイル形式）は解読できません。対応: png, jpg, pdf, doc 等'}), 400
             
-        # Secure the filename before saving
-        filename = secure_filename(file.filename)
-        # Create a unique path to avoid overwriting
-        save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        # Secure and Randomize filename to prevent path traversal and overwrites
+        original_ext = file.filename.rsplit('.', 1)[1].lower()
+        random_filename = f"{uuid.uuid4().hex}.{original_ext}"
+        
+        save_path = os.path.join(app.config['UPLOAD_FOLDER'], random_filename)
         file.save(save_path)
-        # Store relative path for frontend access (served natively by Flask)
-        file_path = f"/static/uploads/{filename}"
+        file_path = f"/static/uploads/{random_filename}"
 
     if content or file_path:
         conn = sqlite3.connect(DB_NAME)
         c = conn.cursor()
-        # Vulnerability Note: This is currently using parameterized queries (safe), 
-        # but students will likely ask AI to "just make it work" or "fix error",
-        # which might introduce SQLi if not careful. Or we can INTENTIONALLY make this vulnerable later.
-        # For base app, we keep it simple but functional.
         c.execute('INSERT INTO posts (content, file_path, name) VALUES (?, ?, ?)', (content, file_path, processed_name))
         conn.commit()
         conn.close()
+        # Update rate limit timestamp
+        last_post_times[user_ip] = now
+        
     return jsonify({'success': True}), 200
 
-# Initialize DB when this file is loaded (works with flask run and direct execution)
+# Initialize DB when this file is loaded
 init_db()
 
 if __name__ == '__main__':
