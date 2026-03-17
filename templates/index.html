@@ -426,6 +426,80 @@
             text-shadow: 0 0 10px rgba(230, 200, 117, 0.5);
         }
 
+        /* === METEORITE CRASH ANIMATION === */
+        .meteorite {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #ff6600, #cc3300, #660000);
+            box-shadow: 0 0 20px 8px rgba(255, 100, 0, 0.7), 0 0 60px 20px rgba(255, 50, 0, 0.4);
+            z-index: 1000;
+            pointer-events: none;
+            animation: meteoriteFly 1.2s ease-in forwards;
+        }
+
+        .meteorite::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 100%;
+            transform: translateY(-50%);
+            width: 120px;
+            height: 8px;
+            background: linear-gradient(to right, rgba(255, 150, 0, 0.9), rgba(255, 100, 0, 0.4), transparent);
+            border-radius: 50%;
+        }
+
+        @keyframes meteoriteFly {
+            0% {
+                top: -50px;
+                left: 70%;
+                opacity: 1;
+                transform: scale(0.5) rotate(0deg);
+            }
+            70% {
+                opacity: 1;
+                transform: scale(1.5) rotate(180deg);
+            }
+            100% {
+                top: 50%;
+                left: 50px;
+                opacity: 0;
+                transform: scale(2) rotate(360deg);
+            }
+        }
+
+        .comment-feed.shake {
+            animation: feedShake 0.5s ease-in-out;
+        }
+
+        @keyframes feedShake {
+            0%, 100% { transform: translateX(0); }
+            15% { transform: translateX(-15px) translateY(5px); }
+            30% { transform: translateX(12px) translateY(-3px); }
+            45% { transform: translateX(-10px) translateY(4px); }
+            60% { transform: translateX(8px) translateY(-2px); }
+            75% { transform: translateX(-5px); }
+        }
+
+        .impact-flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 15% 50%, rgba(255, 150, 0, 0.6), transparent 60%);
+            z-index: 999;
+            pointer-events: none;
+            animation: flashFade 0.6s ease-out forwards;
+        }
+
+        @keyframes flashFade {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
         /* === Responsive === */
         @media (max-width: 900px) {
             body {
@@ -784,25 +858,46 @@
             }
         }
 
-        // ☄️ METEORITE: Clears all comments
+        // ☄️ METEORITE: Animated crash into comment feed
         function triggerMeteorite() {
-            const postsDiv = document.getElementById('posts');
-            // Flash effect
-            postsDiv.style.transition = 'opacity 0.3s';
-            postsDiv.style.opacity = '0';
+            // Create the meteorite element
+            const meteorite = document.createElement('div');
+            meteorite.className = 'meteorite';
+            document.body.appendChild(meteorite);
+
+            // After the meteorite reaches the feed (1.2s animation)
             setTimeout(() => {
-                postsDiv.innerHTML = '';
-                postsDiv.style.opacity = '1';
-            }, 300);
+                meteorite.remove();
+
+                // Impact flash
+                const flash = document.createElement('div');
+                flash.className = 'impact-flash';
+                document.body.appendChild(flash);
+                setTimeout(() => flash.remove(), 600);
+
+                // Shake the comment feed
+                const feed = document.querySelector('.comment-feed');
+                feed.classList.add('shake');
+                setTimeout(() => feed.classList.remove('shake'), 500);
+
+                // Clear comments after impact
+                const postsDiv = document.getElementById('posts');
+                postsDiv.style.transition = 'opacity 0.2s';
+                postsDiv.style.opacity = '0';
+                setTimeout(() => {
+                    postsDiv.innerHTML = '';
+                    postsDiv.style.opacity = '1';
+                }, 200);
+            }, 1100);
         }
 
-        // 🌌 METEOR SHOWER: 20s of continuous stars, 30s cooldown
+        // 🌌 METEOR SHOWER: 20s of continuous stars, keyword-only 30s cooldown
         function triggerMeteorShower() {
             if (meteorShowerActive || meteorShowerCooldown) return;
 
             meteorShowerActive = true;
 
-            // Pause normal star cycle
+            // Pause normal star cycle during shower
             normalCyclePaused = true;
             if (normalCycleTimeout) {
                 clearTimeout(normalCycleTimeout);
@@ -831,19 +926,16 @@
                 meteorShowerSpawnInterval = null;
                 meteorShowerActive = false;
 
-                // Lock input
+                // Lock input and resume normal star cycle immediately
                 lockInput();
+                normalCyclePaused = false;
+                scheduleNextWave();
 
-                // Start 30s cooldown
+                // Start 30s cooldown (only blocks the keyword, NOT input)
                 meteorShowerCooldown = true;
-                starStatus.textContent = '🌌 流星群のクールダウン中...';
-
                 setTimeout(() => {
                     meteorShowerCooldown = false;
-                    // Resume normal cycle
-                    normalCyclePaused = false;
-                    scheduleNextWave();
-                }, 30000); // 30 second cooldown
+                }, 30000); // 30 second keyword cooldown
 
             }, 20000); // 20 second shower
         }
