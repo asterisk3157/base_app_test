@@ -701,13 +701,20 @@ textarea {
 }
 
 .tweet-replies {
-    border-left: 2px solid var(--border);
-    margin-left: 40px;
+    border-left: none;
+    margin-left: 0;
+    padding-left: 0;
+    background: var(--bg-card);
 }
 
-/* Nested replies get less indentation */
-.tweet-replies .tweet-replies {
-    margin-left: 20px;
+.tweet-replies .reply-card {
+    padding-left: 56px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* Nested replies get more indent */
+.tweet-replies .tweet-replies .reply-card {
+    padding-left: 76px;
 }
 
 .reply-card {
