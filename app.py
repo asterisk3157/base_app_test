@@ -29,21 +29,6 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def init_db():
-    # Magical Reset Seal: If a file named 'PURGE_DATABASE' exists, clear everything
-    purge_trigger = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'PURGE_DATABASE')
-    if os.path.exists(purge_trigger):
-        if os.path.exists(DB_NAME):
-            os.remove(DB_NAME)
-        # Also clear uploads
-        if os.path.exists(UPLOAD_FOLDER):
-            for f in os.listdir(UPLOAD_FOLDER):
-                os.remove(os.path.join(UPLOAD_FOLDER, f))
-        # Remove the trigger so it doesn't keep purging
-        try:
-            os.remove(purge_trigger)
-        except:
-            pass
-
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     # Try creating new schema with file_path and name
